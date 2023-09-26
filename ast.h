@@ -7,28 +7,29 @@
 #include "token.h"
 
 // Base AST Node class
-struct ASTNode
+class ASTNode
 {
+public:
 	virtual ~ASTNode(){};
 	virtual std::string ToString() const = 0;
 };
 
-struct ASTLiteral : ASTNode
+class ASTLiteral : public ASTNode
 {
+public:
 	int Value;
-
 	ASTLiteral(int InValue) : Value(InValue){};
 	virtual std::string ToString() const { return std::to_string(Value); }
 };
 
-struct ASTBinOp : ASTNode
+class ASTBinOp : public ASTNode
 {
+public:
 	ASTNode*	Left;
 	ASTNode*	Right;
 	std::string Op;
-
 	ASTBinOp(ASTNode* InLeft, ASTNode* InRight, const std::string& InOp) : Left(InLeft), Right(InRight), Op(InOp){};
-	virtual std::string ToString() const { return "[" + Left->ToString() + " " + Op + " " + Right->ToString() + "]"; }
+	virtual std::string ToString() const { return "(" + Left->ToString() + " " + Op + " " + Right->ToString() + ")"; }
 };
 
 class AST
@@ -40,7 +41,7 @@ private:
 
 	void Next()
 	{
-		auto End = &Tokens.back();
+		Token* End = &Tokens.back();
 		if (CurrentToken == End)
 		{
 			CurrentToken = nullptr;
@@ -70,7 +71,7 @@ private:
 
 	ASTNode* ParseMultiplicativeExpr()
 	{
-		auto Expr = ParseLiteralExpr();
+		ASTNode* Expr = ParseLiteralExpr();
 		while (Match("*") || Match("/"))
 		{
 			std::string Op = CurrentToken->Content;
@@ -83,7 +84,7 @@ private:
 
 	ASTNode* ParseAdditiveExpr()
 	{
-		auto Expr = ParseMultiplicativeExpr();
+		ASTNode* Expr = ParseMultiplicativeExpr();
 		while (Match("+") || Match("-"))
 		{
 			std::string Op = CurrentToken->Content;
@@ -94,6 +95,61 @@ private:
 		return Expr;
 	}
 
+	int EvalBinOp(ASTNode* Node)
+	{
+		ASTBinOp* BinOp = dynamic_cast<ASTBinOp*>(Node);
+		if (!BinOp)
+		{
+			throw std::runtime_error("Invalid node.");
+		}
+
+		// Evaluate the left value
+		int LeftValue;
+		if (dynamic_cast<ASTBinOp*>(BinOp->Left))
+		{
+			LeftValue = EvalBinOp(BinOp->Left);
+		}
+		else if (dynamic_cast<ASTLiteral*>(BinOp->Left))
+		{
+			auto Literal = dynamic_cast<ASTLiteral*>(BinOp->Left);
+			LeftValue = Literal->Value;
+		}
+		else
+		{
+			throw std::runtime_error("Bad left value.");
+		}
+
+		// Evaluate the right value
+		int RightValue;
+		if (dynamic_cast<ASTBinOp*>(BinOp->Right))
+		{
+			RightValue = EvalBinOp(BinOp->Right);
+		}
+		else if (dynamic_cast<ASTLiteral*>(BinOp->Right))
+		{
+			auto Literal = dynamic_cast<ASTLiteral*>(BinOp->Right);
+			RightValue = Literal->Value;
+		}
+		else
+		{
+			throw std::runtime_error("Bad right value.");
+		}
+
+		switch (*BinOp->Op.c_str())
+		{
+			case '+' :
+				return LeftValue + RightValue;
+			case '-' :
+				return LeftValue - RightValue;
+			case '*' :
+				return LeftValue * RightValue;
+			case '/' :
+				return LeftValue / RightValue;
+			default :
+				throw std::runtime_error("Unsupported operator.");
+		}
+	}
+
 public:
 	AST(std::vector<Token>& InTokens) : Tokens(InTokens) { CurrentToken = &Tokens[0]; }
 
@@ -102,4 +158,6 @@ public:
 		ASTNode* ProgramResult = ParseAdditiveExpr();
 		return ProgramResult;
 	}
+
+	int Eval(ASTNode* Node) { return EvalBinOp(Node); }
 };

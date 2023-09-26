@@ -23,6 +23,7 @@ int Compile(std::string FileName)
 	if (Tree)
 	{
 		std::cout << Tree->ToString() << std::endl;
+		std::cout << Ast.Eval(Tree) << std::endl;
 	}
 
 	return 0;
