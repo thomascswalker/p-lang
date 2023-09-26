@@ -1,153 +1,105 @@
 #include <vector>
 #include <memory>
-#include <optional>
 #include <functional>
-#include <variant>
 #include <string>
+#include <variant>
 
 #include "token.h"
 
 // Base AST Node class
-class ASTNode
+struct ASTNode
 {
-public:
-	ASTNode(){};
+	virtual ~ASTNode(){};
 	virtual std::string ToString() const = 0;
-	virtual void		Print() const = 0;
 };
 
-// Node for constant values (numbers, strings, etc.)
-class ASTFactor : public ASTNode
+struct ASTLiteral : ASTNode
 {
-public:
-	std::string Value;
-	std::string Type;
-	ASTFactor(std::string& InValue, std::string& InType) : Value(InValue), Type(InType){};
-	std::string ToString() const { return Value; }
-	void		Print() const { std::cout << ToString() << std::endl; }
+	int Value;
+
+	ASTLiteral(int InValue) : Value(InValue){};
+	virtual std::string ToString() const { return std::to_string(Value); }
 };
 
-class ASTTerm : public ASTNode
+struct ASTBinOp : ASTNode
 {
-public:
-	ASTTerm(){};
-	ASTTerm(std::string& InOp) : Op(InOp){};
-	std::shared_ptr<ASTFactor> Left;
-	std::shared_ptr<ASTTerm>   Right;
-	std::string				   Op;
+	ASTNode*	Left;
+	ASTNode*	Right;
+	std::string Op;
 
-	std::string ToString() const
-	{
-		if (Op == "" || !Right)
-		{
-			return "{" + Left->ToString() + "}";
-		}
-		else
-		{
-
-			return "{" + Left->ToString() + ", " + Op + ", " + Right->ToString() + "}";
-		}
-	}
-	void Print() const { std::cout << ToString() << std::endl; }
+	ASTBinOp(ASTNode* InLeft, ASTNode* InRight, const std::string& InOp) : Left(InLeft), Right(InRight), Op(InOp){};
+	virtual std::string ToString() const { return "[" + Left->ToString() + " " + Op + " " + Right->ToString() + "]"; }
 };
 
 class AST
 {
-	std::vector<Token> Tokens{};
+private:
+	std::vector<Token>	  Tokens{};
+	std::vector<ASTNode*> Nodes{};
+	Token*				  CurrentToken;
 
-	Token Pop()
+	void Next()
 	{
-		if (Tokens.size() > 0)
+		auto End = &Tokens.back();
+		if (CurrentToken == End)
 		{
-			Token T = Tokens[0];
-			Tokens.erase(Tokens.begin());
-			return T;
+			CurrentToken = nullptr;
 		}
 		else
 		{
-			std::cout << "End of tokens." << std::endl;
+			CurrentToken++;
 		}
 	}
 
-	std::shared_ptr<ASTFactor> ParseFactor()
+	bool Match(const std::string& Value)
 	{
-		std::shared_ptr<ASTFactor> Factor;
-		Token					   T = Pop();
-
-		// If the current token is a number
-		if (T.Type == "Number")
+		if (!CurrentToken)
 		{
-			// Construct a new factor and return it
-			Factor = std::make_shared<ASTFactor>(T.Content, T.Type);
-			return Factor;
+			return false;
 		}
-		else
-		{
-			return nullptr;
-		}
+		return CurrentToken->Type == Value;
 	}
 
-	std::shared_ptr<ASTTerm> ParseTerm()
+	ASTNode* ParseLiteralExpr()
 	{
-		// Get the left-hand factor
-		auto					 Left = ParseFactor();
-		std::shared_ptr<ASTTerm> Term = std::make_shared<ASTTerm>();
-		Term->Left = Left;
+		int Value = std::stoi(CurrentToken->Content);
+		Next();
+		Nodes.push_back(new ASTLiteral(Value));
+		return Nodes.back();
+	}
 
-		// While the next token is either + or -, get the right-hand factor
-		while (Tokens.size() > 0 && Contains({ "+", "-" }, Tokens[0].Content))
+	ASTNode* ParseMultiplicativeExpr()
+	{
+		auto Expr = ParseLiteralExpr();
+		while (Match("*") || Match("/"))
 		{
-			// Get the actual operator (+ or -)
-			std::string Op = Pop().Content;
-			Term->Op = Op;
-
-			// Recursively parse the next term
-			Term->Right = ParseTerm();
+			std::string Op = CurrentToken->Content;
+			Next();
+			Nodes.push_back(new ASTBinOp(Expr, ParseLiteralExpr(), Op));
+			Expr = Nodes.back();
 		}
+		return Expr;
+	}
 
-		return Term;
+	ASTNode* ParseAdditiveExpr()
+	{
+		auto Expr = ParseMultiplicativeExpr();
+		while (Match("+") || Match("-"))
+		{
+			std::string Op = CurrentToken->Content;
+			Next();
+			Nodes.push_back(new ASTBinOp(Expr, ParseMultiplicativeExpr(), Op));
+			Expr = Nodes.back();
+		}
+		return Expr;
 	}
 
 public:
-	AST(std::vector<Token>& InTokens) : Tokens(InTokens){};
-	std::shared_ptr<ASTTerm> Parse()
-	{
-		auto Result = ParseTerm();
-		if (Result)
-		{
-			return Result;
-		}
-		else
-		{
-			std::cout << "ERROR: Unable to parse syntax tree." << std::endl;
-			return nullptr;
-		}
-	}
-	int Eval(std::shared_ptr<ASTTerm> Term)
-	{
-		int Result;
-		int Left = std::stoi(Term->Left->Value);
-		if (Term->Op == "" || !Term->Right)
-		{
-			return Left;
-		}
-		std::string Op = Term->Op;
-		int			Right = Eval(Term->Right);
+	AST(std::vector<Token>& InTokens) : Tokens(InTokens) { CurrentToken = &Tokens[0]; }
 
-		switch (*Op.c_str())
-		{
-			case '+' :
-				return Left + Right;
-			case '-' :
-				return Left - Right;
-			case '*' :
-				return Left * Right;
-			case '/' : 
-				return Left / Right;
-			default :
-				std::string Msg = "Operator not supported: " + Op;
-				std::cout << Msg << std::endl;
-				throw(std::runtime_error(Msg));
-		}
+	ASTNode* Parse()
+	{
+		ASTNode* ProgramResult = ParseAdditiveExpr();
+		return ProgramResult;
 	}
 };
