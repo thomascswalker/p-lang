@@ -2,7 +2,6 @@
 #include <fstream>
 #include <regex>
 #include <iostream>
-#include <optional>
 #include <memory>
 #include <sstream>
 #include <map>
@@ -44,12 +43,17 @@ bool Contains(const std::vector<T> Array, T Value)
 
 struct Token
 {
+	// Properties
 	std::string Type = "";
 	std::string Content = "";
 	int			Line = 0;
 
+	// Constructors
 	Token(){};
-	Token(std::string InType, std::string InContent, int InLine) : Type(InType), Content(InContent), Line(InLine){};
+	Token(const std::string& InType, const std::string& InContent, int InLine)
+		: Type(InType), Content(InContent), Line(InLine){};
+
+	// Methods
 	std::string ToString() const
 	{
 		std::ostringstream Stream;

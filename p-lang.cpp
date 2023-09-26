@@ -22,9 +22,8 @@ int Compile(std::string FileName)
 	auto Tree = Ast.Parse();
 	if (Tree)
 	{
-		std::cout << "Tree: " << Tree->ToString() << std::endl;
-		int Result = Ast.Eval(Tree);
-		std::cout << "Result: " << Result << std::endl;
+		std::cout << Tree->ToString() << std::endl;
+		std::cout << Ast.Eval(Tree) << std::endl;
 	}
 
 	return 0;

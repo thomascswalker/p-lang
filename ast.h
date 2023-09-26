@@ -1,9 +1,8 @@
 #include <vector>
 #include <memory>
-#include <optional>
 #include <functional>
-#include <variant>
 #include <string>
+#include <variant>
 
 #include "token.h"
 
@@ -11,143 +10,154 @@
 class ASTNode
 {
 public:
-	ASTNode(){};
+	virtual ~ASTNode(){};
 	virtual std::string ToString() const = 0;
-	virtual void		Print() const = 0;
 };
 
-// Node for constant values (numbers, strings, etc.)
-class ASTFactor : public ASTNode
+class ASTLiteral : public ASTNode
 {
 public:
-	std::string Value;
-	std::string Type;
-	ASTFactor(std::string& InValue, std::string& InType) : Value(InValue), Type(InType){};
-	std::string ToString() const { return Value; }
-	void		Print() const { std::cout << ToString() << std::endl; }
+	int Value;
+	ASTLiteral(int InValue) : Value(InValue){};
+	virtual std::string ToString() const { return std::to_string(Value); }
 };
 
-class ASTTerm : public ASTNode
+class ASTBinOp : public ASTNode
 {
 public:
-	ASTTerm(){};
-	ASTTerm(std::string& InOp) : Op(InOp){};
-	std::shared_ptr<ASTFactor> Left;
-	std::shared_ptr<ASTTerm>   Right;
-	std::string				   Op;
-
-	std::string ToString() const
-	{
-		if (Op == "" || !Right)
-		{
-			return "{" + Left->ToString() + "}";
-		}
-		else
-		{
-
-			return "{" + Left->ToString() + ", " + Op + ", " + Right->ToString() + "}";
-		}
-	}
-	void Print() const { std::cout << ToString() << std::endl; }
+	ASTNode*	Left;
+	ASTNode*	Right;
+	std::string Op;
+	ASTBinOp(ASTNode* InLeft, ASTNode* InRight, const std::string& InOp) : Left(InLeft), Right(InRight), Op(InOp){};
+	virtual std::string ToString() const { return "(" + Left->ToString() + " " + Op + " " + Right->ToString() + ")"; }
 };
 
 class AST
 {
-	std::vector<Token> Tokens{};
+private:
+	std::vector<Token>	  Tokens{};
+	std::vector<ASTNode*> Nodes{};
+	Token*				  CurrentToken;
 
-	Token Pop()
+	void Next()
 	{
-		if (Tokens.size() > 0)
+		Token* End = &Tokens.back();
+		if (CurrentToken == End)
 		{
-			Token T = Tokens[0];
-			Tokens.erase(Tokens.begin());
-			return T;
+			CurrentToken = nullptr;
 		}
 		else
 		{
-			std::cout << "End of tokens." << std::endl;
+			CurrentToken++;
 		}
 	}
 
-	std::shared_ptr<ASTFactor> ParseFactor()
+	bool Match(const std::string& Value)
 	{
-		std::shared_ptr<ASTFactor> Factor;
-		Token					   T = Pop();
-
-		// If the current token is a number
-		if (T.Type == "Number")
+		if (!CurrentToken)
 		{
-			// Construct a new factor and return it
-			Factor = std::make_shared<ASTFactor>(T.Content, T.Type);
-			return Factor;
+			return false;
+		}
+		return CurrentToken->Type == Value;
+	}
+
+	ASTNode* ParseLiteralExpr()
+	{
+		int Value = std::stoi(CurrentToken->Content);
+		Next();
+		Nodes.push_back(new ASTLiteral(Value));
+		return Nodes.back();
+	}
+
+	ASTNode* ParseMultiplicativeExpr()
+	{
+		ASTNode* Expr = ParseLiteralExpr();
+		while (Match("*") || Match("/"))
+		{
+			std::string Op = CurrentToken->Content;
+			Next();
+			Nodes.push_back(new ASTBinOp(Expr, ParseLiteralExpr(), Op));
+			Expr = Nodes.back();
+		}
+		return Expr;
+	}
+
+	ASTNode* ParseAdditiveExpr()
+	{
+		ASTNode* Expr = ParseMultiplicativeExpr();
+		while (Match("+") || Match("-"))
+		{
+			std::string Op = CurrentToken->Content;
+			Next();
+			Nodes.push_back(new ASTBinOp(Expr, ParseMultiplicativeExpr(), Op));
+			Expr = Nodes.back();
+		}
+		return Expr;
+	}
+
+	int EvalBinOp(ASTNode* Node)
+	{
+		ASTBinOp* BinOp = dynamic_cast<ASTBinOp*>(Node);
+		if (!BinOp)
+		{
+			throw std::runtime_error("Invalid node.");
+		}
+
+		// Evaluate the left value
+		int LeftValue;
+		if (dynamic_cast<ASTBinOp*>(BinOp->Left))
+		{
+			LeftValue = EvalBinOp(BinOp->Left);
+		}
+		else if (dynamic_cast<ASTLiteral*>(BinOp->Left))
+		{
+			auto Literal = dynamic_cast<ASTLiteral*>(BinOp->Left);
+			LeftValue = Literal->Value;
 		}
 		else
 		{
-			return nullptr;
+			throw std::runtime_error("Bad left value.");
 		}
-	}
 
-	std::shared_ptr<ASTTerm> ParseTerm()
-	{
-		// Get the left-hand factor
-		auto					 Left = ParseFactor();
-		std::shared_ptr<ASTTerm> Term = std::make_shared<ASTTerm>();
-		Term->Left = Left;
-
-		// While the next token is either + or -, get the right-hand factor
-		while (Tokens.size() > 0 && Contains({ "+", "-" }, Tokens[0].Content))
+		// Evaluate the right value
+		int RightValue;
+		if (dynamic_cast<ASTBinOp*>(BinOp->Right))
 		{
-			// Get the actual operator (+ or -)
-			std::string Op = Pop().Content;
-			Term->Op = Op;
-
-			// Recursively parse the next term
-			Term->Right = ParseTerm();
+			RightValue = EvalBinOp(BinOp->Right);
+		}
+		else if (dynamic_cast<ASTLiteral*>(BinOp->Right))
+		{
+			auto Literal = dynamic_cast<ASTLiteral*>(BinOp->Right);
+			RightValue = Literal->Value;
+		}
+		else
+		{
+			throw std::runtime_error("Bad right value.");
 		}
 
-		return Term;
+		switch (*BinOp->Op.c_str())
+		{
+			case '+' :
+				return LeftValue + RightValue;
+			case '-' :
+				return LeftValue - RightValue;
+			case '*' :
+				return LeftValue * RightValue;
+			case '/' :
+				return LeftValue / RightValue;
+			default :
+				throw std::runtime_error("Unsupported operator.");
+		}
 	}
 
 public:
-	AST(std::vector<Token>& InTokens) : Tokens(InTokens){};
-	std::shared_ptr<ASTTerm> Parse()
-	{
-		auto Result = ParseTerm();
-		if (Result)
-		{
-			return Result;
-		}
-		else
-		{
-			std::cout << "ERROR: Unable to parse syntax tree." << std::endl;
-			return nullptr;
-		}
-	}
-	int Eval(std::shared_ptr<ASTTerm> Term)
-	{
-		int Result;
-		int Left = std::stoi(Term->Left->Value);
-		if (Term->Op == "" || !Term->Right)
-		{
-			return Left;
-		}
-		std::string Op = Term->Op;
-		int			Right = Eval(Term->Right);
+	AST(std::vector<Token>& InTokens) : Tokens(InTokens) { CurrentToken = &Tokens[0]; }
 
-		switch (*Op.c_str())
-		{
-			case '+' :
-				return Left + Right;
-			case '-' :
-				return Left - Right;
-			case '*' :
-				return Left * Right;
-			case '/' : 
-				return Left / Right;
-			default :
-				std::string Msg = "Operator not supported: " + Op;
-				std::cout << Msg << std::endl;
-				throw(std::runtime_error(Msg));
-		}
+	ASTNode* Parse()
+	{
+		ASTNode* ProgramResult = ParseAdditiveExpr();
+		return ProgramResult;
 	}
+
+	int Eval(ASTNode* Node) { return EvalBinOp(Node); }
 };
