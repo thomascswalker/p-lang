@@ -71,7 +71,11 @@ class Lexer
 
 	char		GetCurrentChar() { return Source[Position]; }
 	std::string GetRemaining() { return Source.substr(Position); }
-	void		Advance() { Position++; }
+	const char	Advance()
+	{
+		Position++;
+		return GetCurrentChar();
+	}
 	bool		IsWhitespace()
 	{
 		std::string Slice = GetRemaining();
@@ -94,6 +98,7 @@ public:
 
 	Token Next()
 	{
+		
 		// Advance whitespace, new lines, and tabs
 		while (Position < Source.size() && IsWhitespace())
 		{
@@ -114,8 +119,7 @@ public:
 			while (IsDigit(C) || C == '.')
 			{
 				Number += C;
-				Advance();
-				C = GetCurrentChar();
+				C = Advance();
 			}
 
 			return Token{ "Number", Number, Line };
@@ -124,11 +128,10 @@ public:
 		else if (IsAscii(C))
 		{
 			std::string String;
-			while (IsAscii(C))
+			while (IsAscii(C) || C == '_')
 			{
 				String += C;
-				Advance();
-				C = GetCurrentChar();
+				C = Advance();
 			}
 
 			if (Contains(KEYWORDS, String))
@@ -137,6 +140,21 @@ public:
 			}
 
 			return Token{ "Name", String, Line };
+		}
+		// Strings
+		else if (C == '"' || C == '\'')
+		{
+			C = Advance(); // Skip first quotation
+			std::string String;
+
+			// Get all characters until the next quotation
+			while (C != '\"')
+			{
+				String += C;
+				C = Advance();
+			}
+			Advance(); // Skip last quotation
+			return Token{ "String", String, Line };
 		}
 		// End of file
 		else if (C == '\0')

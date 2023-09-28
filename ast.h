@@ -27,9 +27,58 @@ public:
 class ASTLiteral : public ASTNode
 {
 public:
-	int Value;
-	ASTLiteral(int InValue) : Value(InValue){};
-	virtual std::string ToString() const { return "Literal: " + std::to_string(Value); }
+	std::string							  Type = "Unknown";
+	std::variant<int, float, std::string> Value;
+
+	ASTLiteral(std::variant<int, float, std::string>& InValue) : Value(InValue)
+	{
+		if (IsInt())
+		{
+			Type = "Int";
+		}
+		else if (IsFloat())
+		{
+			Type = "Float";
+		}
+		else if (IsString())
+		{
+			Type = "String";
+		}
+	}
+	ASTLiteral(int InValue) : Value(InValue) { Type = "Int"; };
+	ASTLiteral(float InValue) : Value(InValue) { Type = "Float"; };
+	ASTLiteral(const std::string& InValue) : Value(InValue) { Type = "String"; };
+
+	bool IsInt() const { return std::holds_alternative<int>(Value); }
+	bool IsFloat() const { return std::holds_alternative<float>(Value); }
+	bool IsString() const { return std::holds_alternative<std::string>(Value); }
+
+	int			GetInt() const { return std::get<int>(Value); }
+	float		GetFloat() const { return std::get<float>(Value); }
+	std::string GetString() const { return std::get<std::string>(Value); }
+
+	virtual std::string ToString() const
+	{
+		std::string Result;
+		if (IsInt())
+		{
+			Result = std::to_string(GetInt());
+		}
+		else if (IsFloat())
+		{
+			Result = std::to_string(GetFloat());
+		}
+		else if (IsString())
+		{
+			Result = "\"" + GetString() + "\"";
+		}
+		else
+		{
+			Result = "Unknown";
+		}
+
+		return Result;
+	}
 };
 
 class ASTVariable : public ASTNode
@@ -99,9 +148,28 @@ private:
 	{
 		if (Expect("Number"))
 		{
-			int Value = StringToInt(CurrentToken->Content);
+			std::variant<int, float, std::string> Value;
+
+			// Parse float
+
+			if (CurrentToken->Content.find(".") != std::string::npos)
+			{
+				Value = std::stof(CurrentToken->Content);
+			}
+			// Parse int
+			else
+			{
+				Value = std::stoi(CurrentToken->Content);
+			}
 			Accept();
 			Nodes.push_back(new ASTLiteral(Value));
+			return Nodes.back();
+		}
+		else if (Expect("String"))
+		{
+			std::string String = CurrentToken->Content;
+			Accept();
+			Nodes.push_back(new ASTLiteral(String));
 			return Nodes.back();
 		}
 		else if (Expect("Name"))
@@ -173,7 +241,7 @@ private:
 		{
 			Expr = ParseAssignment();
 		}
-		else if (Expect("Number"))
+		else if (Expect("Number") || Expect("String"))
 		{
 			Expr = ParseAdditiveExpr();
 		}
@@ -220,7 +288,7 @@ private:
 		else if (dynamic_cast<ASTLiteral*>(BinOp->Left))
 		{
 			auto Literal = dynamic_cast<ASTLiteral*>(BinOp->Left);
-			LeftValue = Literal->Value;
+			LeftValue = Literal->GetInt();
 		}
 		else
 		{
@@ -236,7 +304,7 @@ private:
 		else if (dynamic_cast<ASTLiteral*>(BinOp->Right))
 		{
 			auto Literal = dynamic_cast<ASTLiteral*>(BinOp->Right);
-			RightValue = Literal->Value;
+			RightValue = Literal->GetInt();
 		}
 		else
 		{
