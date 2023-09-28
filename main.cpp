@@ -16,9 +16,9 @@ int Compile(std::string FileName)
 
 	AST	 Ast(Tokens);
 	auto Tree = Ast.Parse();
-	if (Tree)
+	for (const auto& E : Tree)
 	{
-		std::cout << Source << " = " << Ast.Eval(Tree) << std::endl;
+		std::cout << E->ToString() << std::endl;
 	}
 
 	return 0;

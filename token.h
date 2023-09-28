@@ -85,7 +85,7 @@ class Lexer
 		}
 		return false;
 	}
-	bool IsAscii(char C) { return C >= 'a' && C <= 'A' && C >= 'z' && C <= 'Z'; }
+	bool IsAscii(char C) { return C >= 'a' && C <= 'z' || C >= 'A' && C <= 'Z'; }
 	bool IsDigit(char C) { return C >= '0' && C <= '9'; }
 	bool IsSymbol(char C) { return Contains(TOKENS, C); }
 
