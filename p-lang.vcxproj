@@ -133,6 +133,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ast.h" />
+    <ClInclude Include="eval.h" />
     <ClInclude Include="token.h" />
   </ItemGroup>
   <ItemGroup>

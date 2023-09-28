@@ -146,12 +146,12 @@ private:
 
 	ASTNode* ParseFactorExpr()
 	{
+		// Parse numbers (floats and ints)
 		if (Expect("Number"))
 		{
 			std::variant<int, float, std::string> Value;
 
 			// Parse float
-
 			if (CurrentToken->Content.find(".") != std::string::npos)
 			{
 				Value = std::stof(CurrentToken->Content);
@@ -165,6 +165,7 @@ private:
 			Nodes.push_back(new ASTLiteral(Value));
 			return Nodes.back();
 		}
+		// Parse strings
 		else if (Expect("String"))
 		{
 			std::string String = CurrentToken->Content;
@@ -172,6 +173,7 @@ private:
 			Nodes.push_back(new ASTLiteral(String));
 			return Nodes.back();
 		}
+		// Parse names (Variables, functions, etc.)
 		else if (Expect("Name"))
 		{
 			std::string Name = CurrentToken->Content;
@@ -213,22 +215,26 @@ private:
 
 	ASTNode* ParseAssignment()
 	{
-		if (Expect("Type"))
+		if (!Expect("Type"))
 		{
-			std::string Type = CurrentToken->Content;
+			return nullptr;
+		}
+
+		std::string Type = CurrentToken->Content;
+		Accept();
+		if (!Expect("Name"))
+		{
+			return nullptr;
+		}
+
+		std::string Name = CurrentToken->Content;
+		Accept();
+		if (Expect("="))
+		{
 			Accept();
-			if (Expect("Name"))
-			{
-				std::string Name = CurrentToken->Content;
-				Accept();
-				if (Expect("="))
-				{
-					Accept();
-					ASTNode* Expr = ParseAdditiveExpr();
-					Nodes.push_back(new ASTAssignment(Type, Name, Expr));
-					return Nodes.back();
-				}
-			}
+			ASTNode* Expr = ParseAdditiveExpr();
+			Nodes.push_back(new ASTAssignment(Type, Name, Expr));
+			return Nodes.back();
 		}
 
 		return nullptr;
@@ -250,6 +256,8 @@ private:
 			throw std::runtime_error("Syntax error.");
 		}
 
+		// At this point, we should be at the end of the expression, and there should
+		// be a semicolon
 		if (Expect(";"))
 		{
 			Accept();
@@ -271,62 +279,6 @@ private:
 		return Expressions;
 	}
 
-	int EvalBinOp(ASTNode* Node)
-	{
-		ASTBinOp* BinOp = dynamic_cast<ASTBinOp*>(Node);
-		if (!BinOp)
-		{
-			throw std::runtime_error("Invalid node.");
-		}
-
-		// Evaluate the left value
-		int LeftValue;
-		if (dynamic_cast<ASTBinOp*>(BinOp->Left))
-		{
-			LeftValue = EvalBinOp(BinOp->Left);
-		}
-		else if (dynamic_cast<ASTLiteral*>(BinOp->Left))
-		{
-			auto Literal = dynamic_cast<ASTLiteral*>(BinOp->Left);
-			LeftValue = Literal->GetInt();
-		}
-		else
-		{
-			throw std::runtime_error("Bad left value.");
-		}
-
-		// Evaluate the right value
-		int RightValue;
-		if (dynamic_cast<ASTBinOp*>(BinOp->Right))
-		{
-			RightValue = EvalBinOp(BinOp->Right);
-		}
-		else if (dynamic_cast<ASTLiteral*>(BinOp->Right))
-		{
-			auto Literal = dynamic_cast<ASTLiteral*>(BinOp->Right);
-			RightValue = Literal->GetInt();
-		}
-		else
-		{
-			throw std::runtime_error("Bad right value.");
-		}
-
-		// Execute Left-Op-Right
-		switch (*BinOp->Op.c_str())
-		{
-			case '+' :
-				return LeftValue + RightValue;
-			case '-' :
-				return LeftValue - RightValue;
-			case '*' :
-				return LeftValue * RightValue;
-			case '/' :
-				return LeftValue / RightValue;
-			default :
-				throw std::runtime_error("Unsupported operator.");
-		}
-	}
-
 public:
 	AST(std::vector<Token>& InTokens) : Tokens(InTokens) { CurrentToken = &Tokens[0]; }
 
@@ -335,6 +287,4 @@ public:
 		std::vector<ASTNode*> ProgramResult = ParseProgram();
 		return ProgramResult;
 	}
-
-	int Eval(ASTNode* Node) { return EvalBinOp(Node); }
 };
