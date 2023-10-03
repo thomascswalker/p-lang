@@ -1,5 +1,5 @@
 #include <utility>
-#include "ast.h"
+#include "eval.h"
 
 int Compile(std::string FileName)
 {
@@ -12,16 +12,25 @@ int Compile(std::string FileName)
 	std::cout << "Source:\n" << Source << std::endl << std::endl;
 
 	// Tokenize the source code
-	Lexer Lex(Source);
+	Lexer			   Lex(Source);
 	std::vector<Token> Tokens = Lex.Tokenize();
 
 	// Construct a syntax tree from the tokens
-	AST	 Ast(Tokens);
-	auto Tree = Ast.Parse();
-	std::cout << "Tree:" << std::endl;
-	for (const auto& E : Tree)
+	AST			Ast(Tokens);
+	ASTProgram* Program = Ast.GetTree();
+	if (Program->Errors.size() == 0)
 	{
-		std::cout << E->ToString() << std::endl;
+		Evaluator* Evaluator;
+		std::cout << "Tree:\n"
+				  << "\x1B[32m" << Program->ToString() << "\033[0m" << std::endl;
+	}
+	else
+	{
+		for (const auto& E : Program->Errors)
+		{
+			std::cout << "\x1B[31m"
+					  << "ERROR: " << E.ToString() << "\033[0m" << std::endl;
+		}
 	}
 
 	return 0;

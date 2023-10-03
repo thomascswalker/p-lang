@@ -47,11 +47,12 @@ struct Token
 	std::string Type = "";
 	std::string Content = "";
 	int			Line = 0;
+	int			Column = 0;
 
 	// Constructors
 	Token(){};
-	Token(const std::string& InType, const std::string& InContent, int InLine)
-		: Type(InType), Content(InContent), Line(InLine){};
+	Token(const std::string& InType, const std::string& InContent, int InLine, int InColumn)
+		: Type(InType), Content(InContent), Line(InLine), Column(InColumn){};
 
 	// Methods
 	std::string ToString() const
@@ -68,12 +69,14 @@ class Lexer
 	std::string Source = "";
 	int			Position = 0;
 	int			Line = 0;
+	int			Column = 0;
 
 	char		GetCurrentChar() { return Source[Position]; }
 	std::string GetRemaining() { return Source.substr(Position); }
 	const char	Advance()
 	{
 		Position++;
+		Column++;
 		return GetCurrentChar();
 	}
 	bool		IsWhitespace()
@@ -84,6 +87,11 @@ class Lexer
 			if (Slice[0] == '\n')
 			{
 				Line += 1;
+				Column = 0;
+			}
+			else
+			{
+				Column++;
 			}
 			return true;
 		}
@@ -111,7 +119,7 @@ public:
 		if (IsSymbol(C))
 		{
 			Advance();
-			return Token{ std::string(1, C), std::string(1, C), Line };
+			return Token{ std::string(1, C), std::string(1, C), Line, Column };
 		}
 		else if (IsDigit(C))
 		{
@@ -122,7 +130,7 @@ public:
 				C = Advance();
 			}
 
-			return Token{ "Number", Number, Line };
+			return Token{ "Number", Number, Line, Column };
 		}
 		// Types, Names
 		else if (IsAscii(C))
@@ -136,10 +144,10 @@ public:
 
 			if (Contains(KEYWORDS, String))
 			{
-				return Token{ "Type", String, Line };
+				return Token{ "Type", String, Line, Column };
 			}
 
-			return Token{ "Name", String, Line };
+			return Token{ "Name", String, Line, Column };
 		}
 		// Strings
 		else if (C == '"' || C == '\'')
@@ -154,12 +162,12 @@ public:
 				C = Advance();
 			}
 			Advance(); // Skip last quotation
-			return Token{ "String", String, Line };
+			return Token{ "String", String, Line, Column };
 		}
 		// End of file
 		else if (C == '\0')
 		{
-			return Token{ "EOF", "\0", Line };
+			return Token{ "EOF", "\0", Line, Column };
 		}
 		else
 		{

@@ -61,5 +61,6 @@ class Evaluator
 
 public:
 	int Eval(ASTNode* Node) { return EvalBinOp(Node); }
-};
 
+	void EvalNode(ASTNode* Node) {}
+};

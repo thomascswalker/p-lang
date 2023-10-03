@@ -6,15 +6,15 @@
 
 #include "token.h"
 
-int StringToInt(const std::string& String)
+struct ASTError
 {
-	int Out = 0;
-	for (const auto& C : String)
-	{
-		Out = (Out * 10) + (C - 48);
-	}
-	return Out;
-}
+	std::string Msg;
+	int			Line;
+	int			Pos;
+
+	ASTError(const std::string& InMsg, int InLine, int InPos) : Msg(InMsg), Line(InLine), Pos(InPos){};
+	std::string ToString() const { return (Msg + " (line " + std::to_string(Line) + ", pos " + std::to_string(Pos) +")"); }
+};
 
 // Base AST Node class
 class ASTNode
@@ -111,12 +111,34 @@ public:
 
 	ASTAssignment(const std::string& InType, const std::string& InName, ASTNode* InRight)
 		: Type(InType), Name(InName), Right(InRight){};
-	virtual std::string ToString() const { return "Assign: (" + Type + ") " + Name + " = " + Right->ToString(); }
+	virtual std::string ToString() const
+	{
+		return "Assign: (" + Type + ") " + Name + " => {" + Right->ToString() + "}";
+	}
+};
+
+class ASTProgram : public ASTNode
+{
+public:
+	std::vector<ASTError> Errors;
+	std::vector<ASTNode*> Expressions;
+	ASTProgram(){};
+	virtual std::string ToString() const
+	{
+
+		std::string Out;
+		for (const auto& E : Expressions)
+		{
+			Out += E->ToString() + "\n";
+		};
+		return Out;
+	}
 };
 
 class AST
 {
 private:
+	ASTProgram*			  Program;
 	std::vector<Token>	  Tokens{};
 	std::vector<ASTNode*> Nodes{};
 	std::vector<ASTNode*> Expressions{};
@@ -253,7 +275,8 @@ private:
 		}
 		else
 		{
-			throw std::runtime_error("Syntax error.");
+			Error("Syntax Error");
+			return nullptr;
 		}
 
 		// At this point, we should be at the end of the expression, and there should
@@ -261,30 +284,43 @@ private:
 		if (Expect(";"))
 		{
 			Accept();
-			return Expr;
+			if (Expr)
+			{
+				return Expr;
+			}
+			else
+			{
+				return nullptr;
+			}
 		}
 		else
 		{
-			throw std::runtime_error("Missing semicolon.");
+			Error("Missing semicolon.");
+			return nullptr;
 		}
 	}
 
-	std::vector<ASTNode*> ParseProgram()
+	void ParseProgram()
 	{
+		Program = new ASTProgram();
 		while (CurrentToken != NULL && CurrentToken != &Tokens.back())
 		{
 			auto Expr = ParseExpr();
-			Expressions.push_back(Expr);
+			Program->Expressions.push_back(Expr);
 		}
-		return Expressions;
 	}
 
 public:
-	AST(std::vector<Token>& InTokens) : Tokens(InTokens) { CurrentToken = &Tokens[0]; }
-
-	std::vector<ASTNode*> Parse()
+	AST(std::vector<Token>& InTokens) : Tokens(InTokens)
 	{
-		std::vector<ASTNode*> ProgramResult = ParseProgram();
-		return ProgramResult;
+		CurrentToken = &Tokens[0];
+		ParseProgram();
 	}
+
+	void Error(const std::string& InMsg)
+	{
+		Program->Errors.push_back({ InMsg, CurrentToken->Line, CurrentToken->Column });
+	}
+
+	ASTProgram* GetTree() { return Program; }
 };
