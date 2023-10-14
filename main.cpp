@@ -1,5 +1,18 @@
 #include <utility>
-#include "eval.h"
+
+#include "ast.h"
+
+class ClassA
+{
+public:
+	virtual void Foo() = 0;
+};
+
+class ClassB : public ClassA
+{
+public:
+	void Foo() override{};
+};
 
 int Compile(std::string FileName)
 {
@@ -20,9 +33,27 @@ int Compile(std::string FileName)
 	ASTProgram* Program = Ast.GetTree();
 	if (Program->Errors.size() == 0)
 	{
-		Evaluator* Evaluator;
+		auto V = std::make_unique<Visitor>();
 		std::cout << "Tree:\n"
 				  << "\x1B[32m" << Program->ToString() << "\033[0m" << std::endl;
+
+		V->Visit(Program);
+
+		for (const auto& Var : V->Variables)
+		{
+			if (std::holds_alternative<int>(Var.second))
+			{
+				std::cout << Var.first << " : " << std::get<int>(Var.second) << std::endl;
+			}
+			else if (std::holds_alternative<float>(Var.second))
+			{
+				std::cout << Var.first << " : " << std::get<float>(Var.second) << std::endl;
+			}
+			else if (std::holds_alternative<std::string>(Var.second))
+			{
+				std::cout << Var.first << " : " << std::get<std::string>(Var.second) << std::endl;
+			}
+		}
 	}
 	else
 	{

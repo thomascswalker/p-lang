@@ -6,6 +6,8 @@
 #include <sstream>
 #include <map>
 
+#include "core.h"
+
 // Token Literals
 const std::vector<char> TOKENS{
 	'+', '-', '/', '*', '=', ';',
@@ -21,12 +23,6 @@ struct Token;
 class Lexer;
 
 typedef std::vector<std::shared_ptr<Token>> TokenArray;
-
-std::string ReadFile(std::string FileName)
-{
-	std::ifstream Stream(FileName.c_str());
-	return std::string(std::istreambuf_iterator<char>(Stream), std::istreambuf_iterator<char>());
-};
 
 template <typename T>
 bool Contains(const std::vector<T> Array, T Value)

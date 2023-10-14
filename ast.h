@@ -3,8 +3,66 @@
 #include <functional>
 #include <string>
 #include <variant>
+#include <typeinfo>
+#include <format>
 
 #include "token.h"
+#include "core.h"
+
+using Variant = std::variant<int, float, std::string>;
+
+void VariantAdd(const Variant& Left, const Variant& Right, Variant& Value);
+void VariantSub(const Variant& Left, const Variant& Right, Variant& Value);
+void VariantMul(const Variant& Left, const Variant& Right, Variant& Value);
+void VariantDiv(const Variant& Left, const Variant& Right, Variant& Value);
+
+class VisitorBase;
+class Visitor;
+
+class ASTNode;
+class ASTLiteral;
+class ASTVariable;
+class ASTBinOp;
+class ASTAssignment;
+class ASTProgram;
+
+class VisitorBase
+{
+public:
+	virtual void Visit(ASTLiteral* Node) = 0;
+	virtual void Visit(ASTVariable* Node) = 0;
+	virtual void Visit(ASTBinOp* Node) = 0;
+	virtual void Visit(ASTAssignment* Node) = 0;
+	virtual void Visit(ASTProgram* Node) = 0;
+};
+
+class Visitor : public VisitorBase
+{
+	void	Push(const Variant& V);
+	Variant Pop();
+	bool	IsVariable(const std::string& Name);
+
+public:
+	std::map<std::string, Variant> Variables;
+	std::vector<Variant>		   Stack;
+
+	Visitor(){};
+	Visitor(Visitor& Other)
+	{
+		Variables = Other.Variables;
+		Stack = Other.Stack;
+	}
+	Visitor(const Visitor& Other)
+	{
+		Variables = Other.Variables;
+		Stack = Other.Stack;
+	}
+	void Visit(ASTLiteral* Node) override;
+	void Visit(ASTVariable* Node) override;
+	void Visit(ASTBinOp* Node) override;
+	void Visit(ASTAssignment* Node) override;
+	void Visit(ASTProgram* Node) override;
+};
 
 struct ASTError
 {
@@ -13,7 +71,10 @@ struct ASTError
 	int			Pos;
 
 	ASTError(const std::string& InMsg, int InLine, int InPos) : Msg(InMsg), Line(InLine), Pos(InPos){};
-	std::string ToString() const { return (Msg + " (line " + std::to_string(Line) + ", pos " + std::to_string(Pos) +")"); }
+	std::string ToString() const
+	{
+		return (Msg + " (line " + std::to_string(Line) + ", pos " + std::to_string(Pos) + ")");
+	}
 };
 
 // Base AST Node class
@@ -21,16 +82,17 @@ class ASTNode
 {
 public:
 	virtual ~ASTNode(){};
+	virtual void		Accept(Visitor& V) = 0;
 	virtual std::string ToString() const = 0;
 };
 
 class ASTLiteral : public ASTNode
 {
 public:
-	std::string							  Type = "Unknown";
-	std::variant<int, float, std::string> Value;
+	std::string Type = "Unknown";
+	Variant		Value;
 
-	ASTLiteral(std::variant<int, float, std::string>& InValue) : Value(InValue)
+	ASTLiteral(Variant& InValue) : Value(InValue)
 	{
 		if (IsInt())
 		{
@@ -49,6 +111,8 @@ public:
 	ASTLiteral(float InValue) : Value(InValue) { Type = "Float"; };
 	ASTLiteral(const std::string& InValue) : Value(InValue) { Type = "String"; };
 
+	void Accept(Visitor& V) override { V.Visit(this); }
+
 	bool IsInt() const { return std::holds_alternative<int>(Value); }
 	bool IsFloat() const { return std::holds_alternative<float>(Value); }
 	bool IsString() const { return std::holds_alternative<std::string>(Value); }
@@ -56,6 +120,12 @@ public:
 	int			GetInt() const { return std::get<int>(Value); }
 	float		GetFloat() const { return std::get<float>(Value); }
 	std::string GetString() const { return std::get<std::string>(Value); }
+
+	template <typename T>
+	T GetValue() const
+	{
+		return std::get<T>(Value);
+	}
 
 	virtual std::string ToString() const
 	{
@@ -87,6 +157,7 @@ public:
 	std::string Name;
 	ASTVariable(const std::string& InName) : Name(InName){};
 	virtual std::string ToString() const { return "Variable: " + Name; }
+	void				Accept(Visitor& V) override { V.Visit(this); }
 };
 
 class ASTBinOp : public ASTNode
@@ -99,6 +170,36 @@ public:
 	virtual std::string ToString() const
 	{
 		return "\"BinOp\": {\"Left: " + Left->ToString() + ", \"Op: \"" + Op + "\", Right: " + Right->ToString() + "}";
+	}
+
+	void Accept(Visitor& V) override { V.Visit(this); }
+
+	template <typename T>
+	bool IsLeftType()
+	{
+		auto Literal = Cast<ASTLiteral>(Left);
+		if (Literal)
+		{
+			auto Type = typeid(T).name();
+			return Literal->Type.c_str() == Type;
+		}
+	}
+
+	template <typename T>
+	bool IsRightType()
+	{
+		auto Literal = Cast<ASTLiteral>(Right);
+		if (Literal)
+		{
+			auto Type = typeid(T).name();
+			return Literal->Type.c_str() == Type;
+		}
+	}
+
+	template <typename T>
+	bool AreBothTypes()
+	{
+		return IsLeftType<T>() == IsRightType<T>();
 	}
 };
 
@@ -115,6 +216,8 @@ public:
 	{
 		return "Assign: (" + Type + ") " + Name + " => {" + Right->ToString() + "}";
 	}
+
+	void Accept(Visitor& V) override { V.Visit(this); }
 };
 
 class ASTProgram : public ASTNode
@@ -133,6 +236,7 @@ public:
 		};
 		return Out;
 	}
+	void Accept(Visitor& V) override { V.Visit(this); }
 };
 
 class AST
@@ -171,7 +275,7 @@ private:
 		// Parse numbers (floats and ints)
 		if (Expect("Number"))
 		{
-			std::variant<int, float, std::string> Value;
+			Variant Value;
 
 			// Parse float
 			if (CurrentToken->Content.find(".") != std::string::npos)
