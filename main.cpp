@@ -22,7 +22,7 @@ int Compile(std::string FileName)
 		std::cout << "ERROR: File " << FileName << " not found." << std::endl;
 		return -1;
 	}
-	std::cout << "Source:\n" << Source << std::endl << std::endl;
+	std::cout << "Source:\n\"\"\"" << Source << "\n\"\"\"" << std::endl << std::endl;
 
 	// Tokenize the source code
 	Lexer			   Lex(Source);
@@ -39,6 +39,8 @@ int Compile(std::string FileName)
 
 		V->Visit(Program);
 
+		std::cout << "Variables:\n"
+				  << "\x1B[36m";
 		for (const auto& Var : V->Variables)
 		{
 			if (std::holds_alternative<int>(Var.second))
@@ -54,6 +56,7 @@ int Compile(std::string FileName)
 				std::cout << Var.first << " : " << std::get<std::string>(Var.second) << std::endl;
 			}
 		}
+		std::cout << "\x1B[33m";
 	}
 	else
 	{

@@ -74,7 +74,6 @@ bool Visitor::IsVariable(const std::string& Name)
 
 void Visitor::Visit(ASTLiteral* Node)
 {
-	std::cout << "Visiting ASTLiteral." << std::endl;
 	if (Node->IsInt())
 	{
 		Push(Node->GetInt());
@@ -93,7 +92,6 @@ void Visitor::Visit(ASTLiteral* Node)
 
 void Visitor::Visit(ASTVariable* Node)
 {
-	std::cout << "Visiting ASTVariable." << std::endl;
 
 	// If the variable is found, set the current Value to the variable's value
 	if (Variables.find(Node->Name) != Variables.end())
@@ -110,7 +108,6 @@ void Visitor::Visit(ASTVariable* Node)
 
 void Visitor::Visit(ASTBinOp* Node)
 {
-	std::cout << "Visiting ASTBinOp." << std::endl;
 
 	// Visit the left value
 	if (Cast<ASTLiteral>(Node->Left))
@@ -171,7 +168,6 @@ void Visitor::Visit(ASTBinOp* Node)
 
 void Visitor::Visit(ASTAssignment* Node)
 {
-	std::cout << "Visiting ASTAssignment." << std::endl;
 
 	// Check if the variable exists, and if it doesn't, make a new one
 	if (!IsVariable(Node->Name))
@@ -198,7 +194,6 @@ void Visitor::Visit(ASTAssignment* Node)
 
 void Visitor::Visit(ASTProgram* Node)
 {
-	std::cout << "Visiting ASTProgram." << std::endl;
 	for (const auto& E : Node->Expressions)
 	{
 		if (Cast<ASTBinOp>(E))

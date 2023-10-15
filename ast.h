@@ -173,34 +173,6 @@ public:
 	}
 
 	void Accept(Visitor& V) override { V.Visit(this); }
-
-	template <typename T>
-	bool IsLeftType()
-	{
-		auto Literal = Cast<ASTLiteral>(Left);
-		if (Literal)
-		{
-			auto Type = typeid(T).name();
-			return Literal->Type.c_str() == Type;
-		}
-	}
-
-	template <typename T>
-	bool IsRightType()
-	{
-		auto Literal = Cast<ASTLiteral>(Right);
-		if (Literal)
-		{
-			auto Type = typeid(T).name();
-			return Literal->Type.c_str() == Type;
-		}
-	}
-
-	template <typename T>
-	bool AreBothTypes()
-	{
-		return IsLeftType<T>() == IsRightType<T>();
-	}
 };
 
 class ASTAssignment : public ASTNode
@@ -339,7 +311,7 @@ private:
 		return Expr;
 	}
 
-	ASTNode* ParseAssignment()
+	ASTNode* ParseNewAssignment()
 	{
 		if (!Expect("Type"))
 		{
@@ -366,16 +338,55 @@ private:
 		return nullptr;
 	}
 
+	ASTNode* ParseAssignment()
+	{
+		if (!Expect("Name"))
+		{
+			return nullptr;
+		}
+
+		std::string Name = CurrentToken->Content;
+		Accept();
+		if (Expect("="))
+		{
+			Accept();
+			ASTNode* Expr = ParseAdditiveExpr();
+
+			std::string Type("None");
+			for (const auto& Node : Nodes)
+			{
+				auto A = Cast<ASTAssignment>(Node);
+				if (A)
+				{
+					if (A->Name == Name)
+					{
+						Type = A->Type;
+						break;
+					}
+				}
+			}
+
+			Nodes.push_back(new ASTAssignment(Type, Name, Expr));
+			return Nodes.back();
+		}
+
+		return nullptr;
+	}
+
 	ASTNode* ParseExpr()
 	{
 		ASTNode* Expr;
 		if (Expect("Type"))
 		{
-			Expr = ParseAssignment();
+			Expr = ParseNewAssignment();
 		}
 		else if (Expect("Number") || Expect("String"))
 		{
 			Expr = ParseAdditiveExpr();
+		}
+		else if (Expect("Name"))
+		{
+			Expr = ParseAssignment();
 		}
 		else
 		{

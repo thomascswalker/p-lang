@@ -1,4 +1,8 @@
 int a = 5;
 int b = 10;
 int c = a + b;
-int d = c + 15;
+a = c - 45;
+c = c + 30;
+
+string e = "test";
+e = e + "_concat";
