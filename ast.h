@@ -229,6 +229,7 @@ private:
 		}
 		else
 		{
+			auto Content = CurrentToken->Content;
 			CurrentToken++;
 		}
 	}
@@ -240,6 +241,20 @@ private:
 			return false;
 		}
 		return CurrentToken->Type == Type;
+	}
+
+	bool Peek(const std::string& Type, int Index = 0)
+	{
+		if (!CurrentToken)
+		{
+			return false;
+		}
+		Token* PeekToken = &Tokens.back() + Index;
+		if (!PeekToken)
+		{
+			return false;
+		}
+		return PeekToken->Type == Type;
 	}
 
 	ASTNode* ParseFactorExpr()
@@ -311,61 +326,35 @@ private:
 		return Expr;
 	}
 
-	ASTNode* ParseNewAssignment()
+	ASTNode* ParseEncapsulatedExpr()
 	{
-		if (!Expect("Type"))
-		{
-			return nullptr;
-		}
-
-		std::string Type = CurrentToken->Content;
-		Accept();
-		if (!Expect("Name"))
-		{
-			return nullptr;
-		}
-
-		std::string Name = CurrentToken->Content;
-		Accept();
-		if (Expect("="))
-		{
-			Accept();
-			ASTNode* Expr = ParseAdditiveExpr();
-			Nodes.push_back(new ASTAssignment(Type, Name, Expr));
-			return Nodes.back();
-		}
-
-		return nullptr;
+		ASTNode* Expr = ParseAdditiveExpr();
+		return Expr;
 	}
 
 	ASTNode* ParseAssignment()
 	{
-		if (!Expect("Name"))
+		std::string Type;
+		std::string Name;
+
+		// Handle new variable assignments
+		if (Expect("Type"))
 		{
-			return nullptr;
+			Type = CurrentToken->Content;
+			Accept();
+			if (!Expect("Name"))
+			{
+				return nullptr;
+			}
 		}
 
-		std::string Name = CurrentToken->Content;
+		// Handle existing variable assignment, or continue with a new assignment
+		Name = CurrentToken->Content;
 		Accept();
 		if (Expect("="))
 		{
 			Accept();
-			ASTNode* Expr = ParseAdditiveExpr();
-
-			std::string Type("None");
-			for (const auto& Node : Nodes)
-			{
-				auto A = Cast<ASTAssignment>(Node);
-				if (A)
-				{
-					if (A->Name == Name)
-					{
-						Type = A->Type;
-						break;
-					}
-				}
-			}
-
+			ASTNode* Expr = ParseEncapsulatedExpr();
 			Nodes.push_back(new ASTAssignment(Type, Name, Expr));
 			return Nodes.back();
 		}
@@ -373,20 +362,21 @@ private:
 		return nullptr;
 	}
 
-	ASTNode* ParseExpr()
+	ASTNode* ParsePrimaryExpr()
 	{
 		ASTNode* Expr;
-		if (Expect("Type"))
+
+		// int MyVar = 5;
+		// MyVar = 5;
+		if (Expect("Type") || Expect("Name"))
 		{
-			Expr = ParseNewAssignment();
+			Expr = ParseAssignment();
 		}
+		// 5 + 10;
+		// "Test" + "String";
 		else if (Expect("Number") || Expect("String"))
 		{
 			Expr = ParseAdditiveExpr();
-		}
-		else if (Expect("Name"))
-		{
-			Expr = ParseAssignment();
 		}
 		else
 		{
@@ -399,18 +389,11 @@ private:
 		if (Expect(";"))
 		{
 			Accept();
-			if (Expr)
-			{
-				return Expr;
-			}
-			else
-			{
-				return nullptr;
-			}
+			return Expr ? Expr : nullptr;
 		}
 		else
 		{
-			Error("Missing semicolon.");
+			Error(std::format("Missing semicolon, got '{}'", CurrentToken->Type));
 			return nullptr;
 		}
 	}
@@ -420,7 +403,7 @@ private:
 		Program = new ASTProgram();
 		while (CurrentToken != NULL && CurrentToken != &Tokens.back())
 		{
-			auto Expr = ParseExpr();
+			auto Expr = ParsePrimaryExpr();
 			Program->Expressions.push_back(Expr);
 		}
 	}
