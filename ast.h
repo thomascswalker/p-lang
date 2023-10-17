@@ -19,16 +19,6 @@ enum DataType
 };
 
 using LiteralVariant = std::variant<int, float, std::string>;
-struct Variable
-{
-	std::string Name;
-	void*		Value;
-	DataType	Type;
-
-	auto GetInt() { return *Cast<int>(Value); }
-	auto GetFloat() { return *Cast<float>(Value); }
-	auto GetString() { return *Cast<std::string>(Value); }
-};
 
 void VariantAdd(const LiteralVariant& Left, const LiteralVariant& Right, LiteralVariant& Value);
 void VariantSub(const LiteralVariant& Left, const LiteralVariant& Right, LiteralVariant& Value);
