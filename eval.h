@@ -185,7 +185,7 @@ public:
 
 	void EvalProgram()
 	{
-		for (const auto& Node : Program->Expressions)
+		for (const auto& Node : Program->Statements)
 		{
 			EvalNode(Node);
 		}

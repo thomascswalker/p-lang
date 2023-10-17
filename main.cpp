@@ -65,6 +65,7 @@ int Compile(std::string FileName)
 			std::cout << "\x1B[31m"
 					  << "ERROR: " << E.ToString() << "\033[0m" << std::endl;
 		}
+		return 1;
 	}
 
 	return 0;
@@ -72,5 +73,6 @@ int Compile(std::string FileName)
 
 int main()
 {
-	return Compile("hello.p");
+	auto Result = Compile("hello.p");
+	return Result;
 }

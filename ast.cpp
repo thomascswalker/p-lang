@@ -2,18 +2,18 @@
 
 void VariantAdd(const Variant& Left, const Variant& Right, Variant& Value)
 {
-	switch (Left.index())
-	{
-		case 0 :
-			Value = std::get<int>(Left) + std::get<int>(Right);
-			break;
-		case 1 :
-			Value = std::get<float>(Left) + std::get<float>(Right);
-			break;
-		case 2 :
-			Value = std::get<std::string>(Left) + std::get<std::string>(Right);
-			break;
-	}
+	Value = std::visit(
+		[](auto L, auto R) -> Variant {
+			if constexpr (!std::is_same_v<decltype(L), decltype(R)>)
+			{
+				throw;
+			}
+			else
+			{
+				return L + R;
+			}
+		},
+		Left, Right);
 }
 
 void VariantSub(const Variant& Left, const Variant& Right, Variant& Value)
@@ -86,18 +86,15 @@ void Visitor::Visit(ASTLiteral* Node)
 	{
 		Push(Node->GetString());
 	}
-
-	//Node->Accept(*this);
 }
 
 void Visitor::Visit(ASTVariable* Node)
 {
 
 	// If the variable is found, set the current Value to the variable's value
-	if (Variables.find(Node->Name) != Variables.end())
+	if (Variables.count(Node->Name))
 	{
 		Push(Variables[Node->Name]);
-		//Node->Accept(*this);
 	}
 	else
 	{
@@ -161,9 +158,6 @@ void Visitor::Visit(ASTBinOp* Node)
 
 	// Push the resulting value to the stack
 	Push(Result);
-
-	// Finally, accept this node
-	//Node->Accept(*this);
 }
 
 void Visitor::Visit(ASTAssignment* Node)
@@ -188,13 +182,11 @@ void Visitor::Visit(ASTAssignment* Node)
 		Visit(Cast<ASTBinOp>(Node->Right));
 	}
 	Variables[Node->Name] = Pop();
-
-	//Node->Accept(*this);
 }
 
 void Visitor::Visit(ASTProgram* Node)
 {
-	for (const auto& E : Node->Expressions)
+	for (const auto& E : Node->Statements)
 	{
 		if (Cast<ASTBinOp>(E))
 		{
@@ -209,5 +201,4 @@ void Visitor::Visit(ASTProgram* Node)
 			std::cout << "WARNING: Bad expression!" << std::endl;
 		}
 	}
-	//Node->Accept(*this);
 }
