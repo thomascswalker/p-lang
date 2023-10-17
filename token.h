@@ -9,9 +9,7 @@
 #include "core.h"
 
 // Token Literals
-const std::vector<char> TOKENS{
-	'+', '-', '/', '*', '=', ';',
-};
+const std::vector<char>		   TOKENS{ '+', '-', '/', '*', '=', ';', '(', ')', '[', ']', '{', '}' };
 const std::vector<std::string> KEYWORDS{
 	"int",
 	"float",
@@ -75,7 +73,7 @@ class Lexer
 		Column++;
 		return GetCurrentChar();
 	}
-	bool		IsWhitespace()
+	bool IsWhitespace()
 	{
 		std::string Slice = GetRemaining();
 		if (Slice[0] == ' ' || Slice[0] == '\t' || Slice[0] == '\n')
@@ -102,7 +100,7 @@ public:
 
 	Token Next()
 	{
-		
+
 		// Advance whitespace, new lines, and tabs
 		while (Position < Source.size() && IsWhitespace())
 		{
