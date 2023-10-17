@@ -2,18 +2,6 @@
 
 #include "ast.h"
 
-class ClassA
-{
-public:
-	virtual void Foo() = 0;
-};
-
-class ClassB : public ClassA
-{
-public:
-	void Foo() override{};
-};
-
 int Compile(std::string FileName)
 {
 	std::string Source = ReadFile(FileName);

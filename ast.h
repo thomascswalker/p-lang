@@ -9,12 +9,31 @@
 #include "token.h"
 #include "core.h"
 
-using Variant = std::variant<int, float, std::string>;
+enum DataType
+{
+	Int,
+	Float,
+	String,
+	Array,
+	Map
+};
 
-void VariantAdd(const Variant& Left, const Variant& Right, Variant& Value);
-void VariantSub(const Variant& Left, const Variant& Right, Variant& Value);
-void VariantMul(const Variant& Left, const Variant& Right, Variant& Value);
-void VariantDiv(const Variant& Left, const Variant& Right, Variant& Value);
+using LiteralVariant = std::variant<int, float, std::string>;
+struct Variable
+{
+	std::string Name;
+	void*		Value;
+	DataType	Type;
+
+	auto GetInt() { return *Cast<int>(Value); }
+	auto GetFloat() { return *Cast<float>(Value); }
+	auto GetString() { return *Cast<std::string>(Value); }
+};
+
+void VariantAdd(const LiteralVariant& Left, const LiteralVariant& Right, LiteralVariant& Value);
+void VariantSub(const LiteralVariant& Left, const LiteralVariant& Right, LiteralVariant& Value);
+void VariantMul(const LiteralVariant& Left, const LiteralVariant& Right, LiteralVariant& Value);
+void VariantDiv(const LiteralVariant& Left, const LiteralVariant& Right, LiteralVariant& Value);
 
 class VisitorBase;
 class Visitor;
@@ -38,13 +57,13 @@ public:
 
 class Visitor : public VisitorBase
 {
-	void	Push(const Variant& V);
-	Variant Pop();
-	bool	IsVariable(const std::string& Name);
+	void		   Push(const LiteralVariant& V);
+	LiteralVariant Pop();
+	bool		   IsVariable(const std::string& Name);
 
 public:
-	std::map<std::string, Variant> Variables;
-	std::vector<Variant>		   Stack;
+	std::map<std::string, LiteralVariant> Variables;
+	std::vector<LiteralVariant>			  Stack;
 
 	Visitor(){};
 	Visitor(Visitor& Other)
@@ -82,17 +101,22 @@ class ASTNode
 {
 public:
 	virtual ~ASTNode(){};
-	virtual void		Accept(Visitor& V) = 0;
+	virtual void Accept(Visitor& V) = 0;
+
+	/// <summary>
+	/// Converts this node to a formatted string.
+	/// </summary>
+	/// <returns>This node formatted as a string.</returns>
 	virtual std::string ToString() const = 0;
 };
 
 class ASTLiteral : public ASTNode
 {
 public:
-	std::string Type = "Unknown";
-	Variant		Value;
+	std::string	   Type = "Unknown";
+	LiteralVariant Value;
 
-	ASTLiteral(Variant& InValue) : Value(InValue)
+	ASTLiteral(LiteralVariant& InValue) : Value(InValue)
 	{
 		if (IsInt())
 		{
@@ -211,6 +235,9 @@ public:
 	void Accept(Visitor& V) override { V.Visit(this); }
 };
 
+/// <summary>
+/// Parses a list of tokens into an Abstract Syntax Tree (AST).
+/// </summary>
 class AST
 {
 private:
@@ -221,249 +248,56 @@ private:
 	Token*				  CurrentToken;
 	int					  Position;
 
-	void Accept()
-	{
-		Token* End = &Tokens.back();
-		if (CurrentToken == End)
-		{
-			CurrentToken = nullptr;
-		}
-		else
-		{
-			if (CurrentToken)
-			{
-				std::cout << std::format("Accept(): {}", CurrentToken->ToString()) << std::endl;
-			}
-			CurrentToken++;
-			Position++;
-		}
-	}
+	/// <summary>
+	/// Accept the current token. This will increment the <paramref name="CurrentToken"/> pointer as well as increment
+	/// the <paramref name="Position"/> value.
+	/// </summary>
+	void Accept();
 
-	bool Expect(const std::string& Type, int Index = 0)
-	{
-		// Make sure the index is valid
-		if (Position + Index > Tokens.max_size())
-		{
-			std::cout << "WARNING: Outside token bounds." << std::endl;
-			return false;
-		}
+	/// <summary>
+	/// Expect the specified <paramref name="Type"/> at the specified <paramref name="Offset"/>, relative to the current
+	/// position.
+	/// </summary>
+	/// <param name="Type">The type to check for.</param>
+	/// <param name="Offset">The offset position.</param>
+	/// <returns>Whether the type is found.</returns>
+	bool Expect(const std::string& Type, int Offset = 0);
 
-		std::cout << std::format("\tExpect {} at {}", Type, Position + Index) << std::endl;
-		return Tokens[Position + Index].Type == Type;
-	}
+	/// <summary>
+	/// Expect the given <paramref name="Types"/> in sequential order at the current position.
+	/// </summary>
+	/// <param name="Types">The types to check for.</param>
+	/// <returns>Whether the types are all found.</returns>
+	bool Expect(const std::initializer_list<std::string>& Types);
 
-	bool Expect(const std::initializer_list<std::string>& Types)
-	{
-		for (auto [I, T] : Enumerate(Types))
-		{
-			if (!Expect(T, (int)I))
-			{
-				return false;
-			}
-		}
-		return true;
-	}
-
-	ASTNode* ParseFactorExpr()
-	{
-		std::cout << "Parsing Factor" << std::endl;
-		// Parse numbers (floats and ints)
-		if (Expect("Number"))
-		{
-			std::cout << "Parsing Number" << std::endl;
-			Variant Value;
-
-			// Parse float
-			if (CurrentToken->Content.find(".") != std::string::npos)
-			{
-				Value = std::stof(CurrentToken->Content);
-			}
-			// Parse int
-			else
-			{
-				Value = std::stoi(CurrentToken->Content);
-			}
-			Accept(); // Consume number
-			Nodes.push_back(new ASTLiteral(Value));
-			return Nodes.back();
-		}
-		// Parse strings
-		else if (Expect("String"))
-		{
-			std::string String = CurrentToken->Content;
-			Accept(); // Consume string
-			Nodes.push_back(new ASTLiteral(String));
-			return Nodes.back();
-		}
-		// Parse names (Variables, functions, etc.)
-		else if (Expect("Name"))
-		{
-			std::cout << "Parsing Name" << std::endl;
-			std::string Name = CurrentToken->Content;
-			Accept(); // Consume name
-			Nodes.push_back(new ASTVariable(Name));
-			return Nodes.back();
-		}
-		else if (Expect("("))
-		{
-			return ParseEncapsulatedExpr();
-		}
-		else
-		{
-			return nullptr;
-		}
-	}
-
-	ASTNode* ParseEncapsulatedExpr()
-	{
-		std::cout << "Parsing Encapsulated" << std::endl;
-		Accept(); // Consume '('
-		ASTNode* Expr = ParseExpr();
-		if (!Expect(")"))
-		{
-			Error("Missing ')'.");
-			return nullptr;
-		}
-		Accept(); // Consume ')'
-		return Expr;
-	}
-
-	ASTNode* ParseMultiplicativeExpr()
-	{
-		std::cout << "Parsing Mul/Div" << std::endl;
-		ASTNode* Expr = ParseFactorExpr();
-		while (Expect("*") || Expect("/"))
-		{
-			std::string Op = CurrentToken->Content;
-			Accept(); // Consume '*' or '/'
-			Nodes.push_back(new ASTBinOp(Expr, ParseFactorExpr(), Op));
-			Expr = Nodes.back();
-		}
-		return Expr;
-	}
-
-	ASTNode* ParseAdditiveExpr()
-	{
-		std::cout << "Parsing Add/Sub" << std::endl;
-		ASTNode* Expr = ParseMultiplicativeExpr();
-		while (Expect("+") || Expect("-"))
-		{
-			std::string Op = CurrentToken->Content;
-			Accept(); // Consume '+' or '-'
-			Nodes.push_back(new ASTBinOp(Expr, ParseMultiplicativeExpr(), Op));
-			Expr = Nodes.back();
-		}
-		return Expr;
-	}
-
-	ASTNode* ParseAssignment()
-	{
-		std::cout << "Parsing Assignment" << std::endl;
-		std::string Type;
-		std::string Name;
-
-		// Handle new variable assignments
-		if (Expect("Type"))
-		{
-			Type = CurrentToken->Content; // Get the type
-			Accept();					  // Consume type
-		}
-
-		if (Expect("Name"))
-		{
-			// Handle existing variable assignment, or continue with a new assignment
-			Name = CurrentToken->Content; // Get the name
-			Accept();					  // Consume name
-			if (Expect("="))
-			{
-				Accept(); // Consume '='
-				ASTNode* Stmt = ParseStatement();
-				Nodes.push_back(new ASTAssignment(Type, Name, Stmt));
-				return Nodes.back();
-			}
-		}
-
-		return nullptr;
-	}
-
-	ASTNode* ParseExpr()
-	{
-		std::cout << "Parsing Expression" << std::endl;
-		// int MyVar = ...;
-		if (Expect({ "Type", "Name", "=" }))
-		{
-			return ParseAssignment();
-		}
-		// MyVar = ...;
-		else if (Expect({ "Name", "=" }))
-		{
-			return ParseAssignment();
-		}
-		// 5 + ...;
-		// "Test" + ...;
-		// MyVar + ...;
-		else if (Expect("Number") || Expect("String") || Expect("Name"))
-		{
-			return ParseAdditiveExpr();
-		}
-		else
-		{
-			Error("Syntax Error");
-			return nullptr;
-		}
-	}
-
-	ASTNode* ParseStatement()
-	{
-		std::cout << "Parsing Statement" << std::endl;
-		ASTNode* Expr;
-
-		if (Expect("("))
-		{
-			Expr = ParseEncapsulatedExpr();
-		}
-		else
-		{
-			Expr = ParseExpr();
-		}
-
-		return Expr;
-	}
-
-	void ParseProgram()
-	{
-		Program = new ASTProgram();
-		while (CurrentToken != NULL && CurrentToken != &Tokens.back())
-		{
-			auto Stmt = ParseStatement();
-			if (!Stmt)
-			{
-				break;
-			}
-			Program->Statements.push_back(Stmt);
-			if (Expect(";"))
-			{
-				Accept();
-			}
-			else
-			{
-				Error(std::format("Missing semicolon, got '{}'", CurrentToken->Type));
-				break;
-			}
-		}
-	}
+	ASTNode* ParseFactorExpr();
+	ASTNode* ParseEncapsulatedExpr();
+	ASTNode* ParseMultiplicativeExpr();
+	ASTNode* ParseAdditiveExpr();
+	ASTNode* ParseAssignment();
+	ASTNode* ParseExpression();
+	void	 ParseProgram();
 
 public:
 	AST(std::vector<Token>& InTokens) : Tokens(InTokens)
 	{
 		CurrentToken = &Tokens[0];
+		Position = 0;
 		ParseProgram();
 	}
 
+	/// <summary>
+	/// Logs an error with the specified <paramref name="InMsg"/> at the current line and column.
+	/// </summary>
+	/// <param name="InMsg">The error message to display.</param>
 	void Error(const std::string& InMsg)
 	{
 		Program->Errors.push_back({ InMsg, CurrentToken->Line, CurrentToken->Column });
 	}
 
+	/// <summary>
+	/// Get the parsed node tree.
+	/// </summary>
+	/// <returns>The root AST node.</returns>
 	ASTProgram* GetTree() { return Program; }
 };
