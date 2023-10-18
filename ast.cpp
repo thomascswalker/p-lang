@@ -82,17 +82,17 @@ bool Visitor::IsVariable(const std::string& Name)
 
 void Visitor::Visit(ASTLiteral* Node)
 {
-	if (Node->IsInt())
+	switch (Node->Value.index())
 	{
-		Push(Node->GetInt());
-	}
-	else if (Node->IsFloat())
-	{
-		Push(Node->GetFloat());
-	}
-	else if (Node->IsString())
-	{
-		Push(Node->GetString());
+		case 0 :
+			Push(Node->GetInt());
+			break;
+		case 1 :
+			Push(Node->GetFloat());
+			break;
+		case 2 :
+			Push(Node->GetString());
+			break;
 	}
 }
 
@@ -146,6 +146,18 @@ void Visitor::Visit(ASTBinOp* Node)
 	// After visiting the right value, pop it off the stack and store it here
 	auto Right = Pop();
 
+	// If either values are floats, cast the other to a float
+	if (Left.index() == 0 && Right.index() == 1)
+	{
+		auto LValue = std::get<int>(Left);
+		Left = Literal((float)LValue);
+	}
+	else if (Left.index() == 1 && Right.index() == 0)
+	{
+		auto RValue = std::get<int>(Right);
+		Right = Literal((float)RValue);
+	}
+
 	// Execute the operator on the left and right value
 	Literal Result;
 	switch (*Node->Op.c_str())
@@ -189,6 +201,10 @@ void Visitor::Visit(ASTAssignment* Node)
 	else if (Cast<ASTBinOp>(Node->Right))
 	{
 		Visit(Cast<ASTBinOp>(Node->Right));
+	}
+	else
+	{
+		std::cout << "WARNING: Bad assignment!" << std::endl;
 	}
 
 	Variables[Node->Name] = Pop();

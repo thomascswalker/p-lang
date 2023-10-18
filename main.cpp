@@ -7,7 +7,8 @@ int Compile(std::string FileName)
 	std::string Source = ReadFile(FileName);
 	if (Source == "")
 	{
-		std::cout << "ERROR: File " << FileName << " not found." << std::endl;
+		std::cout << "\x1B[31m"
+				  << "ERROR: File not found: " << FileName << "\033[0m" << std::endl;
 		return -1;
 	}
 	std::cout << "Source:\n\"\"\"" << Source << "\n\"\"\"" << std::endl << std::endl;
@@ -22,8 +23,8 @@ int Compile(std::string FileName)
 	if (Program->Errors.size() == 0)
 	{
 		auto V = std::make_unique<Visitor>();
-		std::cout << "Tree:\n"
-				  << "\x1B[32m" << Program->ToString() << "\033[0m" << std::endl;
+		// std::cout << "Tree:\n"
+		//		  << "\x1B[32m" << Program->ToString() << "\033[0m" << std::endl;
 
 		V->Visit(Program);
 
@@ -33,15 +34,15 @@ int Compile(std::string FileName)
 		{
 			if (std::holds_alternative<int>(Var.second))
 			{
-				std::cout << Var.first << " : " << std::get<int>(Var.second) << std::endl;
+				std::cout << Var.first << " : " << std::to_string(std::get<int>(Var.second)) << std::endl;
 			}
 			else if (std::holds_alternative<float>(Var.second))
 			{
-				std::cout << Var.first << " : " << std::get<float>(Var.second) << std::endl;
+				std::cout << Var.first << " : " << std::to_string(std::get<float>(Var.second)) << std::endl;
 			}
 			else if (std::holds_alternative<std::string>(Var.second))
 			{
-				std::cout << Var.first << " : " << std::get<std::string>(Var.second) << std::endl;
+				std::cout << Var.first << " : \"" << std::get<std::string>(Var.second) << "\"" << std::endl;
 			}
 		}
 		std::cout << "\x1B[33m";
@@ -61,6 +62,6 @@ int Compile(std::string FileName)
 
 int main()
 {
-	auto Result = Compile("hello.p");
+	auto Result = Compile("example.p");
 	return Result;
 }
