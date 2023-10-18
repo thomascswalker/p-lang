@@ -21,15 +21,15 @@
     <ClCompile Include="ast.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="core.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="token.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ast.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="eval.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="core.h">

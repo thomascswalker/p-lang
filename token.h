@@ -22,19 +22,6 @@ class Lexer;
 
 typedef std::vector<std::shared_ptr<Token>> TokenArray;
 
-template <typename T>
-bool Contains(const std::vector<T> Array, T Value)
-{
-	for (auto A : Array)
-	{
-		if (A == Value)
-		{
-			return true;
-		}
-	}
-	return false;
-}
-
 struct Token
 {
 	// Properties
@@ -100,7 +87,6 @@ public:
 
 	Token Next()
 	{
-
 		// Advance whitespace, new lines, and tabs
 		while (Position < Source.size() && IsWhitespace())
 		{

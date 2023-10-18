@@ -9,21 +9,12 @@
 #include "token.h"
 #include "core.h"
 
-enum DataType
-{
-	Int,
-	Float,
-	String,
-	Array,
-	Map
-};
+using Literal = std::variant<int, float, std::string>;
 
-using LiteralVariant = std::variant<int, float, std::string>;
-
-void VariantAdd(const LiteralVariant& Left, const LiteralVariant& Right, LiteralVariant& Value);
-void VariantSub(const LiteralVariant& Left, const LiteralVariant& Right, LiteralVariant& Value);
-void VariantMul(const LiteralVariant& Left, const LiteralVariant& Right, LiteralVariant& Value);
-void VariantDiv(const LiteralVariant& Left, const LiteralVariant& Right, LiteralVariant& Value);
+void VariantAdd(const Literal& Left, const Literal& Right, Literal& Value);
+void VariantSub(const Literal& Left, const Literal& Right, Literal& Value);
+void VariantMul(const Literal& Left, const Literal& Right, Literal& Value);
+void VariantDiv(const Literal& Left, const Literal& Right, Literal& Value);
 
 class VisitorBase;
 class Visitor;
@@ -47,13 +38,13 @@ public:
 
 class Visitor : public VisitorBase
 {
-	void		   Push(const LiteralVariant& V);
-	LiteralVariant Pop();
-	bool		   IsVariable(const std::string& Name);
+	void	Push(const Literal& V);
+	Literal Pop();
+	bool	IsVariable(const std::string& Name);
 
 public:
-	std::map<std::string, LiteralVariant> Variables;
-	std::vector<LiteralVariant>			  Stack;
+	std::map<std::string, Literal> Variables;
+	std::vector<Literal>		   Stack;
 
 	Visitor(){};
 	Visitor(Visitor& Other)
@@ -103,10 +94,10 @@ public:
 class ASTLiteral : public ASTNode
 {
 public:
-	std::string	   Type = "Unknown";
-	LiteralVariant Value;
+	std::string Type = "Unknown";
+	Literal		Value;
 
-	ASTLiteral(LiteralVariant& InValue) : Value(InValue)
+	ASTLiteral(Literal& InValue) : Value(InValue)
 	{
 		if (IsInt())
 		{

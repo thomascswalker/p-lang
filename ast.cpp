@@ -4,10 +4,10 @@
 // Variants //
 //////////////
 
-void VariantAdd(const LiteralVariant& Left, const LiteralVariant& Right, LiteralVariant& Value)
+void VariantAdd(const Literal& Left, const Literal& Right, Literal& Value)
 {
 	Value = std::visit(
-		[](auto L, auto R) -> LiteralVariant {
+		[](auto L, auto R) -> Literal {
 			if constexpr (!std::is_same_v<decltype(L), decltype(R)>)
 			{
 				throw;
@@ -20,7 +20,7 @@ void VariantAdd(const LiteralVariant& Left, const LiteralVariant& Right, Literal
 		Left, Right);
 }
 
-void VariantSub(const LiteralVariant& Left, const LiteralVariant& Right, LiteralVariant& Value)
+void VariantSub(const Literal& Left, const Literal& Right, Literal& Value)
 {
 	switch (Left.index())
 	{
@@ -33,7 +33,7 @@ void VariantSub(const LiteralVariant& Left, const LiteralVariant& Right, Literal
 	}
 }
 
-void VariantMul(const LiteralVariant& Left, const LiteralVariant& Right, LiteralVariant& Value)
+void VariantMul(const Literal& Left, const Literal& Right, Literal& Value)
 {
 	switch (Left.index())
 	{
@@ -46,7 +46,7 @@ void VariantMul(const LiteralVariant& Left, const LiteralVariant& Right, Literal
 	}
 }
 
-void VariantDiv(const LiteralVariant& Left, const LiteralVariant& Right, LiteralVariant& Value)
+void VariantDiv(const Literal& Left, const Literal& Right, Literal& Value)
 {
 	switch (Left.index())
 	{
@@ -63,14 +63,14 @@ void VariantDiv(const LiteralVariant& Left, const LiteralVariant& Right, Literal
 // Visitors //
 //////////////
 
-void Visitor::Push(const LiteralVariant& V)
+void Visitor::Push(const Literal& V)
 {
 	Stack.push_back(V);
 }
 
-LiteralVariant Visitor::Pop()
+Literal Visitor::Pop()
 {
-	LiteralVariant Value = Stack.back();
+	Literal Value = Stack.back();
 	Stack.pop_back();
 	return Value;
 }
@@ -147,7 +147,7 @@ void Visitor::Visit(ASTBinOp* Node)
 	auto Right = Pop();
 
 	// Execute the operator on the left and right value
-	LiteralVariant Result;
+	Literal Result;
 	switch (*Node->Op.c_str())
 	{
 		case '+' :
@@ -264,7 +264,7 @@ ASTNode* AST::ParseFactorExpr()
 	// Parse numbers (floats and ints)
 	if (Expect("Number"))
 	{
-		LiteralVariant Value;
+		Literal Value;
 
 		// Parse float
 		if (CurrentToken->Content.find(".") != std::string::npos)
