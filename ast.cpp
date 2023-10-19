@@ -244,6 +244,11 @@ void Visitor::Visit(ASTConditional* Node)
 		auto Body = Cast<ASTBody>(Node->TrueBody);
 		Visit(Body);
 	}
+	else
+	{
+		auto Body = Cast<ASTBody>(Node->FalseBody);
+		Visit(Body);
+	}
 }
 
 void Visitor::Visit(ASTBody* Node)
@@ -531,13 +536,28 @@ ASTNode* AST::ParseConditional()
 		return nullptr;
 	}
 
-	auto Body = ParseCurlyExpr();
-	if (!Body)
+	Debug("Parsing 'if' block.");
+	auto TrueBody = ParseCurlyExpr();
+	if (!TrueBody)
 	{
-		Error("Unable to parse body of 'if'.");
+		Error("Unable to parse true body of 'if'.");
 		return nullptr;
 	}
-	Nodes.push_back(new ASTConditional(Cond, Body));
+
+	ASTNode* FalseBody = nullptr;
+	if (Expect("else"))
+	{
+		Accept(); // Consume 'else'
+		Debug("Parsing 'else' block.");
+		FalseBody = ParseCurlyExpr();
+		if (!FalseBody)
+		{
+			Error("Unable to parse false body of 'else'.");
+			return nullptr;
+		}
+	}
+
+	Nodes.push_back(new ASTConditional(Cond, TrueBody, FalseBody));
 
 	Debug("Exiting parse cond.");
 
