@@ -311,7 +311,14 @@ public:
 	/// <param name="InMsg">The error message to display.</param>
 	void Error(const std::string& InMsg)
 	{
-		Program->Errors.push_back({ InMsg, CurrentToken->Line, CurrentToken->Column });
+		if (CurrentToken != nullptr)
+		{
+			Program->Errors.push_back({ InMsg, CurrentToken->Line, CurrentToken->Column });
+		}
+		else
+		{
+			Program->Errors.push_back({ InMsg, -1, -1 });
+		}
 	}
 
 	/// <summary>
