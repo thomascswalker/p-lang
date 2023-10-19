@@ -7,9 +7,9 @@
 #include <format>
 
 #include "token.h"
-#include "core.h"
 
-using Literal = std::variant<int, float, std::string>;
+using namespace Core;
+using Literal = std::variant<int, float, std::string, bool>;
 
 void VariantAdd(const Literal& Left, const Literal& Right, Literal& Value);
 void VariantSub(const Literal& Left, const Literal& Right, Literal& Value);
@@ -24,7 +24,8 @@ class ASTLiteral;
 class ASTVariable;
 class ASTBinOp;
 class ASTAssignment;
-class ASTProgram;
+class ASTConditional;
+class ASTBody;
 
 class VisitorBase
 {
@@ -33,7 +34,8 @@ public:
 	virtual void Visit(ASTVariable* Node) = 0;
 	virtual void Visit(ASTBinOp* Node) = 0;
 	virtual void Visit(ASTAssignment* Node) = 0;
-	virtual void Visit(ASTProgram* Node) = 0;
+	virtual void Visit(ASTConditional* Node) = 0;
+	virtual void Visit(ASTBody* Node) = 0;
 };
 
 class Visitor : public VisitorBase
@@ -61,7 +63,8 @@ public:
 	void Visit(ASTVariable* Node) override;
 	void Visit(ASTBinOp* Node) override;
 	void Visit(ASTAssignment* Node) override;
-	void Visit(ASTProgram* Node) override;
+	void Visit(ASTConditional* Node) override;
+	void Visit(ASTBody* Node) override;
 };
 
 struct ASTError
@@ -111,20 +114,27 @@ public:
 		{
 			Type = "String";
 		}
+		else if (IsBool())
+		{
+			Type = "Bool";
+		}
 	}
 	ASTLiteral(int InValue) : Value(InValue) { Type = "Int"; };
 	ASTLiteral(float InValue) : Value(InValue) { Type = "Float"; };
 	ASTLiteral(const std::string& InValue) : Value(InValue) { Type = "String"; };
+	ASTLiteral(const bool InValue) : Value(InValue) { Type = "Bool"; };
 
 	void Accept(Visitor& V) override { V.Visit(this); }
 
 	bool IsInt() const { return std::holds_alternative<int>(Value); }
 	bool IsFloat() const { return std::holds_alternative<float>(Value); }
 	bool IsString() const { return std::holds_alternative<std::string>(Value); }
+	bool IsBool() const { return std::holds_alternative<bool>(Value); }
 
 	int			GetInt() const { return std::get<int>(Value); }
 	float		GetFloat() const { return std::get<float>(Value); }
 	std::string GetString() const { return std::get<std::string>(Value); }
+	bool		GetBool() const { return std::get<bool>(Value); }
 
 	template <typename T>
 	T GetValue() const
@@ -146,6 +156,10 @@ public:
 		else if (IsString())
 		{
 			Result = "\"" + GetString() + "\"";
+		}
+		else if (IsBool())
+		{
+			Result = GetBool() ? "true" : "false";
 		}
 		else
 		{
@@ -197,17 +211,30 @@ public:
 	void Accept(Visitor& V) override { V.Visit(this); }
 };
 
-class ASTProgram : public ASTNode
+class ASTConditional : public ASTNode
+{
+public:
+	ASTNode* Cond;
+	ASTNode* TrueBody;
+	ASTNode* FalseBody;
+
+	ASTConditional(ASTNode* InCond, ASTNode* InTrueBody, ASTNode* InFalseBody = nullptr)
+		: Cond(InCond), TrueBody(InTrueBody), FalseBody(InFalseBody){};
+	virtual std::string ToString() const { return "Conditional"; }
+	void				Accept(Visitor& V) override { V.Visit(this); }
+};
+
+class ASTBody : public ASTNode
 {
 public:
 	std::vector<ASTError> Errors;
-	std::vector<ASTNode*> Statements;
-	ASTProgram(){};
+	std::vector<ASTNode*> Expressions;
+	ASTBody(std::vector<ASTNode*> InBody = {}) : Expressions(InBody){};
 	virtual std::string ToString() const
 	{
 
 		std::string Out;
-		for (const auto& E : Statements)
+		for (const auto& E : Expressions)
 		{
 			Out += E->ToString() + "\n";
 		};
@@ -222,12 +249,21 @@ public:
 class AST
 {
 private:
-	ASTProgram*			  Program;
+	ASTBody*			  Program;
 	std::vector<Token>	  Tokens{};
 	std::vector<ASTNode*> Nodes{};
 	std::vector<ASTNode*> Expressions{};
 	Token*				  CurrentToken;
 	int					  Position;
+
+	void PrintCurrentToken()
+	{
+		if (CurrentToken == NULL)
+		{
+			return;
+		}
+		std::cout << (std::format("{}", CurrentToken->Content)) << std::endl;
+	}
 
 	/// <summary>
 	/// Accept the current token. This will increment the <paramref name="CurrentToken"/> pointer as well as increment
@@ -251,20 +287,22 @@ private:
 	/// <returns>Whether the types are all found.</returns>
 	bool Expect(const std::initializer_list<std::string>& Types);
 
-	ASTNode* ParseFactorExpr();
-	ASTNode* ParseEncapsulatedExpr();
+	ASTNode* ParseLiteralExpr();
+	ASTNode* ParseParenExpr();
+	ASTNode* ParseCurlyExpr();
 	ASTNode* ParseMultiplicativeExpr();
 	ASTNode* ParseAdditiveExpr();
 	ASTNode* ParseAssignment();
+	ASTNode* ParseConditional();
 	ASTNode* ParseExpression();
-	void	 ParseProgram();
+	void	 ParseBody();
 
 public:
 	AST(std::vector<Token>& InTokens) : Tokens(InTokens)
 	{
 		CurrentToken = &Tokens[0];
 		Position = 0;
-		ParseProgram();
+		ParseBody();
 	}
 
 	/// <summary>
@@ -280,5 +318,5 @@ public:
 	/// Get the parsed node tree.
 	/// </summary>
 	/// <returns>The root AST node.</returns>
-	ASTProgram* GetTree() { return Program; }
+	ASTBody* GetTree() { return Program; }
 };
