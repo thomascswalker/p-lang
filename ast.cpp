@@ -303,14 +303,14 @@ void AST::Accept()
 
 bool AST::Expect(const std::string& Type, int Offset)
 {
-	Debug(std::format("Expect(): {} at {}: {}", Type, Position + Offset, Tokens[Position + Offset].ToString()));
-
 	// Make sure the offset is valid
-	if (Position + Offset > Tokens.max_size())
+	if (Position + Offset > Tokens.size())
 	{
 		Error("WARNING: Outside token bounds.");
 		return false;
 	}
+
+	Debug(std::format("Expect(): {} at {}: {}", Type, Position + Offset, Tokens[Position + Offset].ToString()));
 
 	return Tokens[Position + Offset].Type == Type;
 }
@@ -555,6 +555,12 @@ ASTNode* AST::ParseConditional()
 			Error("Unable to parse false body of 'else'.");
 			return nullptr;
 		}
+	}
+
+	if (!Expect(";"))
+	{
+		Error("Missing semicolon at end of conditional statement.");
+		return nullptr;
 	}
 
 	Nodes.push_back(new ASTConditional(Cond, TrueBody, FalseBody));
