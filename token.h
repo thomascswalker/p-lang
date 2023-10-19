@@ -8,13 +8,17 @@
 
 #include "core.h"
 
+using namespace Core;
+
 // Token Literals
-const std::vector<char>		   TOKENS{ '+', '-', '/', '*', '=', ';', '(', ')', '[', ']', '{', '}' };
-const std::vector<std::string> KEYWORDS{
+const std::vector<char>		   TOKENS{ '+', '-', '/', '*', '=', ';', '<', '>', '(', ')', '[', ']', '{', '}' };
+const std::vector<std::string> TYPES{
 	"int",
 	"float",
 	"string",
+	"bool",
 };
+const std::vector<std::string> KEYWORDS{ "if", "else", "for", "while" };
 
 // Forward decl
 struct Token;
@@ -27,7 +31,7 @@ struct Token
 	// Properties
 	std::string Type = "";
 	std::string Content = "";
-	int			Line = 0;
+	int			Line =0;
 	int			Column = 0;
 
 	// Constructors
@@ -39,7 +43,7 @@ struct Token
 	std::string ToString() const
 	{
 		std::ostringstream Stream;
-		Stream << "(" << Type << ") " << Content << " [" << Line << "]";
+		Stream << Type << ", " << Content << ", " << (Line + 1) << ", " << Column;
 		return Stream.str();
 	}
 	void Print() const { std::cout << ToString() << std::endl; }
@@ -53,6 +57,7 @@ class Lexer
 	int			Column = 0;
 
 	char		GetCurrentChar() { return Source[Position]; }
+	char		GetNextChar() { return Source[Position + 1]; }
 	std::string GetRemaining() { return Source.substr(Position); }
 	const char	Advance()
 	{
@@ -95,12 +100,21 @@ public:
 
 		char C = GetCurrentChar();
 
-		// Numbers
+		// Operators, blocks
 		if (IsSymbol(C))
 		{
+			if (C == '=' && GetNextChar() == '=')
+			{
+				return Token{ "==", "==", Line, Column };
+			}
+			if (C == '!' && GetNextChar() == '=')
+			{
+				return Token{ "!=", "!=", Line, Column };
+			}
 			Advance();
 			return Token{ std::string(1, C), std::string(1, C), Line, Column };
 		}
+		// Numbers
 		else if (IsDigit(C))
 		{
 			std::string Number;
@@ -122,9 +136,19 @@ public:
 				C = Advance();
 			}
 
-			if (Contains(KEYWORDS, String))
+			if (Contains(TYPES, String))
 			{
 				return Token{ "Type", String, Line, Column };
+			}
+
+			if (Contains(KEYWORDS, String))
+			{
+				return Token{ String, String, Line, Column };
+			}
+
+			if (Contains({ "true", "false" }, String))
+			{
+				return Token{ "Bool", String, Line, Column };
 			}
 
 			return Token{ "Name", String, Line, Column };
@@ -161,6 +185,7 @@ public:
 		while (Position < Source.size())
 		{
 			Token T = Next();
+			Debug(std::format("Token: {}", T.ToString()));
 			Tokens.push_back(T);
 		}
 		return Tokens;

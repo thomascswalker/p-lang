@@ -1,5 +1,7 @@
 #include "ast.h"
 
+using namespace Core;
+
 //////////////
 // Variants //
 //////////////
@@ -82,16 +84,25 @@ bool Visitor::IsVariable(const std::string& Name)
 
 void Visitor::Visit(ASTLiteral* Node)
 {
+	Debug("Visiting literal.");
+
 	switch (Node->Value.index())
 	{
 		case 0 :
 			Push(Node->GetInt());
+			Debug(std::format("Got literal int: {}", std::get<int>(Stack.back())));
 			break;
 		case 1 :
 			Push(Node->GetFloat());
+			Debug(std::format("Got literal int: {}", std::get<float>(Stack.back())));
 			break;
 		case 2 :
 			Push(Node->GetString());
+			Debug(std::format("Got literal string: {}", std::get<std::string>(Stack.back())));
+			break;
+		case 3 :
+			Push(Node->GetBool());
+			Debug(std::format("Got literal bool: {}", std::get<bool>(Stack.back())));
 			break;
 	}
 }
@@ -210,9 +221,39 @@ void Visitor::Visit(ASTAssignment* Node)
 	Variables[Node->Name] = Pop();
 }
 
-void Visitor::Visit(ASTProgram* Node)
+void Visitor::Visit(ASTConditional* Node)
 {
-	for (const auto& E : Node->Statements)
+	bool bResult = false;
+
+	if (Cast<ASTLiteral>(Node->Cond))
+	{
+		Visit(Cast<ASTLiteral>(Node->Cond));
+	}
+	else if (Cast<ASTVariable>(Node->Cond))
+	{
+		Visit(Cast<ASTVariable>(Node->Cond));
+	}
+	else if (Cast<ASTBinOp>(Node->Cond))
+	{
+		Visit(Cast<ASTBinOp>(Node->Cond));
+	}
+
+	bResult = std::get<bool>(Pop());
+	if (bResult)
+	{
+		auto Body = Cast<ASTBody>(Node->TrueBody);
+		Visit(Body);
+	}
+	else
+	{
+		auto Body = Cast<ASTBody>(Node->FalseBody);
+		Visit(Body);
+	}
+}
+
+void Visitor::Visit(ASTBody* Node)
+{
+	for (const auto& E : Node->Expressions)
 	{
 		if (Cast<ASTBinOp>(E))
 		{
@@ -222,9 +263,17 @@ void Visitor::Visit(ASTProgram* Node)
 		{
 			Visit(Cast<ASTAssignment>(E));
 		}
+		else if (Cast<ASTLiteral>(E))
+		{
+			Visit(Cast<ASTLiteral>(E));
+		}
+		else if (Cast<ASTConditional>(E))
+		{
+			Visit(Cast<ASTConditional>(E));
+		}
 		else
 		{
-			std::cout << "WARNING: Bad expression!" << std::endl;
+			std::cout << "WARNING: Bad expression during visiting!" << std::endl;
 		}
 	}
 }
@@ -246,6 +295,7 @@ void AST::Accept()
 	// Otherwise increment the CurrentToken pointer and the position
 	else
 	{
+		Debug(std::format("Accept(): {}", CurrentToken->Content));
 		CurrentToken++;
 		Position++;
 	}
@@ -253,6 +303,8 @@ void AST::Accept()
 
 bool AST::Expect(const std::string& Type, int Offset)
 {
+	Debug(std::format("Expect(): {} at {}: {}", Type, Position + Offset, Tokens[Position + Offset].ToString()));
+
 	// Make sure the offset is valid
 	if (Position + Offset > Tokens.max_size())
 	{
@@ -275,8 +327,10 @@ bool AST::Expect(const std::initializer_list<std::string>& Types)
 	return true;
 }
 
-ASTNode* AST::ParseFactorExpr()
+ASTNode* AST::ParseLiteralExpr()
 {
+	Debug("Parsing literal.");
+
 	// Parse numbers (floats and ints)
 	if (Expect("Number"))
 	{
@@ -286,14 +340,18 @@ ASTNode* AST::ParseFactorExpr()
 		if (CurrentToken->Content.find(".") != std::string::npos)
 		{
 			Value = std::stof(CurrentToken->Content);
+			Debug(std::format("Parsing number: {}", std::get<float>(Value)));
 		}
 		// Parse int
 		else
 		{
 			Value = std::stoi(CurrentToken->Content);
+			Debug(std::format("Parsing number: {}", std::get<int>(Value)));
 		}
+
 		Accept(); // Consume number
 		Nodes.push_back(new ASTLiteral(Value));
+		Debug("Exiting parse literal.");
 		return Nodes.back();
 	}
 	// Parse strings
@@ -301,7 +359,9 @@ ASTNode* AST::ParseFactorExpr()
 	{
 		std::string String = CurrentToken->Content;
 		Accept(); // Consume string
+		Debug(std::format("Parsing string: {}", String));
 		Nodes.push_back(new ASTLiteral(String));
+		Debug("Exiting parse literal.");
 		return Nodes.back();
 	}
 	// Parse names (Variables, functions, etc.)
@@ -309,47 +369,114 @@ ASTNode* AST::ParseFactorExpr()
 	{
 		std::string Name = CurrentToken->Content;
 		Accept(); // Consume name
+		Debug(std::format("Parsing name: {}", Name));
 		Nodes.push_back(new ASTVariable(Name));
+		Debug("Exiting parse literal.");
+		return Nodes.back();
+	}
+	else if (Expect("Bool"))
+	{
+		bool Value = CurrentToken->Content == "true" ? true : false;
+		Accept(); // Consume bool
+		Debug(std::format("Parsing bool: {}", Value));
+		Nodes.push_back(new ASTLiteral(Value));
+		Debug("Exiting parse literal.");
 		return Nodes.back();
 	}
 	else if (Expect("("))
 	{
-		return ParseEncapsulatedExpr();
+		Debug("Parsing parenthesis block.");
+		Debug("Exiting parse literal.");
+		return ParseParenExpr();
 	}
 	else
 	{
+		Error("Unable to parse factor.");
 		return nullptr;
 	}
 }
 
-ASTNode* AST::ParseEncapsulatedExpr()
+ASTNode* AST::ParseParenExpr()
 {
+	Debug("Parsing paren.");
+
+	if (!Expect("("))
+	{
+		Error(std::format("Expected '{}' starting conditional. Got '{}'.", "(", CurrentToken->Content));
+		return nullptr;
+	}
 	Accept(); // Consume '('
 	ASTNode* Expr = ParseExpression();
 	if (!Expect(")"))
 	{
-		Error("Missing ')'.");
+		Error(std::format("Expected '{}' ending conditional. Got '{}'.", ")", CurrentToken->Content));
 		return nullptr;
 	}
 	Accept(); // Consume ')'
+	Debug("Exiting parse paren.");
 	return Expr;
+}
+
+ASTNode* AST::ParseCurlyExpr()
+{
+	Debug("Parsing curly.");
+
+	if (!Expect("{"))
+	{
+		Error(std::format("Expected '{}' starting block. Got '{}'.", "{", CurrentToken->Content));
+		return nullptr;
+	}
+	Accept(); // Consume '{'
+
+	std::vector<ASTNode*> Body;
+	while (true)
+	{
+		ASTNode* Expr = ParseExpression();
+		if (Expect(";"))
+		{
+			Accept(); // Consume ';'
+		}
+		else
+		{
+			Error("Expected semicolon.");
+			return nullptr;
+		}
+		Body.push_back(Expr);
+		if (Expect("}"))
+		{
+			break;
+		}
+	}
+
+	Accept(); // Consume '}'
+
+	Debug("Exiting parse curly.");
+
+	Nodes.push_back(new ASTBody(Body));
+	return Nodes.back();
 }
 
 ASTNode* AST::ParseMultiplicativeExpr()
 {
-	ASTNode* Expr = ParseFactorExpr();
+	Debug("Parsing mult.");
+
+	ASTNode* Expr = ParseLiteralExpr();
 	while (Expect("*") || Expect("/"))
 	{
 		std::string Op = CurrentToken->Content;
 		Accept(); // Consume '*' or '/'
-		Nodes.push_back(new ASTBinOp(Expr, ParseFactorExpr(), Op));
+		Nodes.push_back(new ASTBinOp(Expr, ParseLiteralExpr(), Op));
 		Expr = Nodes.back();
 	}
+
+	Debug("Exiting parse mult.");
 	return Expr;
 }
 
 ASTNode* AST::ParseAdditiveExpr()
 {
+	Debug("Parsing add.");
+
 	ASTNode* Expr = ParseMultiplicativeExpr();
 	while (Expect("+") || Expect("-"))
 	{
@@ -358,11 +485,16 @@ ASTNode* AST::ParseAdditiveExpr()
 		Nodes.push_back(new ASTBinOp(Expr, ParseMultiplicativeExpr(), Op));
 		Expr = Nodes.back();
 	}
+
+	Debug("Exiting parse add.");
+
 	return Expr;
 }
 
 ASTNode* AST::ParseAssignment()
 {
+	Debug("Parsing assignment.");
+
 	std::string Type;
 	std::string Name;
 
@@ -387,38 +519,93 @@ ASTNode* AST::ParseAssignment()
 		}
 	}
 
+	Debug("Exiting parse assignment.");
+
 	return nullptr;
+}
+
+ASTNode* AST::ParseConditional()
+{
+	Debug("Parsing cond.");
+
+	Accept(); // Consume 'if'
+	auto Cond = ParseParenExpr();
+	if (!Cond)
+	{
+		Error("Unable to parse 'if'.");
+		return nullptr;
+	}
+
+	Debug("Parsing 'if' block.");
+	auto TrueBody = ParseCurlyExpr();
+	if (!TrueBody)
+	{
+		Error("Unable to parse true body of 'if'.");
+		return nullptr;
+	}
+
+	ASTNode* FalseBody = nullptr;
+	if (Expect("else"))
+	{
+		Accept(); // Consume 'else'
+		Debug("Parsing 'else' block.");
+		FalseBody = ParseCurlyExpr();
+		if (!FalseBody)
+		{
+			Error("Unable to parse false body of 'else'.");
+			return nullptr;
+		}
+	}
+
+	Nodes.push_back(new ASTConditional(Cond, TrueBody, FalseBody));
+
+	Debug("Exiting parse cond.");
+
+	return Nodes.back();
 }
 
 ASTNode* AST::ParseExpression()
 {
+	Debug("Parsing expression.");
+
+	ASTNode* Expr;
+
 	// int MyVar = ...;
 	if (Expect({ "Type", "Name", "=" }))
 	{
-		return ParseAssignment();
+		Expr = ParseAssignment();
 	}
 	// MyVar = ...;
 	else if (Expect({ "Name", "=" }))
 	{
-		return ParseAssignment();
+		Expr = ParseAssignment();
 	}
 	// 5 + ...;
 	// "Test" + ...;
 	// MyVar + ...;
-	else if (Expect("Number") || Expect("String") || Expect("Name") || Expect("("))
+	else if (Expect("Bool") || Expect("Number") || Expect("String") || Expect("Name") || Expect("("))
 	{
-		return ParseAdditiveExpr();
+		Expr = ParseAdditiveExpr();
+	}
+	else if (Expect("if"))
+	{
+		Expr = ParseConditional();
 	}
 	else
 	{
-		Error("Syntax Error");
+		Error("Unable to parse expression.");
 		return nullptr;
 	}
+
+	Debug("Exiting parsing expression.");
+	return Expr;
 }
 
-void AST::ParseProgram()
+void AST::ParseBody()
 {
-	Program = new ASTProgram();
+	Debug("Parsing body.");
+
+	Program = new ASTBody();
 	while (CurrentToken != NULL && CurrentToken != &Tokens.back())
 	{
 		auto Expr = ParseExpression();
@@ -426,14 +613,14 @@ void AST::ParseProgram()
 		{
 			break;
 		}
-		Program->Statements.push_back(Expr);
+		Program->Expressions.push_back(Expr);
 		if (Expect(";"))
 		{
 			Accept(); // Consume ';'
 		}
 		else
 		{
-			Error(std::format("Missing semicolon, got '{}'", CurrentToken->Type));
+			Error("Expected semicolon.");
 			break;
 		}
 	}
