@@ -11,7 +11,7 @@
 using namespace Core;
 
 // Token Literals
-const std::vector<char>		   TOKENS{ '+', '-', '/', '*', '=', ';', '<', '>', '(', ')', '[', ']', '{', '}' };
+const std::vector<char>		   TOKENS{ '+', '-', '/', '*', '=', '!', ';', '<', '>', '(', ')', '[', ']', '{', '}' };
 const std::vector<std::string> TYPES{
 	"int",
 	"float",

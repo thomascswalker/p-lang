@@ -1,5 +1,5 @@
 MyString = "Test" + "String";
-MyBool = false;
+MyBool = true;
 
 if (MyBool == false)
 {
