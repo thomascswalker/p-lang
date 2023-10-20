@@ -31,7 +31,7 @@ struct Token
 	// Properties
 	std::string Type = "";
 	std::string Content = "";
-	int			Line =0;
+	int			Line = 0;
 	int			Column = 0;
 
 	// Constructors
@@ -103,13 +103,20 @@ public:
 		// Operators, blocks
 		if (IsSymbol(C))
 		{
+			// Equals operator
 			if (C == '=' && GetNextChar() == '=')
 			{
 				return Token{ "==", "==", Line, Column };
 			}
+			// Not equals operator
 			if (C == '!' && GetNextChar() == '=')
 			{
 				return Token{ "!=", "!=", Line, Column };
+			}
+			// Returns operator
+			if (C == '-' && GetNextChar() == '>')
+			{
+				return Token{ "->", "->", Line, Column };
 			}
 			Advance();
 			return Token{ std::string(1, C), std::string(1, C), Line, Column };

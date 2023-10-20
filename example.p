@@ -1,12 +1,18 @@
-some_string = "test" + "string";
-bTrue = true;
-bFalse = false;
+MyString = "Test" + "String";
+MyBool = false;
 
-if (bFalse)
+if (MyBool)
 {
-    a = 5;
+    A = 5;
 }
 else
 {
-    a = 10;
+    A = 10;
+};
+
+B = A;
+
+MyFunc() -> int
+{
+
 };
