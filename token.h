@@ -11,7 +11,7 @@
 using namespace Core;
 
 // Token Literals
-const std::vector<char>		   TOKENS{ '+', '-', '/', '*', '=', ';', '<', '>', '(', ')', '[', ']', '{', '}' };
+const std::vector<char>		   TOKENS{ '+', '-', '/', '*', '=', '!', ';', '<', '>', '(', ')', '[', ']', '{', '}' };
 const std::vector<std::string> TYPES{
 	"int",
 	"float",
@@ -59,10 +59,10 @@ class Lexer
 	char		GetCurrentChar() { return Source[Position]; }
 	char		GetNextChar() { return Source[Position + 1]; }
 	std::string GetRemaining() { return Source.substr(Position); }
-	const char	Advance()
+	const char	Advance(int Offset = 1)
 	{
-		Position++;
-		Column++;
+		Position += Offset;
+		Column += Offset;
 		return GetCurrentChar();
 	}
 	bool IsWhitespace()
@@ -103,23 +103,32 @@ public:
 		// Operators, blocks
 		if (IsSymbol(C))
 		{
+			std::string Op;
 			// Equals operator
 			if (C == '=' && GetNextChar() == '=')
 			{
-				return Token{ "==", "==", Line, Column };
+				Op = "==";
+				Advance(2); // Consume double char operator
 			}
 			// Not equals operator
-			if (C == '!' && GetNextChar() == '=')
+			else if (C == '!' && GetNextChar() == '=')
 			{
-				return Token{ "!=", "!=", Line, Column };
+				Op = "!=";
+				Advance(2); // Consume double char operator
 			}
 			// Returns operator
-			if (C == '-' && GetNextChar() == '>')
+			else if (C == '-' && GetNextChar() == '>')
 			{
-				return Token{ "->", "->", Line, Column };
+				Op = "->";
+				Advance(2); // Consume double char operator
 			}
-			Advance();
-			return Token{ std::string(1, C), std::string(1, C), Line, Column };
+			else
+			{
+				Op = std::string(1, C);
+				Advance(); // Consume single char operator
+			}
+
+			return Token{ Op, Op, Line, Column };
 		}
 		// Numbers
 		else if (IsDigit(C))

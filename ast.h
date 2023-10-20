@@ -11,10 +11,12 @@
 using namespace Core;
 using Literal = std::variant<int, float, std::string, bool>;
 
-void VariantAdd(const Literal& Left, const Literal& Right, Literal& Value);
-void VariantSub(const Literal& Left, const Literal& Right, Literal& Value);
-void VariantMul(const Literal& Left, const Literal& Right, Literal& Value);
-void VariantDiv(const Literal& Left, const Literal& Right, Literal& Value);
+void LiteralAdd(const Literal& Left, const Literal& Right, Literal& Value);
+void LiteralSub(const Literal& Left, const Literal& Right, Literal& Value);
+void LiteralMul(const Literal& Left, const Literal& Right, Literal& Value);
+void LiteralDiv(const Literal& Left, const Literal& Right, Literal& Value);
+void LiteralEq(const Literal& Left, const Literal& Right, Literal& Value);
+void LiteralNotEq(const Literal& Left, const Literal& Right, Literal& Value);
 
 class VisitorBase;
 class Visitor;
@@ -292,6 +294,7 @@ private:
 	ASTNode* ParseCurlyExpr();
 	ASTNode* ParseMultiplicativeExpr();
 	ASTNode* ParseAdditiveExpr();
+	ASTNode* ParseEqualityExpr();
 	ASTNode* ParseAssignment();
 	ASTNode* ParseConditional();
 	ASTNode* ParseExpression();
