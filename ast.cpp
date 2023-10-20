@@ -3,10 +3,10 @@
 using namespace Core;
 
 //////////////
-// Variants //
+// Literals //
 //////////////
 
-void VariantAdd(const Literal& Left, const Literal& Right, Literal& Value)
+void LiteralAdd(const Literal& Left, const Literal& Right, Literal& Value)
 {
 	Value = std::visit(
 		[](auto L, auto R) -> Literal {
@@ -22,7 +22,7 @@ void VariantAdd(const Literal& Left, const Literal& Right, Literal& Value)
 		Left, Right);
 }
 
-void VariantSub(const Literal& Left, const Literal& Right, Literal& Value)
+void LiteralSub(const Literal& Left, const Literal& Right, Literal& Value)
 {
 	switch (Left.index())
 	{
@@ -35,7 +35,7 @@ void VariantSub(const Literal& Left, const Literal& Right, Literal& Value)
 	}
 }
 
-void VariantMul(const Literal& Left, const Literal& Right, Literal& Value)
+void LiteralMul(const Literal& Left, const Literal& Right, Literal& Value)
 {
 	switch (Left.index())
 	{
@@ -48,7 +48,7 @@ void VariantMul(const Literal& Left, const Literal& Right, Literal& Value)
 	}
 }
 
-void VariantDiv(const Literal& Left, const Literal& Right, Literal& Value)
+void LiteralDiv(const Literal& Left, const Literal& Right, Literal& Value)
 {
 	switch (Left.index())
 	{
@@ -57,6 +57,44 @@ void VariantDiv(const Literal& Left, const Literal& Right, Literal& Value)
 			break;
 		case 1 :
 			Value = std::get<float>(Left) / std::get<float>(Right);
+			break;
+	}
+}
+
+void LiteralEq(const Literal& Left, const Literal& Right, Literal& Value)
+{
+	switch (Left.index())
+	{
+		case 0 :
+			Value = std::get<int>(Left) == std::get<int>(Right);
+			break;
+		case 1 :
+			Value = std::get<float>(Left) == std::get<float>(Right);
+			break;
+		case 2 :
+			Value = std::get<std::string>(Left) == std::get<std::string>(Right);
+			break;
+		case 3 :
+			Value = std::get<bool>(Left) == std::get<bool>(Right);
+			break;
+	}
+}
+
+void LiteralNotEq(const Literal& Left, const Literal& Right, Literal& Value)
+{
+	switch (Left.index())
+	{
+		case 0 :
+			Value = std::get<int>(Left) != std::get<int>(Right);
+			break;
+		case 1 :
+			Value = std::get<float>(Left) != std::get<float>(Right);
+			break;
+		case 2 :
+			Value = std::get<std::string>(Left) != std::get<std::string>(Right);
+			break;
+		case 3 :
+			Value = std::get<bool>(Left) != std::get<bool>(Right);
 			break;
 	}
 }
@@ -171,20 +209,29 @@ void Visitor::Visit(ASTBinOp* Node)
 
 	// Execute the operator on the left and right value
 	Literal Result;
-	switch (*Node->Op.c_str())
+	if (Node->Op == "+")
 	{
-		case '+' :
-			VariantAdd(Left, Right, Result);
-			break;
-		case '-' :
-			VariantSub(Left, Right, Result);
-			break;
-		case '*' :
-			VariantMul(Left, Right, Result);
-			break;
-		case '/' :
-			VariantDiv(Left, Right, Result);
-			break;
+		LiteralAdd(Left, Right, Result);
+	}
+	else if (Node->Op == "-")
+	{
+		LiteralSub(Left, Right, Result);
+	}
+	else if (Node->Op == "*")
+	{
+		LiteralMul(Left, Right, Result);
+	}
+	else if (Node->Op == "/")
+	{
+		LiteralDiv(Left, Right, Result);
+	}
+	else if (Node->Op == "==")
+	{
+		LiteralEq(Left, Right, Result);
+	}
+	else if (Node->Op == "!=")
+	{
+		LiteralNotEq(Left, Right, Result);
 	}
 
 	// Push the resulting value to the stack
@@ -491,6 +538,23 @@ ASTNode* AST::ParseAdditiveExpr()
 	return Expr;
 }
 
+ASTNode* AST::ParseEqualityExpr()
+{
+	Debug("Parsing equality.");
+	ASTNode* Expr = ParseAdditiveExpr();
+	while (Expect("==") || Expect("!="))
+	{
+		std::string Op = CurrentToken->Content;
+		Accept(); // Consume '==' or '!='
+		Nodes.push_back(new ASTBinOp(Expr, ParseAdditiveExpr(), Op));
+		Expr = Nodes.back();
+	}
+
+	Debug("Exiting parse equality.");
+
+	return Expr;
+}
+
 ASTNode* AST::ParseAssignment()
 {
 	Debug("Parsing assignment.");
@@ -591,7 +655,7 @@ ASTNode* AST::ParseExpression()
 	// MyVar + ...;
 	else if (Expect("Bool") || Expect("Number") || Expect("String") || Expect("Name") || Expect("("))
 	{
-		Expr = ParseAdditiveExpr();
+		Expr = ParseEqualityExpr();
 	}
 	else if (Expect("if"))
 	{
