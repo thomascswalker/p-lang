@@ -284,14 +284,14 @@ private:
 	/// <param name="Type">The type to check for.</param>
 	/// <param name="Offset">The offset position.</param>
 	/// <returns>Whether the type is found.</returns>
-	bool Expect(const std::string& Type, int Offset = 0);
+	bool Expect(TokenType Type, int Offset = 0);
 
 	/// <summary>
 	/// Expect the given <paramref name="Types"/> in sequential order at the current position.
 	/// </summary>
 	/// <param name="Types">The types to check for.</param>
 	/// <returns>Whether the types are all found.</returns>
-	bool Expect(const std::initializer_list<std::string>& Types);
+	bool Expect(const std::initializer_list<TokenType>& Types);
 
 	ASTNode* ParseLiteralExpr();
 	ASTNode* ParseParenExpr();

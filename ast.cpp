@@ -347,7 +347,7 @@ void AST::Accept()
 	}
 }
 
-bool AST::Expect(const std::string& Type, int Offset)
+bool AST::Expect(TokenType Type, int Offset)
 {
 	// Make sure the offset is valid
 	if (Position + Offset > Tokens.size())
@@ -356,12 +356,12 @@ bool AST::Expect(const std::string& Type, int Offset)
 		return false;
 	}
 
-	Debug(std::format("Expect(): {} at {}: {}", Type, Position + Offset, Tokens[Position + Offset].ToString()));
+	Debug(std::format("Expect(): {} at {}: {}", (int)Type, Position + Offset, Tokens[Position + Offset].ToString()));
 
 	return Tokens[Position + Offset].Type == Type;
 }
 
-bool AST::Expect(const std::initializer_list<std::string>& Types)
+bool AST::Expect(const std::initializer_list<TokenType>& Types)
 {
 	for (auto [I, T] : Enumerate(Types))
 	{
@@ -378,7 +378,7 @@ ASTNode* AST::ParseLiteralExpr()
 	Debug("Parsing literal.");
 
 	// Parse numbers (floats and ints)
-	if (Expect("Number"))
+	if (Expect(Number))
 	{
 		Literal Value;
 
@@ -401,7 +401,7 @@ ASTNode* AST::ParseLiteralExpr()
 		return Nodes.back();
 	}
 	// Parse strings
-	else if (Expect("String"))
+	else if (Expect(String))
 	{
 		std::string String = CurrentToken->Content;
 		Accept(); // Consume string
@@ -411,7 +411,7 @@ ASTNode* AST::ParseLiteralExpr()
 		return Nodes.back();
 	}
 	// Parse names (Variables, functions, etc.)
-	else if (Expect("Name"))
+	else if (Expect(Name))
 	{
 		std::string Name = CurrentToken->Content;
 		Accept(); // Consume name
@@ -420,7 +420,7 @@ ASTNode* AST::ParseLiteralExpr()
 		Debug("Exiting parse literal.");
 		return Nodes.back();
 	}
-	else if (Expect("Bool"))
+	else if (Expect(Bool))
 	{
 		bool Value = CurrentToken->Content == "true" ? true : false;
 		Accept(); // Consume bool
@@ -429,7 +429,7 @@ ASTNode* AST::ParseLiteralExpr()
 		Debug("Exiting parse literal.");
 		return Nodes.back();
 	}
-	else if (Expect("("))
+	else if (Expect(LParen))
 	{
 		Debug("Parsing parenthesis block.");
 		Debug("Exiting parse literal.");
@@ -446,14 +446,14 @@ ASTNode* AST::ParseParenExpr()
 {
 	Debug("Parsing paren.");
 
-	if (!Expect("("))
+	if (!Expect(LParen))
 	{
 		Error(std::format("Expected '{}' starting conditional. Got '{}'.", "(", CurrentToken->Content));
 		return nullptr;
 	}
 	Accept(); // Consume '('
 	ASTNode* Expr = ParseExpression();
-	if (!Expect(")"))
+	if (!Expect(RParen))
 	{
 		Error(std::format("Expected '{}' ending conditional. Got '{}'.", ")", CurrentToken->Content));
 		return nullptr;
@@ -467,7 +467,7 @@ ASTNode* AST::ParseCurlyExpr()
 {
 	Debug("Parsing curly.");
 
-	if (!Expect("{"))
+	if (!Expect(LCurly))
 	{
 		Error(std::format("Expected '{}' starting block. Got '{}'.", "{", CurrentToken->Content));
 		return nullptr;
@@ -478,7 +478,7 @@ ASTNode* AST::ParseCurlyExpr()
 	while (true)
 	{
 		ASTNode* Expr = ParseExpression();
-		if (Expect(";"))
+		if (Expect(Semicolon))
 		{
 			Accept(); // Consume ';'
 		}
@@ -488,7 +488,7 @@ ASTNode* AST::ParseCurlyExpr()
 			return nullptr;
 		}
 		Body.push_back(Expr);
-		if (Expect("}"))
+		if (Expect(RCurly))
 		{
 			break;
 		}
@@ -507,7 +507,7 @@ ASTNode* AST::ParseMultiplicativeExpr()
 	Debug("Parsing mult.");
 
 	ASTNode* Expr = ParseLiteralExpr();
-	while (Expect("*") || Expect("/"))
+	while (Expect(Multiply) || Expect(Divide))
 	{
 		std::string Op = CurrentToken->Content;
 		Accept(); // Consume '*' or '/'
@@ -524,7 +524,7 @@ ASTNode* AST::ParseAdditiveExpr()
 	Debug("Parsing add.");
 
 	ASTNode* Expr = ParseMultiplicativeExpr();
-	while (Expect("+") || Expect("-"))
+	while (Expect(Plus) || Expect(Minus))
 	{
 		std::string Op = CurrentToken->Content;
 		Accept(); // Consume '+' or '-'
@@ -541,7 +541,7 @@ ASTNode* AST::ParseEqualityExpr()
 {
 	Debug("Parsing equality.");
 	ASTNode* Expr = ParseAdditiveExpr();
-	while (Expect("==") || Expect("!="))
+	while (Expect(Equals) || Expect(NotEquals))
 	{
 		std::string Op = CurrentToken->Content;
 		Accept(); // Consume '==' or '!='
@@ -562,18 +562,18 @@ ASTNode* AST::ParseAssignment()
 	std::string Name;
 
 	// Handle new variable assignments
-	if (Expect("Type"))
+	if (Expect(TokenType::Type))
 	{
 		Type = CurrentToken->Content; // Get the type
 		Accept();					  // Consume type
 	}
 
-	if (Expect("Name"))
+	if (Expect(TokenType::Name))
 	{
 		// Handle existing variable assignment, or continue with a new assignment
 		Name = CurrentToken->Content; // Get the name
 		Accept();					  // Consume name
-		if (Expect("="))
+		if (Expect(Assign))
 		{
 			Accept(); // Consume '='
 			ASTNode* Expr = ParseExpression();
@@ -608,7 +608,7 @@ ASTNode* AST::ParseConditional()
 	}
 
 	ASTNode* FalseBody = nullptr;
-	if (Expect("else"))
+	if (Expect(Else))
 	{
 		Accept(); // Consume 'else'
 		Debug("Parsing 'else' block.");
@@ -620,7 +620,7 @@ ASTNode* AST::ParseConditional()
 		}
 	}
 
-	if (!Expect(";"))
+	if (!Expect(Semicolon))
 	{
 		Error("Missing semicolon at end of conditional statement.");
 		return nullptr;
@@ -640,23 +640,23 @@ ASTNode* AST::ParseExpression()
 	ASTNode* Expr;
 
 	// int MyVar = ...;
-	if (Expect({ "Type", "Name", "=" }))
+	if (Expect({ Type, Name, Assign }))
 	{
 		Expr = ParseAssignment();
 	}
 	// MyVar = ...;
-	else if (Expect({ "Name", "=" }))
+	else if (Expect({ Name, Assign }))
 	{
 		Expr = ParseAssignment();
 	}
 	// 5 + ...;
 	// "Test" + ...;
 	// MyVar + ...;
-	else if (Expect("Bool") || Expect("Number") || Expect("String") || Expect("Name") || Expect("("))
+	else if (Expect(Bool) || Expect(Number) || Expect(String) || Expect(Name) || Expect(LParen))
 	{
 		Expr = ParseEqualityExpr();
 	}
-	else if (Expect("if"))
+	else if (Expect(If))
 	{
 		Expr = ParseConditional();
 	}
@@ -683,7 +683,7 @@ void AST::ParseBody()
 			break;
 		}
 		Program->Expressions.push_back(Expr);
-		if (Expect(";"))
+		if (Expect(Semicolon))
 		{
 			Accept(); // Consume ';'
 		}
