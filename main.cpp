@@ -19,7 +19,7 @@ int Compile(std::string FileName)
 	std::vector<Token> Tokens = Lex.Tokenize();
 
 	// Construct a syntax tree from the tokens
-	AST			Ast(Tokens);
+	AST		 Ast(Tokens);
 	ASTBody* Program = Ast.GetTree();
 	if (Program->Errors.size() == 0)
 	{
@@ -58,8 +58,27 @@ int Compile(std::string FileName)
 	return 0;
 }
 
-int main()
+// Main entrypoint
+int main(int argc, char* argv[])
 {
-	auto Result = Compile("example.p");
+	if (argc == 1)
+	{
+		return -1;
+	}
+	std::string FileName;
+#ifdef _DEBUG
+	FileName = "example.p";
+#else
+	if (argc == 2) // [1]cmd [2]<filename>.p
+	{
+		FileName = argv[1];
+	}
+	else
+	{
+		printf("Invalid argument. Please enter a filename.");
+		return -1;
+	}
+#endif
+	auto Result = Compile(FileName);
 	return Result;
 }
