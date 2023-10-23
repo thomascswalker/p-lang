@@ -17,6 +17,8 @@ static void LiteralMul(const Literal& Left, const Literal& Right, Literal& Value
 static void LiteralDiv(const Literal& Left, const Literal& Right, Literal& Value);
 static void LiteralEq(const Literal& Left, const Literal& Right, Literal& Value);
 static void LiteralNotEq(const Literal& Left, const Literal& Right, Literal& Value);
+static void LiteralLessThan(const Literal& Left, const Literal& Right, Literal& Value);
+static void LiteralGreaterThan(const Literal& Left, const Literal& Right, Literal& Value);
 
 class VisitorBase;
 class Visitor;
@@ -26,7 +28,8 @@ class ASTLiteral;
 class ASTVariable;
 class ASTBinOp;
 class ASTAssignment;
-class ASTConditional;
+class ASTIf;
+class ASTWhile;
 class ASTBody;
 
 class VisitorBase
@@ -36,7 +39,8 @@ public:
 	virtual void Visit(ASTVariable* Node) = 0;
 	virtual void Visit(ASTBinOp* Node) = 0;
 	virtual void Visit(ASTAssignment* Node) = 0;
-	virtual void Visit(ASTConditional* Node) = 0;
+	virtual void Visit(ASTIf* Node) = 0;
+	virtual void Visit(ASTWhile* Node) = 0;
 	virtual void Visit(ASTBody* Node) = 0;
 };
 
@@ -65,7 +69,8 @@ public:
 	void Visit(ASTVariable* Node) override;
 	void Visit(ASTBinOp* Node) override;
 	void Visit(ASTAssignment* Node) override;
-	void Visit(ASTConditional* Node) override;
+	void Visit(ASTIf* Node) override;
+	void Visit(ASTWhile* Node) override;
 	void Visit(ASTBody* Node) override;
 };
 
@@ -137,12 +142,6 @@ public:
 	float		GetFloat() const { return std::get<float>(Value); }
 	std::string GetString() const { return std::get<std::string>(Value); }
 	bool		GetBool() const { return std::get<bool>(Value); }
-
-	template <typename T>
-	T GetValue() const
-	{
-		return std::get<T>(Value);
-	}
 
 	virtual std::string ToString() const
 	{
@@ -217,16 +216,27 @@ public:
 	void Accept(Visitor& V) override { V.Visit(this); }
 };
 
-class ASTConditional : public ASTNode
+class ASTIf : public ASTNode
 {
 public:
 	ASTNode* Cond;
 	ASTNode* TrueBody;
 	ASTNode* FalseBody;
 
-	ASTConditional(ASTNode* InCond, ASTNode* InTrueBody, ASTNode* InFalseBody = nullptr)
+	ASTIf(ASTNode* InCond, ASTNode* InTrueBody, ASTNode* InFalseBody = nullptr)
 		: Cond(InCond), TrueBody(InTrueBody), FalseBody(InFalseBody){};
 	virtual std::string ToString() const { return "Conditional"; }
+	void				Accept(Visitor& V) override { V.Visit(this); }
+};
+
+class ASTWhile : public ASTNode
+{
+public:
+	ASTNode* Cond;
+	ASTNode* Body;
+
+	ASTWhile(ASTNode* InCond, ASTNode* InBody) : Cond(InCond), Body(InBody){};
+	virtual std::string ToString() const { return "While"; }
 	void				Accept(Visitor& V) override { V.Visit(this); }
 };
 
@@ -284,14 +294,14 @@ private:
 	/// <param name="Type">The type to check for.</param>
 	/// <param name="Offset">The offset position.</param>
 	/// <returns>Whether the type is found.</returns>
-	bool Expect(const std::string& Type, int Offset = 0);
+	bool Expect(TokenType Type, int Offset = 0);
 
 	/// <summary>
 	/// Expect the given <paramref name="Types"/> in sequential order at the current position.
 	/// </summary>
 	/// <param name="Types">The types to check for.</param>
 	/// <returns>Whether the types are all found.</returns>
-	bool Expect(const std::initializer_list<std::string>& Types);
+	bool Expect(const std::initializer_list<TokenType>& Types);
 
 	ASTNode* ParseLiteralExpr();
 	ASTNode* ParseParenExpr();
@@ -300,7 +310,8 @@ private:
 	ASTNode* ParseAdditiveExpr();
 	ASTNode* ParseEqualityExpr();
 	ASTNode* ParseAssignment();
-	ASTNode* ParseConditional();
+	ASTNode* ParseIf();
+	ASTNode* ParseWhile();
 	ASTNode* ParseExpression();
 	void	 ParseBody();
 

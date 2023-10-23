@@ -13,9 +13,13 @@ using namespace Core;
 // Tokens
 enum TokenType
 {
-	Invalid = -1,
-	Eof = 0,
+	Invalid,
+	Eof,
 	Type,
+	Name,
+	Number,
+	String,
+	Bool,
 	Plus,
 	Minus,
 	Divide,
@@ -26,7 +30,7 @@ enum TokenType
 	NotEquals,
 	Semicolon,
 	LessThan,
-	MoreThan,
+	GreaterThan,
 	LParen,
 	RParen,
 	LBracket,
@@ -36,16 +40,19 @@ enum TokenType
 	If,
 	Else,
 	For,
-	While
+	While,
+	Count
 };
 
-// clang-format off
+static int TokenTypeCount = (int)TokenType::Count;
+
 static std::map<TokenType, std::string> TokenStringMap{
-	{ Eof, "/0" },	 { Type, "Type" }, { Plus, "+" },  { Minus, "-" },
-	{ Multiply, "*" }, { Divide, "/" },   { Not, "!" }, { Assign, "=" },
-	{ Equals, "==" }, { NotEquals, "!=" },   { Minus, "-" }, { Minus, "-" },
-	{ Minus, "-" }, { Minus, "-" },   { Minus, "-" }, { Minus, "-" } };
-// clang-format on
+	{ Eof, "/0" },		{ Type, "Type" },  { Plus, "+" },		 { Minus, "-" },   { Multiply, "*" },
+	{ Divide, "/" },	{ Not, "!" },	   { Assign, "=" },		 { Equals, "==" }, { NotEquals, "!=" },
+	{ Semicolon, ";" }, { LessThan, "<" }, { GreaterThan, ">" }, { LParen, "(" },  { RParen, ")" },
+	{ LBracket, "[" },	{ RBracket, "]" }, { LCurly, "{" },		 { RCurly, "}" },  { If, "if" },
+	{ Else, "else" },	{ For, "for" },	   { While, "while" }
+};
 
 static TokenType GetTokenTypeFromString(const std::string& InString)
 {
@@ -56,6 +63,7 @@ static TokenType GetTokenTypeFromString(const std::string& InString)
 			return K;
 		}
 	}
+	return Invalid;
 }
 
 const std::vector<char>		   TOKENS{ '+', '-', '/', '*', '=', '!', ';', '<', '>', '(', ')', '[', ']', '{', '}' };
@@ -76,21 +84,21 @@ typedef std::vector<std::shared_ptr<Token>> TokenArray;
 struct Token
 {
 	// Properties
-	std::string Type = "";
+	TokenType Type;
 	std::string Content = "";
 	int			Line = 0;
 	int			Column = 0;
 
 	// Constructors
-	Token(){};
-	Token(const std::string& InType, const std::string& InContent, int InLine, int InColumn)
+	Token() : Type(Invalid){};
+	Token(TokenType InType, const std::string& InContent, int InLine, int InColumn)
 		: Type(InType), Content(InContent), Line(InLine), Column(InColumn){};
 
 	// Methods
 	std::string ToString() const
 	{
 		std::ostringstream Stream;
-		Stream << Type << ", " << Content << ", " << (Line + 1) << ", " << Column;
+		Stream << (int)Type << ", " << Content << ", line " << (Line + 1) << ", col " << Column;
 		return Stream.str();
 	}
 	void Print() const { std::cout << ToString() << std::endl; }
@@ -175,7 +183,7 @@ public:
 				Advance(); // Consume single char operator
 			}
 
-			return Token{ Op, Op, Line, Column };
+			return Token{ GetTokenTypeFromString(Op), Op, Line, Column };
 		}
 		// Numbers
 		else if (IsDigit(C))
@@ -187,7 +195,7 @@ public:
 				C = Advance();
 			}
 
-			return Token{ "Number", Number, Line, Column };
+			return Token{ TokenType::Number, Number, Line, Column };
 		}
 		// Types, Names
 		else if (IsAscii(C))
@@ -201,20 +209,20 @@ public:
 
 			if (Contains(TYPES, String))
 			{
-				return Token{ "Type", String, Line, Column };
+				return Token{ TokenType::Type, String, Line, Column };
 			}
 
 			if (Contains(KEYWORDS, String))
 			{
-				return Token{ String, String, Line, Column };
+				return Token{ GetTokenTypeFromString(String), String, Line, Column };
 			}
 
 			if (Contains({ "true", "false" }, String))
 			{
-				return Token{ "Bool", String, Line, Column };
+				return Token{ TokenType::Bool, String, Line, Column };
 			}
 
-			return Token{ "Name", String, Line, Column };
+			return Token{ TokenType::Name, String, Line, Column };
 		}
 		// Strings
 		else if (C == '"' || C == '\'')
@@ -229,12 +237,12 @@ public:
 				C = Advance();
 			}
 			Advance(); // Skip last quotation
-			return Token{ "String", String, Line, Column };
+			return Token{ TokenType::String, String, Line, Column };
 		}
 		// End of file
 		else if (C == '\0')
 		{
-			return Token{ "EOF", "\0", Line, Column };
+			return Token{ TokenType::Eof, "\0", Line, Column };
 		}
 		else
 		{
