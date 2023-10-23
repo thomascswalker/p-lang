@@ -28,7 +28,7 @@ class ASTLiteral;
 class ASTVariable;
 class ASTBinOp;
 class ASTAssignment;
-class ASTConditional;
+class ASTIf;
 class ASTWhile;
 class ASTBody;
 
@@ -39,7 +39,7 @@ public:
 	virtual void Visit(ASTVariable* Node) = 0;
 	virtual void Visit(ASTBinOp* Node) = 0;
 	virtual void Visit(ASTAssignment* Node) = 0;
-	virtual void Visit(ASTConditional* Node) = 0;
+	virtual void Visit(ASTIf* Node) = 0;
 	virtual void Visit(ASTWhile* Node) = 0;
 	virtual void Visit(ASTBody* Node) = 0;
 };
@@ -69,7 +69,7 @@ public:
 	void Visit(ASTVariable* Node) override;
 	void Visit(ASTBinOp* Node) override;
 	void Visit(ASTAssignment* Node) override;
-	void Visit(ASTConditional* Node) override;
+	void Visit(ASTIf* Node) override;
 	void Visit(ASTWhile* Node) override;
 	void Visit(ASTBody* Node) override;
 };
@@ -142,12 +142,6 @@ public:
 	float		GetFloat() const { return std::get<float>(Value); }
 	std::string GetString() const { return std::get<std::string>(Value); }
 	bool		GetBool() const { return std::get<bool>(Value); }
-
-	template <typename T>
-	T GetValue() const
-	{
-		return std::get<T>(Value);
-	}
 
 	virtual std::string ToString() const
 	{
@@ -222,14 +216,14 @@ public:
 	void Accept(Visitor& V) override { V.Visit(this); }
 };
 
-class ASTConditional : public ASTNode
+class ASTIf : public ASTNode
 {
 public:
 	ASTNode* Cond;
 	ASTNode* TrueBody;
 	ASTNode* FalseBody;
 
-	ASTConditional(ASTNode* InCond, ASTNode* InTrueBody, ASTNode* InFalseBody = nullptr)
+	ASTIf(ASTNode* InCond, ASTNode* InTrueBody, ASTNode* InFalseBody = nullptr)
 		: Cond(InCond), TrueBody(InTrueBody), FalseBody(InFalseBody){};
 	virtual std::string ToString() const { return "Conditional"; }
 	void				Accept(Visitor& V) override { V.Visit(this); }

@@ -297,7 +297,7 @@ void Visitor::Visit(ASTAssignment* Node)
 	Variables[Node->Name] = Pop();
 }
 
-void Visitor::Visit(ASTConditional* Node)
+void Visitor::Visit(ASTIf* Node)
 {
 	Debug("Visiting conditional.");
 	bool bResult = false;
@@ -329,7 +329,45 @@ void Visitor::Visit(ASTConditional* Node)
 	}
 }
 
-void Visitor::Visit(ASTWhile* Node) {}
+void Visitor::Visit(ASTWhile* Node)
+{
+	
+	Debug("Visiting while.");
+	bool bResult = true;
+	int	 Count = 1;
+
+	while (bResult)
+	{
+		if (Cast<ASTLiteral>(Node->Cond))
+		{
+			Visit(Cast<ASTLiteral>(Node->Cond));
+		}
+		else if (Cast<ASTVariable>(Node->Cond))
+		{
+			Visit(Cast<ASTVariable>(Node->Cond));
+		}
+		else if (Cast<ASTBinOp>(Node->Cond))
+		{
+			Visit(Cast<ASTBinOp>(Node->Cond));
+		}
+
+		bResult = std::get<bool>(Pop());
+		if (!bResult)
+		{
+			break;
+		}
+		Debug(std::format("While result is {}", bResult ? "true" : "false"));
+		auto Body = Cast<ASTBody>(Node->Body);
+		Visit(Body);
+		Count++;
+
+		if (Count == WHILE_MAX_LOOP)
+		{
+			Error("Hit max loop count (10000).");
+			break;
+		}
+	}
+}
 
 void Visitor::Visit(ASTBody* Node)
 {
@@ -347,9 +385,13 @@ void Visitor::Visit(ASTBody* Node)
 		{
 			Visit(Cast<ASTLiteral>(E));
 		}
-		else if (Cast<ASTConditional>(E))
+		else if (Cast<ASTIf>(E))
 		{
-			Visit(Cast<ASTConditional>(E));
+			Visit(Cast<ASTIf>(E));
+		}
+		else if (Cast<ASTWhile>(E))
+		{
+			Visit(Cast<ASTWhile>(E));
 		}
 		else
 		{
@@ -512,15 +554,6 @@ ASTNode* AST::ParseCurlyExpr()
 	while (true)
 	{
 		ASTNode* Expr = ParseExpression();
-		//if (Expect(Semicolon))
-		//{
-		//	Accept(); // Consume ';'
-		//}
-		//else
-		//{
-		//	Error("Expected semicolon.");
-		//	return nullptr;
-		//}
 		Body.push_back(Expr);
 		if (Expect(RCurly))
 		{
@@ -654,13 +687,7 @@ ASTNode* AST::ParseIf()
 		}
 	}
 
-	// if (!Expect(Semicolon))
-	//{
-	//	Error("Missing semicolon at end of conditional statement.");
-	//	return nullptr;
-	// }
-
-	Nodes.push_back(new ASTConditional(Cond, TrueBody, FalseBody));
+	Nodes.push_back(new ASTIf(Cond, TrueBody, FalseBody));
 
 	Debug("Exiting parse cond.");
 
@@ -711,7 +738,6 @@ ASTNode* AST::ParseExpression()
 	else if (Expect(Bool) || Expect(Number) || Expect(String) || Expect(Name) || Expect(LParen))
 	{
 		Expr = ParseEqualityExpr();
-		//Accept(); // Consume ';'
 	}
 	else if (Expect(If))
 	{
@@ -744,20 +770,5 @@ void AST::ParseBody()
 			break;
 		}
 		Program->Expressions.push_back(Expr);
-
-		// if (CurrentToken == nullptr)
-		//{
-		//	break;
-		// }
-
-		// if (Expect(Semicolon))
-		//{
-		//	Accept(); // Consume ';'
-		// }
-		// else
-		//{
-		//	Error("Expected semicolon.");
-		//	break;
-		// }
 	}
 }

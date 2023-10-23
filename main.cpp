@@ -9,8 +9,7 @@ int Compile(std::string FileName)
 	std::string Source = ReadFile(FileName);
 	if (Source == "")
 	{
-		std::cout << "\x1B[31m"
-				  << "ERROR: File not found or empty: " << FileName << "\033[0m" << std::endl;
+		Error(std::format("ERROR: File not found or empty: {}", FileName));
 		return -1;
 	}
 	std::cout << "Source:\n\"\"\"\n" << Source << "\n\"\"\"" << std::endl << std::endl;
@@ -27,8 +26,6 @@ int Compile(std::string FileName)
 		auto V = std::make_unique<Visitor>();
 		V->Visit(Program);
 
-		std::cout << "Variables:\n"
-				  << "\x1B[36m";
 		for (const auto& Var : V->Variables)
 		{
 			if (std::holds_alternative<int>(Var.second))
@@ -48,14 +45,12 @@ int Compile(std::string FileName)
 				std::cout << Var.first << " : " << (std::get<bool>(Var.second) ? "true" : "false") << std::endl;
 			}
 		}
-		std::cout << "\x1B[33m";
 	}
 	else
 	{
 		for (const auto& E : Program->Errors)
 		{
-			std::cout << "\x1B[31m"
-					  << "ERROR: " << E.ToString() << "\033[0m" << std::endl;
+			Error(E.ToString());
 		}
 		return 1;
 	}

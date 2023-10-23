@@ -7,8 +7,11 @@
 namespace Core
 {
 
-	void Log(const std::string& InMsg);
+	static int WHILE_MAX_LOOP = 10000;
 
+	void Log(const std::string& InMsg);
+	void Warning(const std::string& InMsg);
+	void Error(const std::string& InMsg);
 	void Debug(const std::string& InMsg);
 
 	/// <summary>
