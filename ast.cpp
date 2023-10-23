@@ -99,6 +99,32 @@ void LiteralNotEq(const Literal& Left, const Literal& Right, Literal& Value)
 	}
 }
 
+void LiteralLessThan(const Literal& Left, const Literal& Right, Literal& Value)
+{
+	switch (Left.index())
+	{
+		case 0 :
+			Value = std::get<int>(Left) < std::get<int>(Right);
+			break;
+		case 1 :
+			Value = std::get<float>(Left) < std::get<float>(Right);
+			break;
+	}
+}
+
+void LiteralGreaterThan(const Literal& Left, const Literal& Right, Literal& Value)
+{
+	switch (Left.index())
+	{
+		case 0 :
+			Value = std::get<int>(Left) > std::get<int>(Right);
+			break;
+		case 1 :
+			Value = std::get<float>(Left) > std::get<float>(Right);
+			break;
+	}
+}
+
 //////////////
 // Visitors //
 //////////////
@@ -228,6 +254,12 @@ void Visitor::Visit(ASTBinOp* Node)
 			break;
 		case NotEquals :
 			LiteralNotEq(Left, Right, Result);
+			break;
+		case LessThan :
+			LiteralLessThan(Left, Right, Result);
+			break;
+		case GreaterThan :
+			LiteralGreaterThan(Left, Right, Result);
 			break;
 	}
 
@@ -541,7 +573,7 @@ ASTNode* AST::ParseEqualityExpr()
 {
 	Debug("Parsing equality.");
 	ASTNode* Expr = ParseAdditiveExpr();
-	while (Expect(Equals) || Expect(NotEquals))
+	while (Expect(Equals) || Expect(NotEquals) || Expect(LessThan) || Expect(GreaterThan))
 	{
 		std::string Op = CurrentToken->Content;
 		Accept(); // Consume '==' or '!='

@@ -13,8 +13,8 @@ using namespace Core;
 // Tokens
 enum TokenType
 {
-	Invalid = -1,
-	Eof = 0,
+	Invalid,
+	Eof,
 	Type,
 	Name,
 	Number,
@@ -40,8 +40,11 @@ enum TokenType
 	If,
 	Else,
 	For,
-	While
+	While,
+	Count
 };
+
+static int TokenTypeCount = (int)TokenType::Count;
 
 static std::map<TokenType, std::string> TokenStringMap{
 	{ Eof, "/0" },		{ Type, "Type" },  { Plus, "+" },		 { Minus, "-" },   { Multiply, "*" },

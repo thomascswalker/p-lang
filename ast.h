@@ -17,6 +17,8 @@ static void LiteralMul(const Literal& Left, const Literal& Right, Literal& Value
 static void LiteralDiv(const Literal& Left, const Literal& Right, Literal& Value);
 static void LiteralEq(const Literal& Left, const Literal& Right, Literal& Value);
 static void LiteralNotEq(const Literal& Left, const Literal& Right, Literal& Value);
+static void LiteralLessThan(const Literal& Left, const Literal& Right, Literal& Value);
+static void LiteralGreaterThan(const Literal& Left, const Literal& Right, Literal& Value);
 
 class VisitorBase;
 class Visitor;
