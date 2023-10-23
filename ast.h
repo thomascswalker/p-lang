@@ -11,12 +11,12 @@
 using namespace Core;
 using Literal = std::variant<int, float, std::string, bool>;
 
-void LiteralAdd(const Literal& Left, const Literal& Right, Literal& Value);
-void LiteralSub(const Literal& Left, const Literal& Right, Literal& Value);
-void LiteralMul(const Literal& Left, const Literal& Right, Literal& Value);
-void LiteralDiv(const Literal& Left, const Literal& Right, Literal& Value);
-void LiteralEq(const Literal& Left, const Literal& Right, Literal& Value);
-void LiteralNotEq(const Literal& Left, const Literal& Right, Literal& Value);
+static void LiteralAdd(const Literal& Left, const Literal& Right, Literal& Value);
+static void LiteralSub(const Literal& Left, const Literal& Right, Literal& Value);
+static void LiteralMul(const Literal& Left, const Literal& Right, Literal& Value);
+static void LiteralDiv(const Literal& Left, const Literal& Right, Literal& Value);
+static void LiteralEq(const Literal& Left, const Literal& Right, Literal& Value);
+static void LiteralNotEq(const Literal& Left, const Literal& Right, Literal& Value);
 
 class VisitorBase;
 class Visitor;
@@ -183,14 +183,18 @@ public:
 
 class ASTBinOp : public ASTNode
 {
+	std::string OpString;
+
 public:
-	ASTNode*	Left;
-	ASTNode*	Right;
-	std::string Op;
-	ASTBinOp(ASTNode* InLeft, ASTNode* InRight, const std::string& InOp) : Left(InLeft), Right(InRight), Op(InOp){};
+	ASTNode*  Left;
+	ASTNode*  Right;
+	TokenType Op = Invalid;
+
+	ASTBinOp(ASTNode* InLeft, ASTNode* InRight, const std::string& InOp)
+		: Left(InLeft), Right(InRight), Op(GetTokenTypeFromString(InOp)){};
 	virtual std::string ToString() const
 	{
-		return "BinOp{\"Left: " + Left->ToString() + ", \"Op: \"" + Op + "\", Right: " + Right->ToString() + "}";
+		return "BinOp{\"Left: " + Left->ToString() + ", \"Op: \"" + OpString + "\", Right: " + Right->ToString() + "}";
 	}
 
 	void Accept(Visitor& V) override { V.Visit(this); }

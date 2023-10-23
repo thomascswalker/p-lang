@@ -1,11 +1,3 @@
-MyString = "Test" + "String";
-MyBool = true;
-
-if (MyBool == false)
-{
-    A = 5;
-}
-else
-{
-    A = 10;
-};
+a = 20.0;
+b = 100.0;
+c = a - b;
