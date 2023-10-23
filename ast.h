@@ -9,22 +9,22 @@
 #include "token.h"
 
 using namespace Core;
-using Literal = std::variant<int, float, std::string, bool>;
+using TValue = std::variant<int, float, std::string, bool>;
 
-static void LiteralAdd(const Literal& Left, const Literal& Right, Literal& Value);
-static void LiteralSub(const Literal& Left, const Literal& Right, Literal& Value);
-static void LiteralMul(const Literal& Left, const Literal& Right, Literal& Value);
-static void LiteralDiv(const Literal& Left, const Literal& Right, Literal& Value);
-static void LiteralEq(const Literal& Left, const Literal& Right, Literal& Value);
-static void LiteralNotEq(const Literal& Left, const Literal& Right, Literal& Value);
-static void LiteralLessThan(const Literal& Left, const Literal& Right, Literal& Value);
-static void LiteralGreaterThan(const Literal& Left, const Literal& Right, Literal& Value);
+static void EvalAdd(const TValue& Left, const TValue& Right, TValue& Value);
+static void EvalSub(const TValue& Left, const TValue& Right, TValue& Value);
+static void EvalMul(const TValue& Left, const TValue& Right, TValue& Value);
+static void EvalDiv(const TValue& Left, const TValue& Right, TValue& Value);
+static void EvalEq(const TValue& Left, const TValue& Right, TValue& Value);
+static void EvalNotEq(const TValue& Left, const TValue& Right, TValue& Value);
+static void EvalLessThan(const TValue& Left, const TValue& Right, TValue& Value);
+static void EvalGreaterThan(const TValue& Left, const TValue& Right, TValue& Value);
 
 class VisitorBase;
 class Visitor;
 
 class ASTNode;
-class ASTLiteral;
+class ASTValue;
 class ASTVariable;
 class ASTBinOp;
 class ASTAssignment;
@@ -35,7 +35,7 @@ class ASTBody;
 class VisitorBase
 {
 public:
-	virtual void Visit(ASTLiteral* Node) = 0;
+	virtual void Visit(ASTValue* Node) = 0;
 	virtual void Visit(ASTVariable* Node) = 0;
 	virtual void Visit(ASTBinOp* Node) = 0;
 	virtual void Visit(ASTAssignment* Node) = 0;
@@ -46,13 +46,13 @@ public:
 
 class Visitor : public VisitorBase
 {
-	void	Push(const Literal& V);
-	Literal Pop();
-	bool	IsVariable(const std::string& Name);
+	void   Push(const TValue& V);
+	TValue Pop();
+	bool   IsVariable(const std::string& Name);
 
 public:
-	std::map<std::string, Literal> Variables;
-	std::vector<Literal>		   Stack;
+	std::map<std::string, TValue> Variables;
+	std::vector<TValue>			  Stack;
 
 	Visitor(){};
 	Visitor(Visitor& Other)
@@ -65,13 +65,37 @@ public:
 		Variables = Other.Variables;
 		Stack = Other.Stack;
 	}
-	void Visit(ASTLiteral* Node) override;
+	void Visit(ASTValue* Node) override;
 	void Visit(ASTVariable* Node) override;
 	void Visit(ASTBinOp* Node) override;
 	void Visit(ASTAssignment* Node) override;
 	void Visit(ASTIf* Node) override;
 	void Visit(ASTWhile* Node) override;
 	void Visit(ASTBody* Node) override;
+
+	void Dump()
+	{
+		std::cout << "Variables:" << std::endl;
+		for (const auto& Var : Variables)
+		{
+			if (std::holds_alternative<int>(Var.second))
+			{
+				std::cout << "  " << Var.first << " : " << std::to_string(std::get<int>(Var.second)) << std::endl;
+			}
+			else if (std::holds_alternative<float>(Var.second))
+			{
+				std::cout << "  " << Var.first << " : " << std::to_string(std::get<float>(Var.second)) << std::endl;
+			}
+			else if (std::holds_alternative<std::string>(Var.second))
+			{
+				std::cout << "  " << Var.first << " : \"" << std::get<std::string>(Var.second) << "\"" << std::endl;
+			}
+			else if (std::holds_alternative<bool>(Var.second))
+			{
+				std::cout << "  " << Var.first << " : " << (std::get<bool>(Var.second) ? "true" : "false") << std::endl;
+			}
+		}
+	}
 };
 
 struct ASTError
@@ -101,13 +125,13 @@ public:
 	virtual std::string ToString() const = 0;
 };
 
-class ASTLiteral : public ASTNode
+class ASTValue : public ASTNode
 {
 public:
 	std::string Type = "Unknown";
-	Literal		Value;
+	TValue		Value;
 
-	ASTLiteral(Literal& InValue) : Value(InValue)
+	ASTValue(TValue& InValue) : Value(InValue)
 	{
 		if (IsInt())
 		{
@@ -126,10 +150,10 @@ public:
 			Type = "Bool";
 		}
 	}
-	ASTLiteral(int InValue) : Value(InValue) { Type = "Int"; };
-	ASTLiteral(float InValue) : Value(InValue) { Type = "Float"; };
-	ASTLiteral(const std::string& InValue) : Value(InValue) { Type = "String"; };
-	ASTLiteral(const bool InValue) : Value(InValue) { Type = "Bool"; };
+	ASTValue(int InValue) : Value(InValue) { Type = "Int"; };
+	ASTValue(float InValue) : Value(InValue) { Type = "Float"; };
+	ASTValue(const std::string& InValue) : Value(InValue) { Type = "String"; };
+	ASTValue(const bool InValue) : Value(InValue) { Type = "Bool"; };
 
 	void Accept(Visitor& V) override { V.Visit(this); }
 
@@ -243,14 +267,14 @@ public:
 class ASTBody : public ASTNode
 {
 public:
+	ASTBody*			  Parent = nullptr;
 	std::vector<ASTError> Errors;
 	std::vector<ASTNode*> Expressions;
 	ASTBody(std::vector<ASTNode*> InBody = {}) : Expressions(InBody){};
 	virtual std::string ToString() const
 	{
-
 		std::string Out;
-		for (const auto& E : Expressions)
+		for (const ASTNode* E : Expressions)
 		{
 			Out += E->ToString() + "\n";
 		};
@@ -303,7 +327,7 @@ private:
 	/// <returns>Whether the types are all found.</returns>
 	bool Expect(const std::initializer_list<TokenType>& Types);
 
-	ASTNode* ParseLiteralExpr();
+	ASTNode* ParseValueExpr();
 	ASTNode* ParseParenExpr();
 	ASTNode* ParseCurlyExpr();
 	ASTNode* ParseMultiplicativeExpr();

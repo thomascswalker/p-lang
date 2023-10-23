@@ -6,7 +6,7 @@ using namespace Core;
 // Literals //
 //////////////
 
-void LiteralAdd(const Literal& Left, const Literal& Right, Literal& Value)
+void EvalAdd(const TValue& Left, const TValue& Right, TValue& Value)
 {
 	switch (Left.index())
 	{
@@ -22,7 +22,7 @@ void LiteralAdd(const Literal& Left, const Literal& Right, Literal& Value)
 	}
 }
 
-void LiteralSub(const Literal& Left, const Literal& Right, Literal& Value)
+void EvalSub(const TValue& Left, const TValue& Right, TValue& Value)
 {
 	switch (Left.index())
 	{
@@ -35,7 +35,7 @@ void LiteralSub(const Literal& Left, const Literal& Right, Literal& Value)
 	}
 }
 
-void LiteralMul(const Literal& Left, const Literal& Right, Literal& Value)
+void EvalMul(const TValue& Left, const TValue& Right, TValue& Value)
 {
 	switch (Left.index())
 	{
@@ -48,7 +48,7 @@ void LiteralMul(const Literal& Left, const Literal& Right, Literal& Value)
 	}
 }
 
-void LiteralDiv(const Literal& Left, const Literal& Right, Literal& Value)
+void EvalDiv(const TValue& Left, const TValue& Right, TValue& Value)
 {
 	switch (Left.index())
 	{
@@ -61,7 +61,7 @@ void LiteralDiv(const Literal& Left, const Literal& Right, Literal& Value)
 	}
 }
 
-void LiteralEq(const Literal& Left, const Literal& Right, Literal& Value)
+void EvalEq(const TValue& Left, const TValue& Right, TValue& Value)
 {
 	switch (Left.index())
 	{
@@ -80,7 +80,7 @@ void LiteralEq(const Literal& Left, const Literal& Right, Literal& Value)
 	}
 }
 
-void LiteralNotEq(const Literal& Left, const Literal& Right, Literal& Value)
+void EvalNotEq(const TValue& Left, const TValue& Right, TValue& Value)
 {
 	switch (Left.index())
 	{
@@ -99,7 +99,7 @@ void LiteralNotEq(const Literal& Left, const Literal& Right, Literal& Value)
 	}
 }
 
-void LiteralLessThan(const Literal& Left, const Literal& Right, Literal& Value)
+void EvalLessThan(const TValue& Left, const TValue& Right, TValue& Value)
 {
 	switch (Left.index())
 	{
@@ -112,7 +112,7 @@ void LiteralLessThan(const Literal& Left, const Literal& Right, Literal& Value)
 	}
 }
 
-void LiteralGreaterThan(const Literal& Left, const Literal& Right, Literal& Value)
+void EvalGreaterThan(const TValue& Left, const TValue& Right, TValue& Value)
 {
 	switch (Left.index())
 	{
@@ -129,14 +129,14 @@ void LiteralGreaterThan(const Literal& Left, const Literal& Right, Literal& Valu
 // Visitors //
 //////////////
 
-void Visitor::Push(const Literal& V)
+void Visitor::Push(const TValue& V)
 {
 	Stack.push_back(V);
 }
 
-Literal Visitor::Pop()
+TValue Visitor::Pop()
 {
-	Literal Value = Stack.back();
+	TValue Value = Stack.back();
 	Stack.pop_back();
 	return Value;
 }
@@ -146,27 +146,27 @@ bool Visitor::IsVariable(const std::string& Name)
 	return Variables.find(Name) != Variables.end();
 }
 
-void Visitor::Visit(ASTLiteral* Node)
+void Visitor::Visit(ASTValue* Node)
 {
-	Debug("Visiting literal.");
+	Debug("Visiting value.");
 
 	switch (Node->Value.index())
 	{
 		case 0 :
 			Push(Node->GetInt());
-			Debug(std::format("Got literal int: {}", std::get<int>(Stack.back())));
+			Debug(std::format("Got value int: {}", std::get<int>(Stack.back())));
 			break;
 		case 1 :
 			Push(Node->GetFloat());
-			Debug(std::format("Got literal int: {}", std::get<float>(Stack.back())));
+			Debug(std::format("Got value int: {}", std::get<float>(Stack.back())));
 			break;
 		case 2 :
 			Push(Node->GetString());
-			Debug(std::format("Got literal string: {}", std::get<std::string>(Stack.back())));
+			Debug(std::format("Got value string: {}", std::get<std::string>(Stack.back())));
 			break;
 		case 3 :
 			Push(Node->GetBool());
-			Debug(std::format("Got literal bool: {}", std::get<bool>(Stack.back())));
+			Debug(std::format("Got value bool: {}", std::get<bool>(Stack.back())));
 			break;
 	}
 }
@@ -190,9 +190,9 @@ void Visitor::Visit(ASTBinOp* Node)
 {
 
 	// Visit the left value
-	if (Cast<ASTLiteral>(Node->Left))
+	if (Cast<ASTValue>(Node->Left))
 	{
-		Visit(Cast<ASTLiteral>(Node->Left));
+		Visit(Cast<ASTValue>(Node->Left));
 	}
 	else if (Cast<ASTVariable>(Node->Left))
 	{
@@ -206,9 +206,9 @@ void Visitor::Visit(ASTBinOp* Node)
 	auto Left = Pop();
 
 	// Visit the right value
-	if (Cast<ASTLiteral>(Node->Right))
+	if (Cast<ASTValue>(Node->Right))
 	{
-		Visit(Cast<ASTLiteral>(Node->Right));
+		Visit(Cast<ASTValue>(Node->Right));
 	}
 	else if (Cast<ASTVariable>(Node->Right))
 	{
@@ -225,41 +225,41 @@ void Visitor::Visit(ASTBinOp* Node)
 	if (Left.index() == 0 && Right.index() == 1)
 	{
 		auto LValue = std::get<int>(Left);
-		Left = Literal((float)LValue);
+		Left = TValue((float)LValue);
 	}
 	else if (Left.index() == 1 && Right.index() == 0)
 	{
 		auto RValue = std::get<int>(Right);
-		Right = Literal((float)RValue);
+		Right = TValue((float)RValue);
 	}
 
 	// Execute the operator on the left and right value
-	Literal Result;
+	TValue Result;
 	switch (Node->Op)
 	{
 		case Plus :
-			LiteralAdd(Left, Right, Result);
+			EvalAdd(Left, Right, Result);
 			break;
 		case Minus :
-			LiteralSub(Left, Right, Result);
+			EvalSub(Left, Right, Result);
 			break;
 		case Multiply :
-			LiteralMul(Left, Right, Result);
+			EvalMul(Left, Right, Result);
 			break;
 		case Divide :
-			LiteralDiv(Left, Right, Result);
+			EvalDiv(Left, Right, Result);
 			break;
 		case Equals :
-			LiteralEq(Left, Right, Result);
+			EvalEq(Left, Right, Result);
 			break;
 		case NotEquals :
-			LiteralNotEq(Left, Right, Result);
+			EvalNotEq(Left, Right, Result);
 			break;
 		case LessThan :
-			LiteralLessThan(Left, Right, Result);
+			EvalLessThan(Left, Right, Result);
 			break;
 		case GreaterThan :
-			LiteralGreaterThan(Left, Right, Result);
+			EvalGreaterThan(Left, Right, Result);
 			break;
 	}
 
@@ -277,9 +277,9 @@ void Visitor::Visit(ASTAssignment* Node)
 	}
 	auto Var = &Variables[Node->Name];
 
-	if (Cast<ASTLiteral>(Node->Right))
+	if (Cast<ASTValue>(Node->Right))
 	{
-		Visit(Cast<ASTLiteral>(Node->Right));
+		Visit(Cast<ASTValue>(Node->Right));
 	}
 	else if (Cast<ASTVariable>(Node->Right))
 	{
@@ -302,9 +302,9 @@ void Visitor::Visit(ASTIf* Node)
 	Debug("Visiting conditional.");
 	bool bResult = false;
 
-	if (Cast<ASTLiteral>(Node->Cond))
+	if (Cast<ASTValue>(Node->Cond))
 	{
-		Visit(Cast<ASTLiteral>(Node->Cond));
+		Visit(Cast<ASTValue>(Node->Cond));
 	}
 	else if (Cast<ASTVariable>(Node->Cond))
 	{
@@ -338,9 +338,9 @@ void Visitor::Visit(ASTWhile* Node)
 
 	while (bResult)
 	{
-		if (Cast<ASTLiteral>(Node->Cond))
+		if (Cast<ASTValue>(Node->Cond))
 		{
-			Visit(Cast<ASTLiteral>(Node->Cond));
+			Visit(Cast<ASTValue>(Node->Cond));
 		}
 		else if (Cast<ASTVariable>(Node->Cond))
 		{
@@ -381,9 +381,9 @@ void Visitor::Visit(ASTBody* Node)
 		{
 			Visit(Cast<ASTAssignment>(E));
 		}
-		else if (Cast<ASTLiteral>(E))
+		else if (Cast<ASTValue>(E))
 		{
-			Visit(Cast<ASTLiteral>(E));
+			Visit(Cast<ASTValue>(E));
 		}
 		else if (Cast<ASTIf>(E))
 		{
@@ -449,14 +449,14 @@ bool AST::Expect(const std::initializer_list<TokenType>& Types)
 	return true;
 }
 
-ASTNode* AST::ParseLiteralExpr()
+ASTNode* AST::ParseValueExpr()
 {
-	Debug("Parsing literal.");
+	Debug("Parsing value.");
 
 	// Parse numbers (floats and ints)
 	if (Expect(Number))
 	{
-		Literal Value;
+		TValue Value;
 
 		// Parse float
 		if (CurrentToken->Content.find(".") != std::string::npos)
@@ -472,8 +472,8 @@ ASTNode* AST::ParseLiteralExpr()
 		}
 
 		Accept(); // Consume number
-		Nodes.push_back(new ASTLiteral(Value));
-		Debug("Exiting parse literal.");
+		Nodes.push_back(new ASTValue(Value));
+		Debug("Exiting parse value.");
 		return Nodes.back();
 	}
 	// Parse strings
@@ -482,8 +482,8 @@ ASTNode* AST::ParseLiteralExpr()
 		std::string String = CurrentToken->Content;
 		Accept(); // Consume string
 		Debug(std::format("Parsing string: {}", String));
-		Nodes.push_back(new ASTLiteral(String));
-		Debug("Exiting parse literal.");
+		Nodes.push_back(new ASTValue(String));
+		Debug("Exiting parse value.");
 		return Nodes.back();
 	}
 	// Parse names (Variables, functions, etc.)
@@ -493,7 +493,7 @@ ASTNode* AST::ParseLiteralExpr()
 		Accept(); // Consume name
 		Debug(std::format("Parsing name: {}", Name));
 		Nodes.push_back(new ASTVariable(Name));
-		Debug("Exiting parse literal.");
+		Debug("Exiting parse value.");
 		return Nodes.back();
 	}
 	else if (Expect(Bool))
@@ -501,14 +501,14 @@ ASTNode* AST::ParseLiteralExpr()
 		bool Value = CurrentToken->Content == "true" ? true : false;
 		Accept(); // Consume bool
 		Debug(std::format("Parsing bool: {}", Value));
-		Nodes.push_back(new ASTLiteral(Value));
-		Debug("Exiting parse literal.");
+		Nodes.push_back(new ASTValue(Value));
+		Debug("Exiting parse value.");
 		return Nodes.back();
 	}
 	else if (Expect(LParen))
 	{
 		Debug("Parsing parenthesis block.");
-		Debug("Exiting parse literal.");
+		Debug("Exiting parse value.");
 		return ParseParenExpr();
 	}
 	else
@@ -573,12 +573,12 @@ ASTNode* AST::ParseMultiplicativeExpr()
 {
 	Debug("Parsing mult.");
 
-	ASTNode* Expr = ParseLiteralExpr();
+	ASTNode* Expr = ParseValueExpr();
 	while (Expect(Multiply) || Expect(Divide))
 	{
 		std::string Op = CurrentToken->Content;
 		Accept(); // Consume '*' or '/'
-		Nodes.push_back(new ASTBinOp(Expr, ParseLiteralExpr(), Op));
+		Nodes.push_back(new ASTBinOp(Expr, ParseValueExpr(), Op));
 		Expr = Nodes.back();
 	}
 

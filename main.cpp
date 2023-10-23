@@ -25,26 +25,7 @@ int Compile(std::string FileName)
 	{
 		auto V = std::make_unique<Visitor>();
 		V->Visit(Program);
-
-		for (const auto& Var : V->Variables)
-		{
-			if (std::holds_alternative<int>(Var.second))
-			{
-				std::cout << Var.first << " : " << std::to_string(std::get<int>(Var.second)) << std::endl;
-			}
-			else if (std::holds_alternative<float>(Var.second))
-			{
-				std::cout << Var.first << " : " << std::to_string(std::get<float>(Var.second)) << std::endl;
-			}
-			else if (std::holds_alternative<std::string>(Var.second))
-			{
-				std::cout << Var.first << " : \"" << std::get<std::string>(Var.second) << "\"" << std::endl;
-			}
-			else if (std::holds_alternative<bool>(Var.second))
-			{
-				std::cout << Var.first << " : " << (std::get<bool>(Var.second) ? "true" : "false") << std::endl;
-			}
-		}
+		V->Dump();
 	}
 	else
 	{
