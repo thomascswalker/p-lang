@@ -329,6 +329,8 @@ void Visitor::Visit(ASTConditional* Node)
 	}
 }
 
+void Visitor::Visit(ASTWhile* Node) {}
+
 void Visitor::Visit(ASTBody* Node)
 {
 	for (const auto& E : Node->Expressions)
@@ -510,15 +512,15 @@ ASTNode* AST::ParseCurlyExpr()
 	while (true)
 	{
 		ASTNode* Expr = ParseExpression();
-		if (Expect(Semicolon))
-		{
-			Accept(); // Consume ';'
-		}
-		else
-		{
-			Error("Expected semicolon.");
-			return nullptr;
-		}
+		//if (Expect(Semicolon))
+		//{
+		//	Accept(); // Consume ';'
+		//}
+		//else
+		//{
+		//	Error("Expected semicolon.");
+		//	return nullptr;
+		//}
 		Body.push_back(Expr);
 		if (Expect(RCurly))
 		{
@@ -619,7 +621,7 @@ ASTNode* AST::ParseAssignment()
 	return nullptr;
 }
 
-ASTNode* AST::ParseConditional()
+ASTNode* AST::ParseIf()
 {
 	Debug("Parsing cond.");
 
@@ -652,16 +654,36 @@ ASTNode* AST::ParseConditional()
 		}
 	}
 
-	if (!Expect(Semicolon))
-	{
-		Error("Missing semicolon at end of conditional statement.");
-		return nullptr;
-	}
+	// if (!Expect(Semicolon))
+	//{
+	//	Error("Missing semicolon at end of conditional statement.");
+	//	return nullptr;
+	// }
 
 	Nodes.push_back(new ASTConditional(Cond, TrueBody, FalseBody));
 
 	Debug("Exiting parse cond.");
 
+	return Nodes.back();
+}
+
+ASTNode* AST::ParseWhile()
+{
+	Debug("Parsing while.");
+	Accept(); // Consume 'while'
+	auto Cond = ParseParenExpr();
+
+	Debug("Parsing while block.");
+	auto Body = ParseCurlyExpr();
+
+	if (!Body)
+	{
+		Error("Unable to parse while body.");
+		return nullptr;
+	}
+
+	Nodes.push_back(new ASTWhile(Cond, Body));
+	Debug("Exiting parse while.");
 	return Nodes.back();
 }
 
@@ -675,11 +697,13 @@ ASTNode* AST::ParseExpression()
 	if (Expect({ Type, Name, Assign }))
 	{
 		Expr = ParseAssignment();
+		Accept(); // Consume ';'
 	}
 	// MyVar = ...;
 	else if (Expect({ Name, Assign }))
 	{
 		Expr = ParseAssignment();
+		Accept(); // Consume ';'
 	}
 	// 5 + ...;
 	// "Test" + ...;
@@ -687,10 +711,15 @@ ASTNode* AST::ParseExpression()
 	else if (Expect(Bool) || Expect(Number) || Expect(String) || Expect(Name) || Expect(LParen))
 	{
 		Expr = ParseEqualityExpr();
+		//Accept(); // Consume ';'
 	}
 	else if (Expect(If))
 	{
-		Expr = ParseConditional();
+		Expr = ParseIf();
+	}
+	else if (Expect(While))
+	{
+		Expr = ParseWhile();
 	}
 	else
 	{
@@ -715,14 +744,20 @@ void AST::ParseBody()
 			break;
 		}
 		Program->Expressions.push_back(Expr);
-		if (Expect(Semicolon))
-		{
-			Accept(); // Consume ';'
-		}
-		else
-		{
-			Error("Expected semicolon.");
-			break;
-		}
+
+		// if (CurrentToken == nullptr)
+		//{
+		//	break;
+		// }
+
+		// if (Expect(Semicolon))
+		//{
+		//	Accept(); // Consume ';'
+		// }
+		// else
+		//{
+		//	Error("Expected semicolon.");
+		//	break;
+		// }
 	}
 }

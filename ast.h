@@ -29,6 +29,7 @@ class ASTVariable;
 class ASTBinOp;
 class ASTAssignment;
 class ASTConditional;
+class ASTWhile;
 class ASTBody;
 
 class VisitorBase
@@ -39,6 +40,7 @@ public:
 	virtual void Visit(ASTBinOp* Node) = 0;
 	virtual void Visit(ASTAssignment* Node) = 0;
 	virtual void Visit(ASTConditional* Node) = 0;
+	virtual void Visit(ASTWhile* Node) = 0;
 	virtual void Visit(ASTBody* Node) = 0;
 };
 
@@ -68,6 +70,7 @@ public:
 	void Visit(ASTBinOp* Node) override;
 	void Visit(ASTAssignment* Node) override;
 	void Visit(ASTConditional* Node) override;
+	void Visit(ASTWhile* Node) override;
 	void Visit(ASTBody* Node) override;
 };
 
@@ -232,6 +235,17 @@ public:
 	void				Accept(Visitor& V) override { V.Visit(this); }
 };
 
+class ASTWhile : public ASTNode
+{
+public:
+	ASTNode* Cond;
+	ASTNode* Body;
+
+	ASTWhile(ASTNode* InCond, ASTNode* InBody) : Cond(InCond), Body(InBody){};
+	virtual std::string ToString() const { return "While"; }
+	void				Accept(Visitor& V) override { V.Visit(this); }
+};
+
 class ASTBody : public ASTNode
 {
 public:
@@ -302,7 +316,8 @@ private:
 	ASTNode* ParseAdditiveExpr();
 	ASTNode* ParseEqualityExpr();
 	ASTNode* ParseAssignment();
-	ASTNode* ParseConditional();
+	ASTNode* ParseIf();
+	ASTNode* ParseWhile();
 	ASTNode* ParseExpression();
 	void	 ParseBody();
 

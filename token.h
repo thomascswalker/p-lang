@@ -98,7 +98,7 @@ struct Token
 	std::string ToString() const
 	{
 		std::ostringstream Stream;
-		Stream << (int)Type << ", " << Content << ", " << (Line + 1) << ", " << Column;
+		Stream << (int)Type << ", " << Content << ", line " << (Line + 1) << ", col " << Column;
 		return Stream.str();
 	}
 	void Print() const { std::cout << ToString() << std::endl; }
