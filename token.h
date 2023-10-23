@@ -10,7 +10,54 @@
 
 using namespace Core;
 
-// Token Literals
+// Tokens
+enum TokenType
+{
+	Invalid = -1,
+	Eof = 0,
+	Type,
+	Plus,
+	Minus,
+	Divide,
+	Multiply,
+	Not,
+	Assign,
+	Equals,
+	NotEquals,
+	Semicolon,
+	LessThan,
+	MoreThan,
+	LParen,
+	RParen,
+	LBracket,
+	RBracket,
+	LCurly,
+	RCurly,
+	If,
+	Else,
+	For,
+	While
+};
+
+// clang-format off
+static std::map<TokenType, std::string> TokenStringMap{
+	{ Eof, "/0" },	 { Type, "Type" }, { Plus, "+" },  { Minus, "-" },
+	{ Multiply, "*" }, { Divide, "/" },   { Not, "!" }, { Assign, "=" },
+	{ Equals, "==" }, { NotEquals, "!=" },   { Minus, "-" }, { Minus, "-" },
+	{ Minus, "-" }, { Minus, "-" },   { Minus, "-" }, { Minus, "-" } };
+// clang-format on
+
+static TokenType GetTokenTypeFromString(const std::string& InString)
+{
+	for (auto& [K, V] : TokenStringMap)
+	{
+		if (InString == V)
+		{
+			return K;
+		}
+	}
+}
+
 const std::vector<char>		   TOKENS{ '+', '-', '/', '*', '=', '!', ';', '<', '>', '(', ')', '[', ']', '{', '}' };
 const std::vector<std::string> TYPES{
 	"int",

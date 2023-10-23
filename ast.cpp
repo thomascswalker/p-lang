@@ -8,18 +8,18 @@ using namespace Core;
 
 void LiteralAdd(const Literal& Left, const Literal& Right, Literal& Value)
 {
-	Value = std::visit(
-		[](auto L, auto R) -> Literal {
-			if constexpr (!std::is_same_v<decltype(L), decltype(R)>)
-			{
-				throw;
-			}
-			else
-			{
-				return L + R;
-			}
-		},
-		Left, Right);
+	switch (Left.index())
+	{
+		case 0 :
+			Value = std::get<int>(Left) + std::get<int>(Right);
+			break;
+		case 1 :
+			Value = std::get<float>(Left) + std::get<float>(Right);
+			break;
+		case 2 :
+			Value = std::get<std::string>(Left) + std::get<std::string>(Right);
+			break;
+	}
 }
 
 void LiteralSub(const Literal& Left, const Literal& Right, Literal& Value)
@@ -209,29 +209,26 @@ void Visitor::Visit(ASTBinOp* Node)
 
 	// Execute the operator on the left and right value
 	Literal Result;
-	if (Node->Op == "+")
+	switch (Node->Op)
 	{
-		LiteralAdd(Left, Right, Result);
-	}
-	else if (Node->Op == "-")
-	{
-		LiteralSub(Left, Right, Result);
-	}
-	else if (Node->Op == "*")
-	{
-		LiteralMul(Left, Right, Result);
-	}
-	else if (Node->Op == "/")
-	{
-		LiteralDiv(Left, Right, Result);
-	}
-	else if (Node->Op == "==")
-	{
-		LiteralEq(Left, Right, Result);
-	}
-	else if (Node->Op == "!=")
-	{
-		LiteralNotEq(Left, Right, Result);
+		case Plus :
+			LiteralAdd(Left, Right, Result);
+			break;
+		case Minus :
+			LiteralSub(Left, Right, Result);
+			break;
+		case Multiply :
+			LiteralMul(Left, Right, Result);
+			break;
+		case Divide :
+			LiteralDiv(Left, Right, Result);
+			break;
+		case Equals :
+			LiteralEq(Left, Right, Result);
+			break;
+		case NotEquals :
+			LiteralNotEq(Left, Right, Result);
+			break;
 	}
 
 	// Push the resulting value to the stack
@@ -270,6 +267,7 @@ void Visitor::Visit(ASTAssignment* Node)
 
 void Visitor::Visit(ASTConditional* Node)
 {
+	Debug("Visiting conditional.");
 	bool bResult = false;
 
 	if (Cast<ASTLiteral>(Node->Cond))
@@ -286,6 +284,7 @@ void Visitor::Visit(ASTConditional* Node)
 	}
 
 	bResult = std::get<bool>(Pop());
+	Debug(std::format("Conditional result is {}", bResult ? "true" : "false"));
 	if (bResult)
 	{
 		auto Body = Cast<ASTBody>(Node->TrueBody);

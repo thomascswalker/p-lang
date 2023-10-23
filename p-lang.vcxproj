@@ -142,6 +142,7 @@
     <ClInclude Include="token.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include=".clang-format" />
     <None Include="example.p" />
     <None Include="README.md" />
   </ItemGroup>
