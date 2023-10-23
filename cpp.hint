@@ -1,0 +1,5 @@
+// Hint files help the Visual Studio IDE interpret Visual C++ identifiers
+// such as names of functions and macros.
+// For more information see https://go.microsoft.com/fwlink/?linkid=865984
+#define GEN_VALUE_OPS(X) GEN_VALUE_OP_HEADER(+, X, X, X) GEN_VALUE_OP_HEADER(-, X, X, X) GEN_VALUE_OP_HEADER(*, X, X, X) GEN_VALUE_OP_HEADER(/, X, X, X)
+#define GEN_VALUE_BODY_OPS(X) GEN_VALUE_OP_BODY(+, X, X, X) GEN_VALUE_OP_BODY(-, X, X, X) GEN_VALUE_OP_BODY(*, X, X, X) GEN_VALUE_OP_BODY(/, X, X, X) GEN_VALUE_OP_BODY(==, X, bool, ) GEN_VALUE_OP_BODY(!=, X, bool, X) GEN_VALUE_OP_BODY(<, X, bool, X) GEN_VALUE_OP_BODY(>, X, bool, X)

@@ -7,18 +7,19 @@
 #include <format>
 
 #include "token.h"
+#include "value.h"
 
 using namespace Core;
-using TValue = std::variant<int, float, std::string, bool>;
+using TRawValue = std::variant<int, float, std::string, bool>;
 
-static void EvalAdd(const TValue& Left, const TValue& Right, TValue& Value);
-static void EvalSub(const TValue& Left, const TValue& Right, TValue& Value);
-static void EvalMul(const TValue& Left, const TValue& Right, TValue& Value);
-static void EvalDiv(const TValue& Left, const TValue& Right, TValue& Value);
-static void EvalEq(const TValue& Left, const TValue& Right, TValue& Value);
-static void EvalNotEq(const TValue& Left, const TValue& Right, TValue& Value);
-static void EvalLessThan(const TValue& Left, const TValue& Right, TValue& Value);
-static void EvalGreaterThan(const TValue& Left, const TValue& Right, TValue& Value);
+static void EvalAdd(const TRawValue& Left, const TRawValue& Right, TRawValue& Value);
+static void EvalSub(const TRawValue& Left, const TRawValue& Right, TRawValue& Value);
+static void EvalMul(const TRawValue& Left, const TRawValue& Right, TRawValue& Value);
+static void EvalDiv(const TRawValue& Left, const TRawValue& Right, TRawValue& Value);
+static void EvalEq(const TRawValue& Left, const TRawValue& Right, TRawValue& Value);
+static void EvalNotEq(const TRawValue& Left, const TRawValue& Right, TRawValue& Value);
+static void EvalLessThan(const TRawValue& Left, const TRawValue& Right, TRawValue& Value);
+static void EvalGreaterThan(const TRawValue& Left, const TRawValue& Right, TRawValue& Value);
 
 class VisitorBase;
 class Visitor;
@@ -46,13 +47,13 @@ public:
 
 class Visitor : public VisitorBase
 {
-	void   Push(const TValue& V);
-	TValue Pop();
+	void   Push(const TRawValue& V);
+	TRawValue Pop();
 	bool   IsVariable(const std::string& Name);
 
 public:
-	std::map<std::string, TValue> Variables;
-	std::vector<TValue>			  Stack;
+	std::map<std::string, TRawValue> Variables;
+	std::vector<TRawValue>			  Stack;
 
 	Visitor(){};
 	Visitor(Visitor& Other)
@@ -129,9 +130,9 @@ class ASTValue : public ASTNode
 {
 public:
 	std::string Type = "Unknown";
-	TValue		Value;
+	TRawValue		Value;
 
-	ASTValue(TValue& InValue) : Value(InValue)
+	ASTValue(TRawValue& InValue) : Value(InValue)
 	{
 		if (IsInt())
 		{

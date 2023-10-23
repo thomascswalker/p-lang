@@ -6,7 +6,7 @@ using namespace Core;
 // Literals //
 //////////////
 
-void EvalAdd(const TValue& Left, const TValue& Right, TValue& Value)
+void EvalAdd(const TRawValue& Left, const TRawValue& Right, TRawValue& Value)
 {
 	switch (Left.index())
 	{
@@ -22,7 +22,7 @@ void EvalAdd(const TValue& Left, const TValue& Right, TValue& Value)
 	}
 }
 
-void EvalSub(const TValue& Left, const TValue& Right, TValue& Value)
+void EvalSub(const TRawValue& Left, const TRawValue& Right, TRawValue& Value)
 {
 	switch (Left.index())
 	{
@@ -35,7 +35,7 @@ void EvalSub(const TValue& Left, const TValue& Right, TValue& Value)
 	}
 }
 
-void EvalMul(const TValue& Left, const TValue& Right, TValue& Value)
+void EvalMul(const TRawValue& Left, const TRawValue& Right, TRawValue& Value)
 {
 	switch (Left.index())
 	{
@@ -48,7 +48,7 @@ void EvalMul(const TValue& Left, const TValue& Right, TValue& Value)
 	}
 }
 
-void EvalDiv(const TValue& Left, const TValue& Right, TValue& Value)
+void EvalDiv(const TRawValue& Left, const TRawValue& Right, TRawValue& Value)
 {
 	switch (Left.index())
 	{
@@ -61,7 +61,7 @@ void EvalDiv(const TValue& Left, const TValue& Right, TValue& Value)
 	}
 }
 
-void EvalEq(const TValue& Left, const TValue& Right, TValue& Value)
+void EvalEq(const TRawValue& Left, const TRawValue& Right, TRawValue& Value)
 {
 	switch (Left.index())
 	{
@@ -80,7 +80,7 @@ void EvalEq(const TValue& Left, const TValue& Right, TValue& Value)
 	}
 }
 
-void EvalNotEq(const TValue& Left, const TValue& Right, TValue& Value)
+void EvalNotEq(const TRawValue& Left, const TRawValue& Right, TRawValue& Value)
 {
 	switch (Left.index())
 	{
@@ -99,7 +99,7 @@ void EvalNotEq(const TValue& Left, const TValue& Right, TValue& Value)
 	}
 }
 
-void EvalLessThan(const TValue& Left, const TValue& Right, TValue& Value)
+void EvalLessThan(const TRawValue& Left, const TRawValue& Right, TRawValue& Value)
 {
 	switch (Left.index())
 	{
@@ -112,7 +112,7 @@ void EvalLessThan(const TValue& Left, const TValue& Right, TValue& Value)
 	}
 }
 
-void EvalGreaterThan(const TValue& Left, const TValue& Right, TValue& Value)
+void EvalGreaterThan(const TRawValue& Left, const TRawValue& Right, TRawValue& Value)
 {
 	switch (Left.index())
 	{
@@ -129,14 +129,14 @@ void EvalGreaterThan(const TValue& Left, const TValue& Right, TValue& Value)
 // Visitors //
 //////////////
 
-void Visitor::Push(const TValue& V)
+void Visitor::Push(const TRawValue& V)
 {
 	Stack.push_back(V);
 }
 
-TValue Visitor::Pop()
+TRawValue Visitor::Pop()
 {
-	TValue Value = Stack.back();
+	TRawValue Value = Stack.back();
 	Stack.pop_back();
 	return Value;
 }
@@ -225,16 +225,16 @@ void Visitor::Visit(ASTBinOp* Node)
 	if (Left.index() == 0 && Right.index() == 1)
 	{
 		auto LValue = std::get<int>(Left);
-		Left = TValue((float)LValue);
+		Left = TRawValue((float)LValue);
 	}
 	else if (Left.index() == 1 && Right.index() == 0)
 	{
 		auto RValue = std::get<int>(Right);
-		Right = TValue((float)RValue);
+		Right = TRawValue((float)RValue);
 	}
 
 	// Execute the operator on the left and right value
-	TValue Result;
+	TRawValue Result;
 	switch (Node->Op)
 	{
 		case Plus :
@@ -456,7 +456,7 @@ ASTNode* AST::ParseValueExpr()
 	// Parse numbers (floats and ints)
 	if (Expect(Number))
 	{
-		TValue Value;
+		TRawValue Value;
 
 		// Parse float
 		if (CurrentToken->Content.find(".") != std::string::npos)
