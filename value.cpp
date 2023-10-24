@@ -1,3 +1,4 @@
+#include <functional>
 #include "value.h"
 
 using namespace Values;
@@ -220,4 +221,182 @@ TFloatValue::operator TStringValue() const
 TStringValue Values::TStringValue::operator+(const TStringValue& Other) const
 {
 	return TStringValue(Value + Other.GetValue());
+}
+
+TObject Values::TObject::operator+(const TObject& Other) const
+{
+	switch (Type)
+	{
+		case IntType :
+		{
+			switch (Other.Type)
+			{
+				case IntType :
+					return AsInt().GetValue() + Other.AsInt().GetValue();
+				case FloatType :
+					return AsInt().GetValue() + Other.AsFloat().GetValue();
+				default :
+					break;
+			}
+			break;
+		}
+		case FloatType :
+		{
+			switch (Other.Type)
+			{
+				case IntType :
+					return AsFloat().GetValue() + Other.AsInt().GetValue();
+				case FloatType :
+					return AsFloat().GetValue() + Other.AsFloat().GetValue();
+				default :
+					break;
+			}
+			break;
+		}
+		case StringType :
+		{
+			return AsString().GetValue() + Other.AsString().GetValue();
+		}
+		default :
+			break;
+	}
+
+	throw std ::runtime_error("Cannot ");
+}
+
+TObject Values::TObject::operator-(const TObject& Other) const
+{
+	switch (Type)
+	{
+		case IntType :
+		{
+			switch (Other.Type)
+			{
+				case IntType :
+					return AsInt().GetValue() - Other.AsInt().GetValue();
+				case FloatType :
+					return AsInt().GetValue() - Other.AsFloat().GetValue();
+				default :
+					break;
+			}
+			break;
+		}
+		case FloatType :
+		{
+			switch (Other.Type)
+			{
+				case IntType :
+					return AsFloat().GetValue() - Other.AsInt().GetValue();
+				case FloatType :
+					return AsFloat().GetValue() - Other.AsFloat().GetValue();
+				default :
+					break;
+			}
+			break;
+		}
+		default :
+			break;
+	}
+	return TObject();
+}
+
+TObject Values::TObject::operator*(const TObject& Other) const
+{
+	switch (Type)
+	{
+		case IntType :
+		{
+			switch (Other.Type)
+			{
+				case IntType :
+					return AsInt().GetValue() * Other.AsInt().GetValue();
+				case FloatType :
+					return AsInt().GetValue() * Other.AsFloat().GetValue();
+				default :
+					break;
+			}
+			break;
+		}
+		case FloatType :
+		{
+			switch (Other.Type)
+			{
+				case IntType :
+					return AsFloat().GetValue() * Other.AsInt().GetValue();
+				case FloatType :
+					return AsFloat().GetValue() * Other.AsFloat().GetValue();
+				default :
+					break;
+			}
+			break;
+		}
+		default :
+			break;
+	}
+	return TObject();
+}
+
+TObject Values::TObject::operator/(const TObject& Other) const
+{
+	switch (Type)
+	{
+		case IntType :
+		{
+			switch (Other.Type)
+			{
+				case IntType :
+					return AsInt().GetValue() / Other.AsInt().GetValue();
+				case FloatType :
+					return AsInt().GetValue() / Other.AsFloat().GetValue();
+				default :
+					break;
+			}
+			break;
+		}
+		case FloatType :
+		{
+			switch (Other.Type)
+			{
+				case IntType :
+					return AsFloat().GetValue() / Other.AsInt().GetValue();
+				case FloatType :
+					return AsFloat().GetValue() / Other.AsFloat().GetValue();
+				default :
+					break;
+			}
+			break;
+		}
+		default :
+			break;
+	}
+	return TObject();
+}
+
+#define TOBJECT_COMPARE_OP_BODY(X)                                            \
+	if (Type == Other.Type)                                                   \
+	{                                                                         \
+		switch (Type)                                                         \
+		{                                                                     \
+			case BoolType :                                                   \
+				return GetBool().GetValue() X Other.GetBool().GetValue();     \
+			case IntType :                                                    \
+				return GetInt().GetValue() X Other.GetInt().GetValue();       \
+			case FloatType :                                                  \
+				return GetFloat().GetValue() X Other.GetFloat().GetValue();   \
+			case StringType :                                                 \
+				return GetString().GetValue() X Other.GetString().GetValue(); \
+			default :                                                         \
+				return TObject();                                             \
+		}                                                                     \
+	}
+
+TObject Values::TObject::operator<(const TObject& Other) const { TOBJECT_COMPARE_OP_BODY(<) }
+
+TObject Values::TObject::operator>(const TObject& Other) const { TOBJECT_COMPARE_OP_BODY(>) }
+
+TObject Values::TObject::operator==(const TObject& Other) const { TOBJECT_COMPARE_OP_BODY(==) }
+
+TObject Values::TObject::operator!=(const TObject& Other) const
+{
+	TOBJECT_COMPARE_OP_BODY(!=)
 }

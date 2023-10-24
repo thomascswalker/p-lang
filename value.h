@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <tuple>
 
 #include "core.h"
 
@@ -18,7 +19,8 @@ namespace Values
 		FloatType,
 		StringType,
 		ArrayType,
-		MapType
+		MapType,
+		TypeCount
 	};
 
 	class TObject;
@@ -37,12 +39,15 @@ namespace Values
 	{
 	public:
 		virtual ~TValue() = default;
+		virtual std::string ToString() = 0;
+		virtual std::string ToString() const = 0;
 	};
 
 	class TNullValue : public TValue
 	{
 	public:
 		TNullValue() = default;
+		std::string ToString() const override { return "nullptr"; }
 	};
 
 	class TBoolValue : public TValue
@@ -51,10 +56,15 @@ namespace Values
 
 	public:
 		TBoolValue(bool InValue) : Value(InValue){};
-		bool GetValue() const { return Value; }
+		bool		GetValue() const { return Value; }
+		std::string ToString() override { return Value ? "true" : "false"; }
+		std::string ToString() const override { return Value ? "true" : "false"; }
 
 		TBoolValue operator==(const TBoolValue& Other) const;
 		TBoolValue operator!=(const TBoolValue& Other) const;
+
+		// Bool -> Bool
+		explicit operator bool() const { return Value; }
 
 		// Bool -> Int
 		explicit operator int() const;
@@ -71,7 +81,9 @@ namespace Values
 
 	public:
 		TIntValue(int InValue) : Value(InValue){};
-		int GetValue() const { return Value; }
+		int			GetValue() const { return Value; }
+		std::string ToString() override { return std::to_string(Value); }
+		std::string ToString() const override { return std::to_string(Value); }
 
 		// Operators
 
@@ -95,6 +107,9 @@ namespace Values
 
 		// Casting
 
+		// Int -> Int
+		operator int() const { return Value; }
+
 		// Int -> Bool
 		operator bool() const { return Value; }
 
@@ -113,7 +128,9 @@ namespace Values
 
 	public:
 		TFloatValue(float InValue) : Value(InValue){};
-		float GetValue() const { return Value; }
+		float		GetValue() const { return Value; }
+		std::string ToString() override { return std::to_string(Value); }
+		std::string ToString() const override { return std::to_string(Value); }
 
 		// Operators
 		// Float | Float
@@ -138,8 +155,11 @@ namespace Values
 
 		// Casting
 
+		// Float -> Float
+		operator float() const { return Value; }
+
 		// Float -> Int
-		operator int() const { return (int)Value; }
+		operator int() const { return Value; }
 		operator TIntValue() const;
 
 		// Float -> String
@@ -154,6 +174,10 @@ namespace Values
 	public:
 		TStringValue(const std::string& InValue) : Value(InValue){};
 		std::string GetValue() const { return Value; }
+		std::string ToString() override { return Value; }
+		std::string ToString() const override { return Value; }
+
+		// String -> String
 
 		operator std::string() const { return Value; }
 		TStringValue operator+(const TStringValue& Other) const;
@@ -165,7 +189,9 @@ namespace Values
 
 	public:
 		TArrayValue(const TArray& InValue) : Value(InValue){};
-		TArray GetValue() const { return Value; }
+		TArray		GetValue() const { return Value; }
+		std::string ToString() override { return "Array"; }
+		std::string ToString() const override { return "Array"; }
 
 		TObject& operator[](int Index) { return Value[Index]; }
 	};
@@ -176,7 +202,9 @@ namespace Values
 
 	public:
 		TMapValue(const TMap& InValue) : Value(InValue){};
-		TMap GetValue() const { return Value; }
+		TMap		GetValue() const { return Value; }
+		std::string ToString() override { return "Map"; }
+		std::string ToString() const override { return "Map"; }
 
 		TObject& operator[](const std::string& Key) { return Value[Key]; }
 	};
@@ -225,6 +253,8 @@ namespace Values
 		};
 
 	public:
+		std::map<int, std::function<void()>> FunctionMap;
+
 		// Constructors
 		TObject()
 		{
@@ -236,12 +266,36 @@ namespace Values
 			*this = Other;
 			Type = Other.Type;
 		};
-		TObject(bool InValue) { Value = std::make_unique<TBoolValue>(InValue); };				  // Bool
-		TObject(int InValue) { Value = std::make_unique<TIntValue>(InValue); };					  // Integer
-		TObject(float InValue) { Value = std::make_unique<TFloatValue>(InValue); };				  // Float
-		TObject(const std::string& InValue) { Value = std::make_unique<TStringValue>(InValue); }; // String
-		TObject(const TArrayValue& InValue) { Value = std::make_unique<TArrayValue>(InValue); };  // Array
-		TObject(const TMapValue& InValue) { Value = std::make_unique<TMapValue>(InValue); };	  // Map
+		TObject(bool InValue)
+		{
+			Value = std::make_unique<TBoolValue>(InValue);
+			Type = BoolType;
+		}; // Bool
+		TObject(int InValue)
+		{
+			Value = std::make_unique<TIntValue>(InValue);
+			Type = IntType;
+		}; // Integer
+		TObject(float InValue)
+		{
+			Value = std::make_unique<TFloatValue>(InValue);
+			Type = FloatType;
+		}; // Float
+		TObject(const std::string& InValue)
+		{
+			Value = std::make_unique<TStringValue>(InValue);
+			Type = StringType;
+		}; // String
+		TObject(const TArrayValue& InValue)
+		{
+			Value = std::make_unique<TArrayValue>(InValue);
+			Type = ArrayType;
+		}; // Array
+		TObject(const TMapValue& InValue)
+		{
+			Value = std::make_unique<TMapValue>(InValue);
+			Type = MapType;
+		};
 
 		// Methods
 		EValueType GetType() { return Type; }
@@ -269,6 +323,9 @@ namespace Values
 			auto MapType = AsMap().GetValue();
 			return MapType.find(Key) != MapType.end();
 		}
+
+		std::string ToString() { return Value->ToString(); }
+		std::string ToString() const { return Value->ToString(); }
 
 		// Operators
 		TObject& operator=(const TObject& Other)
@@ -339,5 +396,14 @@ namespace Values
 			}
 			return ArrayType[Index];
 		}
+
+		TObject operator+(const TObject& Other) const;
+		TObject operator-(const TObject& Other) const;
+		TObject operator*(const TObject& Other) const;
+		TObject operator/(const TObject& Other) const;
+		TObject operator<(const TObject& Other) const;
+		TObject operator>(const TObject& Other) const;
+		TObject operator==(const TObject& Other) const;
+		TObject operator!=(const TObject& Other) const;
 	};
 } // namespace Values
