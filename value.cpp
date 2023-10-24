@@ -260,8 +260,7 @@ TObject Values::TObject::operator+(const TObject& Other) const
 		default :
 			break;
 	}
-
-	throw std ::runtime_error("Cannot ");
+	return TObject();
 }
 
 TObject Values::TObject::operator-(const TObject& Other) const
