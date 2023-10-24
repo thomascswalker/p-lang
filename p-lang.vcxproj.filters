@@ -24,6 +24,9 @@
     <ClCompile Include="core.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="value.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="token.h">
@@ -35,6 +38,9 @@
     <ClInclude Include="core.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="value.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="example.p">
@@ -44,5 +50,6 @@
       <Filter>Resource Files</Filter>
     </None>
     <None Include=".clang-format" />
+    <None Include="cpp.hint" />
   </ItemGroup>
 </Project>

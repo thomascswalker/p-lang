@@ -3,6 +3,7 @@
 #include "ast.h"
 
 using namespace Core;
+using namespace Values;
 
 int Compile(std::string FileName)
 {
@@ -61,5 +62,17 @@ int main(int argc, char* argv[])
 	}
 #endif
 	auto Result = Compile(FileName);
+
+	//auto A = TFloatValue(5.34f);
+	//auto B = TIntValue(3);
+
+	//auto C = A == B;
+	//std::cout << (std::string)C << std::endl;
+
+	//auto StringA = TStringValue("Test");
+	//auto StringB = TStringValue("34234");
+	//std::cout << (std::string)(StringA + StringB) << std::endl;
+
+
 	return Result;
 }

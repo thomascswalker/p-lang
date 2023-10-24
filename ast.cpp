@@ -1,142 +1,20 @@
 #include "ast.h"
+#include <functional>
 
 using namespace Core;
-
-//////////////
-// Literals //
-//////////////
-
-void EvalAdd(const TValue& Left, const TValue& Right, TValue& Value)
-{
-	switch (Left.index())
-	{
-		case 0 :
-			Value = std::get<int>(Left) + std::get<int>(Right);
-			break;
-		case 1 :
-			Value = std::get<float>(Left) + std::get<float>(Right);
-			break;
-		case 2 :
-			Value = std::get<std::string>(Left) + std::get<std::string>(Right);
-			break;
-	}
-}
-
-void EvalSub(const TValue& Left, const TValue& Right, TValue& Value)
-{
-	switch (Left.index())
-	{
-		case 0 :
-			Value = std::get<int>(Left) - std::get<int>(Right);
-			break;
-		case 1 :
-			Value = std::get<float>(Left) - std::get<float>(Right);
-			break;
-	}
-}
-
-void EvalMul(const TValue& Left, const TValue& Right, TValue& Value)
-{
-	switch (Left.index())
-	{
-		case 0 :
-			Value = std::get<int>(Left) * std::get<int>(Right);
-			break;
-		case 1 :
-			Value = std::get<float>(Left) * std::get<float>(Right);
-			break;
-	}
-}
-
-void EvalDiv(const TValue& Left, const TValue& Right, TValue& Value)
-{
-	switch (Left.index())
-	{
-		case 0 :
-			Value = std::get<int>(Left) / std::get<int>(Right);
-			break;
-		case 1 :
-			Value = std::get<float>(Left) / std::get<float>(Right);
-			break;
-	}
-}
-
-void EvalEq(const TValue& Left, const TValue& Right, TValue& Value)
-{
-	switch (Left.index())
-	{
-		case 0 :
-			Value = std::get<int>(Left) == std::get<int>(Right);
-			break;
-		case 1 :
-			Value = std::get<float>(Left) == std::get<float>(Right);
-			break;
-		case 2 :
-			Value = std::get<std::string>(Left) == std::get<std::string>(Right);
-			break;
-		case 3 :
-			Value = std::get<bool>(Left) == std::get<bool>(Right);
-			break;
-	}
-}
-
-void EvalNotEq(const TValue& Left, const TValue& Right, TValue& Value)
-{
-	switch (Left.index())
-	{
-		case 0 :
-			Value = std::get<int>(Left) != std::get<int>(Right);
-			break;
-		case 1 :
-			Value = std::get<float>(Left) != std::get<float>(Right);
-			break;
-		case 2 :
-			Value = std::get<std::string>(Left) != std::get<std::string>(Right);
-			break;
-		case 3 :
-			Value = std::get<bool>(Left) != std::get<bool>(Right);
-			break;
-	}
-}
-
-void EvalLessThan(const TValue& Left, const TValue& Right, TValue& Value)
-{
-	switch (Left.index())
-	{
-		case 0 :
-			Value = std::get<int>(Left) < std::get<int>(Right);
-			break;
-		case 1 :
-			Value = std::get<float>(Left) < std::get<float>(Right);
-			break;
-	}
-}
-
-void EvalGreaterThan(const TValue& Left, const TValue& Right, TValue& Value)
-{
-	switch (Left.index())
-	{
-		case 0 :
-			Value = std::get<int>(Left) > std::get<int>(Right);
-			break;
-		case 1 :
-			Value = std::get<float>(Left) > std::get<float>(Right);
-			break;
-	}
-}
 
 //////////////
 // Visitors //
 //////////////
 
-void Visitor::Push(const TValue& V)
+void Visitor::Push(const TObject& V)
 {
 	Stack.push_back(V);
 }
 
-TValue Visitor::Pop()
+TObject Visitor::Pop()
 {
-	TValue Value = Stack.back();
+	TObject Value = Stack.back();
 	Stack.pop_back();
 	return Value;
 }
@@ -149,24 +27,22 @@ bool Visitor::IsVariable(const std::string& Name)
 void Visitor::Visit(ASTValue* Node)
 {
 	Debug("Visiting value.");
-
-	switch (Node->Value.index())
+	switch (Node->Value.GetType())
 	{
-		case 0 :
-			Push(Node->GetInt());
-			Debug(std::format("Got value int: {}", std::get<int>(Stack.back())));
+		case IntType :
+			Push(TObject(Node->GetInt().GetValue()));
 			break;
-		case 1 :
-			Push(Node->GetFloat());
-			Debug(std::format("Got value int: {}", std::get<float>(Stack.back())));
+		case FloatType :
+			Push(TObject(Node->GetFloat().GetValue()));
 			break;
-		case 2 :
-			Push(Node->GetString());
-			Debug(std::format("Got value string: {}", std::get<std::string>(Stack.back())));
+		case StringType :
+			Push(TObject(Node->GetString().GetValue()));
 			break;
-		case 3 :
-			Push(Node->GetBool());
-			Debug(std::format("Got value bool: {}", std::get<bool>(Stack.back())));
+		case BoolType :
+			Push(TObject(Node->GetBool().GetValue()));
+			break;
+		default :
+			Error("Invalid type.");
 			break;
 	}
 }
@@ -221,45 +97,33 @@ void Visitor::Visit(ASTBinOp* Node)
 	// After visiting the right value, pop it off the stack and store it here
 	auto Right = Pop();
 
-	// If either values are floats, cast the other to a float
-	if (Left.index() == 0 && Right.index() == 1)
-	{
-		auto LValue = std::get<int>(Left);
-		Left = TValue((float)LValue);
-	}
-	else if (Left.index() == 1 && Right.index() == 0)
-	{
-		auto RValue = std::get<int>(Right);
-		Right = TValue((float)RValue);
-	}
-
 	// Execute the operator on the left and right value
-	TValue Result;
+	TObject Result;
 	switch (Node->Op)
 	{
 		case Plus :
-			EvalAdd(Left, Right, Result);
+			Result = Left + Right;
 			break;
 		case Minus :
-			EvalSub(Left, Right, Result);
+			Result = Left - Right;
 			break;
 		case Multiply :
-			EvalMul(Left, Right, Result);
+			Result = Left * Right;
 			break;
 		case Divide :
-			EvalDiv(Left, Right, Result);
-			break;
-		case Equals :
-			EvalEq(Left, Right, Result);
-			break;
-		case NotEquals :
-			EvalNotEq(Left, Right, Result);
+			Result = Left / Right;
 			break;
 		case LessThan :
-			EvalLessThan(Left, Right, Result);
+			Result = Left < Right;
 			break;
 		case GreaterThan :
-			EvalGreaterThan(Left, Right, Result);
+			Result = Left > Right;
+			break;
+		case Equals :
+			Result = Left == Right;
+			break;
+		case NotEquals :
+			Result = Left != Right;
 			break;
 	}
 
@@ -300,7 +164,7 @@ void Visitor::Visit(ASTAssignment* Node)
 void Visitor::Visit(ASTIf* Node)
 {
 	Debug("Visiting conditional.");
-	bool bResult = false;
+	TBoolValue bResult = false;
 
 	if (Cast<ASTValue>(Node->Cond))
 	{
@@ -315,7 +179,7 @@ void Visitor::Visit(ASTIf* Node)
 		Visit(Cast<ASTBinOp>(Node->Cond));
 	}
 
-	bResult = std::get<bool>(Pop());
+	bResult = Pop().GetBool();
 	Debug(std::format("Conditional result is {}", bResult ? "true" : "false"));
 	if (bResult)
 	{
@@ -331,10 +195,10 @@ void Visitor::Visit(ASTIf* Node)
 
 void Visitor::Visit(ASTWhile* Node)
 {
-	
+
 	Debug("Visiting while.");
-	bool bResult = true;
-	int	 Count = 1;
+	TBoolValue bResult = true;
+	int		   Count = 1;
 
 	while (bResult)
 	{
@@ -350,8 +214,12 @@ void Visitor::Visit(ASTWhile* Node)
 		{
 			Visit(Cast<ASTBinOp>(Node->Cond));
 		}
+		else
+		{
+			throw std::runtime_error("Invalid AST node.");
+		}
 
-		bResult = std::get<bool>(Pop());
+		bResult = Pop().GetBool();
 		if (!bResult)
 		{
 			break;
@@ -456,19 +324,19 @@ ASTNode* AST::ParseValueExpr()
 	// Parse numbers (floats and ints)
 	if (Expect(Number))
 	{
-		TValue Value;
+		TObject Value;
 
 		// Parse float
 		if (CurrentToken->Content.find(".") != std::string::npos)
 		{
 			Value = std::stof(CurrentToken->Content);
-			Debug(std::format("Parsing number: {}", std::get<float>(Value)));
+			Debug(std::format("Parsing number: {}", Value.GetFloat().GetValue()));
 		}
 		// Parse int
 		else
 		{
 			Value = std::stoi(CurrentToken->Content);
-			Debug(std::format("Parsing number: {}", std::get<int>(Value)));
+			Debug(std::format("Parsing number: {}", Value.GetInt().GetValue()));
 		}
 
 		Accept(); // Consume number

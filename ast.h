@@ -7,18 +7,10 @@
 #include <format>
 
 #include "token.h"
+#include "value.h"
 
 using namespace Core;
-using TValue = std::variant<int, float, std::string, bool>;
-
-static void EvalAdd(const TValue& Left, const TValue& Right, TValue& Value);
-static void EvalSub(const TValue& Left, const TValue& Right, TValue& Value);
-static void EvalMul(const TValue& Left, const TValue& Right, TValue& Value);
-static void EvalDiv(const TValue& Left, const TValue& Right, TValue& Value);
-static void EvalEq(const TValue& Left, const TValue& Right, TValue& Value);
-static void EvalNotEq(const TValue& Left, const TValue& Right, TValue& Value);
-static void EvalLessThan(const TValue& Left, const TValue& Right, TValue& Value);
-static void EvalGreaterThan(const TValue& Left, const TValue& Right, TValue& Value);
+using namespace Values;
 
 class VisitorBase;
 class Visitor;
@@ -46,13 +38,13 @@ public:
 
 class Visitor : public VisitorBase
 {
-	void   Push(const TValue& V);
-	TValue Pop();
-	bool   IsVariable(const std::string& Name);
+	void	Push(const TObject& V);
+	TObject Pop();
+	bool	IsVariable(const std::string& Name);
 
 public:
-	std::map<std::string, TValue> Variables;
-	std::vector<TValue>			  Stack;
+	std::map<std::string, TObject> Variables;
+	std::vector<TObject>		   Stack;
 
 	Visitor(){};
 	Visitor(Visitor& Other)
@@ -78,22 +70,7 @@ public:
 		std::cout << "Variables:" << std::endl;
 		for (const auto& Var : Variables)
 		{
-			if (std::holds_alternative<int>(Var.second))
-			{
-				std::cout << "  " << Var.first << " : " << std::to_string(std::get<int>(Var.second)) << std::endl;
-			}
-			else if (std::holds_alternative<float>(Var.second))
-			{
-				std::cout << "  " << Var.first << " : " << std::to_string(std::get<float>(Var.second)) << std::endl;
-			}
-			else if (std::holds_alternative<std::string>(Var.second))
-			{
-				std::cout << "  " << Var.first << " : \"" << std::get<std::string>(Var.second) << "\"" << std::endl;
-			}
-			else if (std::holds_alternative<bool>(Var.second))
-			{
-				std::cout << "  " << Var.first << " : " << (std::get<bool>(Var.second) ? "true" : "false") << std::endl;
-			}
+			std::cout << Var.first << " : " << Var.second.ToString() << std::endl;
 		}
 	}
 };
@@ -128,68 +105,49 @@ public:
 class ASTValue : public ASTNode
 {
 public:
-	std::string Type = "Unknown";
-	TValue		Value;
+	TObject Value;
 
-	ASTValue(TValue& InValue) : Value(InValue)
-	{
-		if (IsInt())
-		{
-			Type = "Int";
-		}
-		else if (IsFloat())
-		{
-			Type = "Float";
-		}
-		else if (IsString())
-		{
-			Type = "String";
-		}
-		else if (IsBool())
-		{
-			Type = "Bool";
-		}
-	}
-	ASTValue(int InValue) : Value(InValue) { Type = "Int"; };
-	ASTValue(float InValue) : Value(InValue) { Type = "Float"; };
-	ASTValue(const std::string& InValue) : Value(InValue) { Type = "String"; };
-	ASTValue(const bool InValue) : Value(InValue) { Type = "Bool"; };
+	ASTValue(TObject& InValue) : Value(InValue) {}
+	ASTValue(int InValue) : Value(InValue){};
+	ASTValue(float InValue) : Value(InValue){};
+	ASTValue(const std::string& InValue) : Value(InValue){};
+	ASTValue(const bool InValue) : Value(InValue){};
 
 	void Accept(Visitor& V) override { V.Visit(this); }
 
-	bool IsInt() const { return std::holds_alternative<int>(Value); }
-	bool IsFloat() const { return std::holds_alternative<float>(Value); }
-	bool IsString() const { return std::holds_alternative<std::string>(Value); }
-	bool IsBool() const { return std::holds_alternative<bool>(Value); }
+	bool IsInt() { return Value.GetType() == IntType; }
+	bool IsFloat() { return Value.GetType() == FloatType; }
+	bool IsString() { return Value.GetType() == StringType; }
+	bool IsBool() { return Value.GetType() == BoolType; }
 
-	int			GetInt() const { return std::get<int>(Value); }
-	float		GetFloat() const { return std::get<float>(Value); }
-	std::string GetString() const { return std::get<std::string>(Value); }
-	bool		GetBool() const { return std::get<bool>(Value); }
+	TIntValue	 GetInt() const { return Value.GetInt(); }
+	TFloatValue	 GetFloat() const { return Value.GetFloat(); }
+	TStringValue GetString() const { return Value.GetString(); }
+	TBoolValue	 GetBool() const { return Value.GetBool(); }
 
 	virtual std::string ToString() const
 	{
 		std::string Result;
-		if (IsInt())
-		{
-			Result = std::to_string(GetInt());
-		}
-		else if (IsFloat())
-		{
-			Result = std::to_string(GetFloat());
-		}
-		else if (IsString())
-		{
-			Result = "\"" + GetString() + "\"";
-		}
-		else if (IsBool())
-		{
-			Result = GetBool() ? "true" : "false";
-		}
-		else
-		{
-			Result = "Unknown";
-		}
+		// if (IsInt())
+		//{
+		//	Result = std::to_string(GetInt());
+		// }
+		// else if (IsFloat())
+		//{
+		//	Result = std::to_string(GetFloat());
+		// }
+		// else if (IsString())
+		//{
+		//	Result = "\"" + GetString() + "\"";
+		// }
+		// else if (IsBool())
+		//{
+		//	Result = GetBool() ? "true" : "false";
+		// }
+		// else
+		//{
+		//	Result = "Unknown";
+		// }
 
 		return Result;
 	}
