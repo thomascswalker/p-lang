@@ -22,6 +22,8 @@ class ASTBinOp;
 class ASTAssignment;
 class ASTIf;
 class ASTWhile;
+class ASTFunctionDef;
+class ASTReturn;
 class ASTBody;
 
 class VisitorBase
@@ -33,6 +35,8 @@ public:
 	virtual void Visit(ASTAssignment* Node) = 0;
 	virtual void Visit(ASTIf* Node) = 0;
 	virtual void Visit(ASTWhile* Node) = 0;
+	virtual void Visit(ASTFunctionDef* Node) = 0;
+	virtual void Visit(ASTReturn* Node) = 0;
 	virtual void Visit(ASTBody* Node) = 0;
 };
 
@@ -63,6 +67,8 @@ public:
 	void Visit(ASTAssignment* Node) override;
 	void Visit(ASTIf* Node) override;
 	void Visit(ASTWhile* Node) override;
+	void Visit(ASTFunctionDef* Node) override;
+	void Visit(ASTReturn* Node) override;
 	void Visit(ASTBody* Node) override;
 
 	void Dump()
@@ -128,27 +134,6 @@ public:
 	virtual std::string ToString() const
 	{
 		std::string Result;
-		// if (IsInt())
-		//{
-		//	Result = std::to_string(GetInt());
-		// }
-		// else if (IsFloat())
-		//{
-		//	Result = std::to_string(GetFloat());
-		// }
-		// else if (IsString())
-		//{
-		//	Result = "\"" + GetString() + "\"";
-		// }
-		// else if (IsBool())
-		//{
-		//	Result = GetBool() ? "true" : "false";
-		// }
-		// else
-		//{
-		//	Result = "Unknown";
-		// }
-
 		return Result;
 	}
 };
@@ -222,6 +207,32 @@ public:
 	void				Accept(Visitor& V) override { V.Visit(this); }
 };
 
+using ArgValue = std::pair<EValueType, std::string>;
+
+class ASTFunctionDef : public ASTNode
+{
+public:
+	EValueType			  ReturnType;
+	std::string			  Name;
+	std::vector<ArgValue> Arguments;
+	ASTNode*			  Body;
+
+	ASTFunctionDef(EValueType InReturnType, const std::string& InName, std::vector<ArgValue> InArguments,
+				   ASTNode* InBody)
+		: ReturnType(InReturnType), Name(InName), Arguments(InArguments), Body(InBody){};
+	virtual std::string ToString() const { return "FunctionDef"; }
+	void				Accept(Visitor& V) override { V.Visit(this); }
+};
+
+class ASTReturn : public ASTNode
+{
+public:
+	ASTNode* Expression;
+	ASTReturn(ASTNode* InExpression) : Expression(InExpression){};
+	virtual std::string ToString() const { return "Return"; }
+	void				Accept(Visitor& V) override { V.Visit(this); }
+};
+
 class ASTBody : public ASTNode
 {
 public:
@@ -247,12 +258,18 @@ public:
 class AST
 {
 private:
-	ASTBody*			  Program;
-	std::vector<Token>	  Tokens{};
-	std::vector<ASTNode*> Nodes{};
-	std::vector<ASTNode*> Expressions{};
-	Token*				  CurrentToken;
-	int					  Position;
+	ASTBody*						  Program;
+	std::vector<Token>				  Tokens{};
+	std::vector<ASTNode*>			  Nodes{};
+	std::vector<ASTNode*>			  Expressions{};
+	Token*							  CurrentToken;
+	int								  Position;
+	const std::map<std::string, EValueType> StringTypeMap{
+		{ "void", NullType },
+		{ "bool", BoolType },
+		{ "int", IntType },
+		{ "float", FloatType },
+	};
 
 	void PrintCurrentToken()
 	{
@@ -292,8 +309,10 @@ private:
 	ASTNode* ParseAdditiveExpr();
 	ASTNode* ParseEqualityExpr();
 	ASTNode* ParseAssignment();
+	ASTNode* ParseReturnExpr();
 	ASTNode* ParseIf();
 	ASTNode* ParseWhile();
+	ASTNode* ParseFunctionDef();
 	ASTNode* ParseExpression();
 	void	 ParseBody();
 

@@ -24,6 +24,7 @@ enum TokenType
 	Minus,
 	Divide,
 	Multiply,
+	Comma,
 	Not,
 	Assign,
 	Equals,
@@ -41,17 +42,18 @@ enum TokenType
 	Else,
 	For,
 	While,
+	Return,
 	Count
 };
 
 static int TokenTypeCount = (int)TokenType::Count;
 
 static std::map<TokenType, std::string> TokenStringMap{
-	{ Eof, "/0" },		{ Type, "Type" },  { Plus, "+" },		 { Minus, "-" },   { Multiply, "*" },
-	{ Divide, "/" },	{ Not, "!" },	   { Assign, "=" },		 { Equals, "==" }, { NotEquals, "!=" },
-	{ Semicolon, ";" }, { LessThan, "<" }, { GreaterThan, ">" }, { LParen, "(" },  { RParen, ")" },
-	{ LBracket, "[" },	{ RBracket, "]" }, { LCurly, "{" },		 { RCurly, "}" },  { If, "if" },
-	{ Else, "else" },	{ For, "for" },	   { While, "while" }
+	{ Eof, "/0" },		 { Type, "Type" },	 { Plus, "+" },		{ Minus, "-" },		  { Multiply, "*" },
+	{ Divide, "/" },	 { Comma, "," },	 { Not, "!" },		{ Assign, "=" },	  { Equals, "==" },
+	{ NotEquals, "!=" }, { Semicolon, ";" }, { LessThan, "<" }, { GreaterThan, ">" }, { LParen, "(" },
+	{ RParen, ")" },	 { LBracket, "[" },	 { RBracket, "]" }, { LCurly, "{" },	  { RCurly, "}" },
+	{ If, "if" },		 { Else, "else" },	 { For, "for" },	{ While, "while" },	  { Return, "return" }
 };
 
 static TokenType GetTokenTypeFromString(const std::string& InString)
@@ -66,14 +68,14 @@ static TokenType GetTokenTypeFromString(const std::string& InString)
 	return Invalid;
 }
 
-const std::vector<char>		   TOKENS{ '+', '-', '/', '*', '=', '!', ';', '<', '>', '(', ')', '[', ']', '{', '}' };
+const std::vector<char>		   TOKENS{ '+', '-', '/', '*', '=', '!', ';', '<', '>', '(', ')', '[', ']', '{', '}', ',' };
 const std::vector<std::string> TYPES{
 	"int",
 	"float",
 	"string",
 	"bool",
 };
-const std::vector<std::string> KEYWORDS{ "if", "else", "for", "while" };
+const std::vector<std::string> KEYWORDS{ "if", "else", "for", "while", "return" };
 
 // Forward decl
 struct Token;
@@ -84,7 +86,7 @@ typedef std::vector<std::shared_ptr<Token>> TokenArray;
 struct Token
 {
 	// Properties
-	TokenType Type;
+	TokenType	Type;
 	std::string Content = "";
 	int			Line = 0;
 	int			Column = 0;

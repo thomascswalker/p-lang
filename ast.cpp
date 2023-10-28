@@ -237,6 +237,10 @@ void Visitor::Visit(ASTWhile* Node)
 	}
 }
 
+void Visitor::Visit(ASTFunctionDef* Node) {}
+
+void Visitor::Visit(ASTReturn* Node) {}
+
 void Visitor::Visit(ASTBody* Node)
 {
 	for (const auto& E : Node->Expressions)
@@ -419,13 +423,18 @@ ASTNode* AST::ParseCurlyExpr()
 	Accept(); // Consume '{'
 
 	std::vector<ASTNode*> Body;
-	while (true)
+	while (!Expect(RCurly))
 	{
-		ASTNode* Expr = ParseExpression();
-		Body.push_back(Expr);
-		if (Expect(RCurly))
+		if (Expect(Return))
 		{
-			break;
+			ASTNode* Expr = ParseReturnExpr();
+			Body.push_back(Expr);
+			break; // Early exit after the return
+		}
+		else
+		{
+			ASTNode* Expr = ParseExpression();
+			Body.push_back(Expr);
 		}
 	}
 
@@ -522,6 +531,14 @@ ASTNode* AST::ParseAssignment()
 	return nullptr;
 }
 
+ASTNode* AST::ParseReturnExpr()
+{
+	Accept(); // Consume return
+	ASTNode* Expr = ParseExpression();
+	Nodes.push_back(new ASTReturn(Expr));
+	return Nodes.back();
+}
+
 ASTNode* AST::ParseIf()
 {
 	Debug("Parsing cond.");
@@ -582,14 +599,57 @@ ASTNode* AST::ParseWhile()
 	return Nodes.back();
 }
 
+ASTNode* AST::ParseFunctionDef()
+{
+	std::string TypeString = CurrentToken->Content;
+	EValueType	ReturnType = StringTypeMap.at(TypeString);
+	Accept(); // Consume return type
+	std::string Name = CurrentToken->Content;
+	Accept(); // Consume name
+	Accept(); // Parse left parenthesis
+
+	std::vector<ArgValue> Arguments;
+
+	// If there isn't immediately a right parenthesis, then parse
+	// the arguments listed
+	if (!Expect(RParen))
+	{
+		EValueType ArgType = StringTypeMap.at(CurrentToken->Content);
+		Accept(); // Consume the argument type
+		std::string ArgName = CurrentToken->Content;
+		Accept(); // Consume the argument name
+
+		while (Expect(Comma))
+		{
+			Accept(); // Consume comma
+			EValueType ArgType = StringTypeMap.at(CurrentToken->Content);
+			Accept(); // Consume the argument type
+			std::string ArgName = CurrentToken->Content;
+			Accept(); // Consume the argument name
+		}
+	}
+
+	Accept(); // Consume right parenthesis
+	ASTNode* Body = ParseCurlyExpr(); // Parse the body, expecting a return statement
+
+	Nodes.push_back(new ASTFunctionDef(ReturnType, Name, Arguments, Body));
+
+	return nullptr;
+}
+
 ASTNode* AST::ParseExpression()
 {
 	Debug("Parsing expression.");
 
 	ASTNode* Expr;
 
+	// int MyFunc() { ... }
+	if (Expect({ Type, Name, LParen }))
+	{
+		Expr = ParseFunctionDef();
+	}
 	// int MyVar = ...;
-	if (Expect({ Type, Name, Assign }))
+	else if (Expect({ Type, Name, Assign }))
 	{
 		Expr = ParseAssignment();
 		Accept(); // Consume ';'
