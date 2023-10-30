@@ -167,7 +167,7 @@ void Visitor::Visit(ASTAssignment* Node)
 void Visitor::Visit(ASTIf* Node)
 {
 	Debug("Visiting conditional.");
-	TBoolValue bResult = false;
+	TObject bResult;
 
 	if (Cast<ASTValue>(Node->Cond))
 	{
@@ -182,7 +182,7 @@ void Visitor::Visit(ASTIf* Node)
 		Visit(Cast<ASTBinOp>(Node->Cond));
 	}
 
-	bResult = Pop().GetBool();
+	bResult = Pop();
 	Debug(std::format("Conditional result is {}", bResult ? "true" : "false"));
 	if (bResult)
 	{
@@ -200,8 +200,8 @@ void Visitor::Visit(ASTWhile* Node)
 {
 
 	Debug("Visiting while.");
-	TBoolValue bResult = true;
-	int		   Count = 1;
+	TObject bResult;
+	int		Count = 1;
 
 	while (bResult)
 	{
@@ -222,7 +222,7 @@ void Visitor::Visit(ASTWhile* Node)
 			throw std::runtime_error("Invalid AST node.");
 		}
 
-		bResult = Pop().GetBool();
+		bResult = Pop();
 		if (!bResult)
 		{
 			break;
@@ -675,7 +675,7 @@ ASTNode* AST::ParseFunctionDef()
 		}
 	}
 
-	Accept(); // Consume right parenthesis
+	Accept();						  // Consume right parenthesis
 	ASTNode* Body = ParseCurlyExpr(); // Parse the body, expecting a return statement
 
 	Nodes.push_back(new ASTFunctionDef(ReturnType, Name, Arguments, Body));
