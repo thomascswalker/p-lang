@@ -7,7 +7,7 @@
 namespace Core
 {
 
-	static int WHILE_MAX_LOOP = 10000;
+	static int WHILE_MAX_LOOP = 100;
 
 	void Log(const std::string& InMsg);
 	void Warning(const std::string& InMsg);

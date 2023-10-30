@@ -18,6 +18,7 @@ class Visitor;
 class ASTNode;
 class ASTValue;
 class ASTVariable;
+class ASTUnaryExpr;
 class ASTBinOp;
 class ASTAssignment;
 class ASTIf;
@@ -31,6 +32,7 @@ class VisitorBase
 public:
 	virtual void Visit(ASTValue* Node) = 0;
 	virtual void Visit(ASTVariable* Node) = 0;
+	virtual void Visit(ASTUnaryExpr* Node) = 0;
 	virtual void Visit(ASTBinOp* Node) = 0;
 	virtual void Visit(ASTAssignment* Node) = 0;
 	virtual void Visit(ASTIf* Node) = 0;
@@ -63,6 +65,7 @@ public:
 	}
 	void Visit(ASTValue* Node) override;
 	void Visit(ASTVariable* Node) override;
+	void Visit(ASTUnaryExpr* Node) override;
 	void Visit(ASTBinOp* Node) override;
 	void Visit(ASTAssignment* Node) override;
 	void Visit(ASTIf* Node) override;
@@ -171,6 +174,18 @@ public:
 	void				Accept(Visitor& V) override { V.Visit(this); }
 };
 
+class ASTUnaryExpr : public ASTNode
+{
+public:
+	std::string Name;
+	std::string Op;
+	ASTNode*	OpArg = nullptr;
+	bool		bRightHand = true;
+	ASTUnaryExpr(const std::string& InName, const std::string& InOp, ASTNode* InOpArg = nullptr) : Name(InName), Op(InOp), OpArg(InOpArg){};
+	virtual std::string ToString() const { return "UnaryExpr: " + Name + Op + "(" + OpArg->ToString() + ")"; }
+	void				Accept(Visitor& V) override { V.Visit(this); }
+};
+
 class ASTBinOp : public ASTNode
 {
 	std::string OpString;
@@ -178,7 +193,7 @@ class ASTBinOp : public ASTNode
 public:
 	ASTNode*  Left;
 	ASTNode*  Right;
-	TokenType Op = Invalid;
+	ETokenType Op = Invalid;
 
 	ASTBinOp(ASTNode* InLeft, ASTNode* InRight, const std::string& InOp)
 		: Left(InLeft), Right(InRight), Op(GetTokenTypeFromString(InOp)){};
@@ -317,16 +332,19 @@ private:
 	/// <param name="Type">The type to check for.</param>
 	/// <param name="Offset">The offset position.</param>
 	/// <returns>Whether the type is found.</returns>
-	bool Expect(TokenType Type, int Offset = 0);
+	bool Expect(ETokenType Type, int Offset = 0);
 
 	/// <summary>
 	/// Expect the given <paramref name="Types"/> in sequential order at the current position.
 	/// </summary>
 	/// <param name="Types">The types to check for.</param>
 	/// <returns>Whether the types are all found.</returns>
-	bool Expect(const std::initializer_list<TokenType>& Types);
+	bool Expect(const std::initializer_list<ETokenType>& Types, int Offset = 0);
+
+	bool ExpectAny(const std::initializer_list<ETokenType>& Types, int Offset = 0);
 
 	ASTNode* ParseValueExpr();
+	ASTNode* ParseUnaryExpr();
 	ASTNode* ParseParenExpr();
 	ASTNode* ParseBracketExpr();
 	ASTNode* ParseCurlyExpr();

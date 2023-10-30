@@ -9,6 +9,8 @@
 
 #include "core.h"
 
+using namespace Core;
+
 namespace Values
 {
 	enum EValueType
@@ -39,6 +41,7 @@ namespace Values
 	{
 	public:
 		virtual ~TValue() = default;
+		virtual bool		IsSubscriptable() = 0;
 		virtual std::string ToString() = 0;
 		virtual std::string ToString() const = 0;
 	};
@@ -47,6 +50,7 @@ namespace Values
 	{
 	public:
 		TNullValue() = default;
+		bool		IsSubscriptable() override { return false; }
 		std::string ToString() const override { return "nullptr"; }
 	};
 
@@ -57,6 +61,7 @@ namespace Values
 	public:
 		TBoolValue(bool InValue) : Value(InValue){};
 		bool		GetValue() const { return Value; }
+		bool		IsSubscriptable() override { return false; }
 		std::string ToString() override { return Value ? "true" : "false"; }
 		std::string ToString() const override { return Value ? "true" : "false"; }
 
@@ -82,6 +87,9 @@ namespace Values
 	public:
 		TIntValue(int InValue) : Value(InValue){};
 		int			GetValue() const { return Value; }
+		bool		IsSubscriptable() override { return false; }
+		int			Increment() { return Value++; }
+		int			Decrement() { return Value--; }
 		std::string ToString() override { return std::to_string(Value); }
 		std::string ToString() const override { return std::to_string(Value); }
 
@@ -129,6 +137,7 @@ namespace Values
 	public:
 		TFloatValue(float InValue) : Value(InValue){};
 		float		GetValue() const { return Value; }
+		bool		IsSubscriptable() override { return false; }
 		std::string ToString() override { return std::to_string(Value); }
 		std::string ToString() const override { return std::to_string(Value); }
 
@@ -174,6 +183,7 @@ namespace Values
 	public:
 		TStringValue(const std::string& InValue) : Value(InValue){};
 		std::string GetValue() const { return Value; }
+		bool		IsSubscriptable() override { return true; }
 		std::string ToString() override { return "\"" + Value + "\""; }
 		std::string ToString() const override { return ToString(); }
 
@@ -193,6 +203,7 @@ namespace Values
 		TArrayValue(){};
 		TArrayValue(const TArray& InValue) : Value(InValue){};
 		TArray		GetValue() const { return Value; }
+		bool		IsSubscriptable() override { return true; }
 		std::string ToString() override { return "#[" + TStringValue::Join(Value, ",") + "]"; }
 		std::string ToString() const override { return ToString(); }
 
@@ -214,6 +225,7 @@ namespace Values
 	public:
 		TMapValue(const TMap& InValue) : Value(InValue){};
 		TMap		GetValue() const { return Value; }
+		bool		IsSubscriptable() override { return false; }
 		std::string ToString() override { return "Map"; }
 		std::string ToString() const override { return "Map"; }
 
@@ -340,12 +352,12 @@ namespace Values
 		// Methods
 		EValueType GetType() { return Type; }
 
-		TBoolValue&	  AsBool() const { return *Core::Cast<TBoolValue>(Value.get()); }
-		TIntValue&	  AsInt() const { return *Core::Cast<TIntValue>(Value.get()); }
-		TFloatValue&  AsFloat() const { return *Core::Cast<TFloatValue>(Value.get()); }
-		TStringValue& AsString() const { return *Core::Cast<TStringValue>(Value.get()); }
-		TArrayValue&  AsArray() const { return *Core::Cast<TArrayValue>(Value.get()); }
-		TMapValue&	  AsMap() const { return *Core::Cast<TMapValue>(Value.get()); }
+		TBoolValue&	  AsBool() const { return *Cast<TBoolValue>(Value.get()); }
+		TIntValue&	  AsInt() const { return *Cast<TIntValue>(Value.get()); }
+		TFloatValue&  AsFloat() const { return *Cast<TFloatValue>(Value.get()); }
+		TStringValue& AsString() const { return *Cast<TStringValue>(Value.get()); }
+		TArrayValue&  AsArray() const { return *Cast<TArrayValue>(Value.get()); }
+		TMapValue&	  AsMap() const { return *Cast<TMapValue>(Value.get()); }
 
 		TBoolValue	 GetBool() const { return AsBool(); }
 		TIntValue	 GetInt() const { return AsInt(); }
@@ -355,7 +367,7 @@ namespace Values
 		TMapValue	 GetMap() const { return AsMap(); }
 
 		EValueType GetType() const { return Type; }
-		bool HasKey(const std::string& Key)
+		bool	   HasKey(const std::string& Key)
 		{
 			if (Type != MapType)
 			{
@@ -365,6 +377,7 @@ namespace Values
 			return MapType.find(Key) != MapType.end();
 		}
 
+		bool		IsSubscriptable() { return Value->IsSubscriptable(); }
 		std::string ToString() { return Value->ToString(); }
 		std::string ToString() const { return Value->ToString(); }
 
@@ -452,6 +465,73 @@ namespace Values
 		TBoolValue operator==(TObject& Other);
 		TBoolValue operator==(const TObject& Other) const;
 		TBoolValue operator!=(const TObject& Other) const;
+
+		TObject& operator++() // Prefix
+		{
+			TIntValue* V = nullptr;
+			switch (Type)
+			{
+				case IntType :
+					V = Cast<TIntValue>(Value.get());
+					if (V)
+					{
+						Value = std::make_unique<TIntValue>(V->Increment());
+					}
+					return *this;
+				default :
+					throw std::runtime_error("Cannot increment this value.");
+			}
+		}
+		TObject operator++(int)
+		{
+			TIntValue* V = nullptr;
+			switch (Type)
+			{
+				case IntType :
+					V = Cast<TIntValue>(Value.get());
+					if (V)
+					{
+						Value = std::make_unique<TIntValue>(V->Increment());
+					}
+					return *this;
+				default :
+					throw std::runtime_error("Cannot increment this value.");
+			}
+		} // Postfix
+
+
+		TObject& operator--() // Prefix
+		{
+			TIntValue* V = nullptr;
+			switch (Type)
+			{
+				case IntType :
+					V = Cast<TIntValue>(Value.get());
+					if (V)
+					{
+						Value = std::make_unique<TIntValue>(V->Decrement());
+					}
+					return *this;
+				default :
+					throw std::runtime_error("Cannot increment this value.");
+			}
+		}
+		TObject operator--(int)
+		{
+			TIntValue* V = nullptr;
+			switch (Type)
+			{
+				case IntType :
+					V = Cast<TIntValue>(Value.get());
+					if (V)
+					{
+						Value = std::make_unique<TIntValue>(V->Decrement());
+					}
+					return *this;
+				default :
+					throw std::runtime_error("Cannot increment this value.");
+			}
+		} // Postfix
 
 		operator bool() { return (bool)Value.get(); }
 		operator bool() const { return (bool)*this; }

@@ -1,5 +1,6 @@
-#include "ast.h"
 #include <functional>
+
+#include "ast.h"
 
 using namespace Core;
 
@@ -26,7 +27,7 @@ bool Visitor::IsVariable(const std::string& Name)
 
 void Visitor::Visit(ASTValue* Node)
 {
-	Debug("Visiting value.");
+	Debug(std::format("Visiting {}.", __FUNCSIG__));
 	switch (Node->Value.GetType())
 	{
 		case BoolType :
@@ -52,11 +53,12 @@ void Visitor::Visit(ASTValue* Node)
 
 void Visitor::Visit(ASTVariable* Node)
 {
-
+	Debug(std::format("Visiting {}.", __FUNCSIG__));
 	// If the variable is found, set the current Value to the variable's value
 	if (Variables.count(Node->Name))
 	{
-		Push(Variables[Node->Name]);
+		auto Var = Variables[Node->Name];
+		Visit(new ASTValue(Var));
 	}
 	else
 	{
@@ -65,9 +67,42 @@ void Visitor::Visit(ASTVariable* Node)
 	}
 }
 
+void Visitor::Visit(ASTUnaryExpr* Node)
+{
+	Debug(std::format("Visiting {}.", __FUNCSIG__));
+	if (Variables.count(Node->Name))
+	{
+		auto Var = Variables[Node->Name];
+		Visit(new ASTValue(Var));
+		auto Value = Pop();
+		if (Value.GetType() != IntType)
+		{
+			Error("Value is not int.");
+			return;
+		}
+
+		ETokenType Op = GetTokenTypeFromString(Node->Op);
+		TIntValue  NewValue = 0;
+		switch (Op)
+		{
+			case PlusPlus :
+				NewValue = Value.GetInt().GetValue() + 1;
+				break;
+			case MinusMinus :
+				NewValue = Value.GetInt().GetValue() - 1;
+				break;
+			default :
+				return;
+		}
+
+		Variables[Node->Name] = NewValue;
+		Push(NewValue);
+	}
+}
+
 void Visitor::Visit(ASTBinOp* Node)
 {
-
+	Debug(std::format("Visiting {}.", __FUNCSIG__));
 	// Visit the left value
 	if (Cast<ASTValue>(Node->Left))
 	{
@@ -136,7 +171,7 @@ void Visitor::Visit(ASTBinOp* Node)
 
 void Visitor::Visit(ASTAssignment* Node)
 {
-
+	Debug(std::format("Visiting {}.", __FUNCSIG__));
 	// Check if the variable exists, and if it doesn't, make a new one
 	if (!IsVariable(Node->Name))
 	{
@@ -166,7 +201,7 @@ void Visitor::Visit(ASTAssignment* Node)
 
 void Visitor::Visit(ASTIf* Node)
 {
-	Debug("Visiting conditional.");
+	Debug(std::format("Visiting {}.", __FUNCSIG__));
 	TObject bResult;
 
 	if (Cast<ASTValue>(Node->Cond))
@@ -198,10 +233,9 @@ void Visitor::Visit(ASTIf* Node)
 
 void Visitor::Visit(ASTWhile* Node)
 {
-
-	Debug("Visiting while.");
-	TObject bResult;
-	int		Count = 1;
+	Debug(std::format("Visiting {}.", __FUNCSIG__));
+	TBoolValue bResult = true;
+	int		   Count = 1;
 
 	while (bResult)
 	{
@@ -222,19 +256,19 @@ void Visitor::Visit(ASTWhile* Node)
 			throw std::runtime_error("Invalid AST node.");
 		}
 
-		bResult = Pop();
+		bResult = Pop().AsBool();
+		Debug(std::format("While result is {}", bResult ? "true" : "false"));
 		if (!bResult)
 		{
 			break;
 		}
-		Debug(std::format("While result is {}", bResult ? "true" : "false"));
 		auto Body = Cast<ASTBody>(Node->Body);
 		Visit(Body);
 		Count++;
 
 		if (Count == WHILE_MAX_LOOP)
 		{
-			Error("Hit max loop count (10000).");
+			Error(std::format("Hit max loop count ({}).", WHILE_MAX_LOOP));
 			break;
 		}
 	}
@@ -246,11 +280,16 @@ void Visitor::Visit(ASTReturn* Node) {}
 
 void Visitor::Visit(ASTBody* Node)
 {
+	Debug(std::format("Visiting {}.", __FUNCSIG__));
 	for (const auto& E : Node->Expressions)
 	{
 		if (Cast<ASTBinOp>(E))
 		{
 			Visit(Cast<ASTBinOp>(E));
+		}
+		else if (Cast<ASTUnaryExpr>(E))
+		{
+			Visit(Cast<ASTUnaryExpr>(E));
 		}
 		else if (Cast<ASTAssignment>(E))
 		{
@@ -298,7 +337,7 @@ void AST::Accept()
 	}
 }
 
-bool AST::Expect(TokenType Type, int Offset)
+bool AST::Expect(ETokenType Type, int Offset)
 {
 	// Make sure the offset is valid
 	if (Position + Offset > Tokens.size())
@@ -312,11 +351,23 @@ bool AST::Expect(TokenType Type, int Offset)
 	return Tokens[Position + Offset].Type == Type;
 }
 
-bool AST::Expect(const std::initializer_list<TokenType>& Types)
+bool AST::Expect(const std::initializer_list<ETokenType>& Types, int Offset)
 {
 	for (auto [I, T] : Enumerate(Types))
 	{
-		if (!Expect(T, (int)I))
+		if (!Expect(T, Offset + (int)I))
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+bool AST::ExpectAny(const std::initializer_list<ETokenType>& Types, int Offset)
+{
+	for (const auto& T : Types)
+	{
+		if (!Expect(T, Offset))
 		{
 			return false;
 		}
@@ -326,7 +377,7 @@ bool AST::Expect(const std::initializer_list<TokenType>& Types)
 
 ASTNode* AST::ParseValueExpr()
 {
-	Debug("Parsing value.");
+	Debug(std::format("Parsing {}.", __FUNCTION__));
 
 	// Parse numbers (floats and ints)
 	if (Expect(Number))
@@ -393,9 +444,31 @@ ASTNode* AST::ParseValueExpr()
 	}
 }
 
+ASTNode* AST::ParseUnaryExpr()
+{
+	Debug(std::format("Parsing {}.", __FUNCTION__));
+	std::string Name;
+	if (Expect(ETokenType::Name))
+	{
+		// Handle existing variable assignment, or continue with a new assignment
+		Name = CurrentToken->Content;	 // Get the name
+		Accept();						 // Consume name
+		auto Op = CurrentToken->Content; // Get the operator used
+		Accept();						 // Consume operator
+		ASTNode* Expr = nullptr;
+		if (!Expect(Semicolon))
+		{
+			Expr = ParseExpression();
+		}
+		Nodes.push_back(new ASTUnaryExpr(Name, Op, Expr)); // Construct a new unary expression
+		Debug("Exiting parsing unary.");
+		return Nodes.back();
+	}
+}
+
 ASTNode* AST::ParseParenExpr()
 {
-	Debug("Parsing paren.");
+	Debug(std::format("Parsing {}.", __FUNCTION__));
 
 	if (!Expect(LParen))
 	{
@@ -416,7 +489,7 @@ ASTNode* AST::ParseParenExpr()
 
 ASTNode* AST::ParseBracketExpr()
 {
-	Debug("Parsing bracket.");
+	Debug(std::format("Parsing {}.", __FUNCTION__));
 
 	if (!Expect(LBracket))
 	{
@@ -459,7 +532,7 @@ ASTNode* AST::ParseBracketExpr()
 
 ASTNode* AST::ParseCurlyExpr()
 {
-	Debug("Parsing curly.");
+	Debug(std::format("Parsing {}.", __FUNCTION__));
 
 	if (!Expect(LCurly))
 	{
@@ -494,7 +567,7 @@ ASTNode* AST::ParseCurlyExpr()
 
 ASTNode* AST::ParseMultiplicativeExpr()
 {
-	Debug("Parsing mult.");
+	Debug(std::format("Parsing {}.", __FUNCTION__));
 
 	ASTNode* Expr = ParseValueExpr();
 	while (Expect(Multiply) || Expect(Divide))
@@ -511,7 +584,7 @@ ASTNode* AST::ParseMultiplicativeExpr()
 
 ASTNode* AST::ParseAdditiveExpr()
 {
-	Debug("Parsing add.");
+	Debug(std::format("Parsing {}.", __FUNCTION__));
 
 	ASTNode* Expr = ParseMultiplicativeExpr();
 	while (Expect(Plus) || Expect(Minus))
@@ -529,7 +602,7 @@ ASTNode* AST::ParseAdditiveExpr()
 
 ASTNode* AST::ParseEqualityExpr()
 {
-	Debug("Parsing equality.");
+	Debug(std::format("Parsing {}.", __FUNCTION__));
 	ASTNode* Expr = ParseAdditiveExpr();
 	while (Expect(Equals) || Expect(NotEquals) || Expect(LessThan) || Expect(GreaterThan))
 	{
@@ -546,19 +619,19 @@ ASTNode* AST::ParseEqualityExpr()
 
 ASTNode* AST::ParseAssignment()
 {
-	Debug("Parsing assignment.");
+	Debug(std::format("Parsing {}.", __FUNCTION__));
 
 	std::string Type;
 	std::string Name;
 
 	// Handle new variable assignments
-	if (Expect(TokenType::Type))
+	if (Expect(ETokenType::Type))
 	{
 		Type = CurrentToken->Content; // Get the type
 		Accept();					  // Consume type
 	}
 
-	if (Expect(TokenType::Name))
+	if (Expect(ETokenType::Name))
 	{
 		// Handle existing variable assignment, or continue with a new assignment
 		Name = CurrentToken->Content; // Get the name
@@ -579,6 +652,7 @@ ASTNode* AST::ParseAssignment()
 
 ASTNode* AST::ParseReturnExpr()
 {
+	Debug(std::format("Parsing {}.", __FUNCTION__));
 	Accept(); // Consume return
 	ASTNode* Expr = ParseExpression();
 	Nodes.push_back(new ASTReturn(Expr));
@@ -587,7 +661,7 @@ ASTNode* AST::ParseReturnExpr()
 
 ASTNode* AST::ParseIf()
 {
-	Debug("Parsing cond.");
+	Debug(std::format("Parsing {}.", __FUNCTION__));
 
 	Accept(); // Consume 'if'
 	auto Cond = ParseParenExpr();
@@ -627,7 +701,7 @@ ASTNode* AST::ParseIf()
 
 ASTNode* AST::ParseWhile()
 {
-	Debug("Parsing while.");
+	Debug(std::format("Parsing {}.", __FUNCTION__));
 	Accept(); // Consume 'while'
 	auto Cond = ParseParenExpr();
 
@@ -647,6 +721,8 @@ ASTNode* AST::ParseWhile()
 
 ASTNode* AST::ParseFunctionDef()
 {
+	Debug(std::format("Parsing {}.", __FUNCTION__));
+
 	std::string TypeString = CurrentToken->Content;
 	EValueType	ReturnType = StringTypeMap.at(TypeString);
 	Accept(); // Consume return type
@@ -685,7 +761,7 @@ ASTNode* AST::ParseFunctionDef()
 
 ASTNode* AST::ParseExpression()
 {
-	Debug("Parsing expression.");
+	Debug(std::format("Parsing {}.", __FUNCTION__));
 
 	ASTNode* Expr;
 
@@ -693,6 +769,17 @@ ASTNode* AST::ParseExpression()
 	if (Expect({ Type, Name, LParen }))
 	{
 		Expr = ParseFunctionDef();
+	}
+	// MyVar++;
+	// MyVar--;
+	else if (Expect(Name) && Expect(PlusPlus, 1)) // ExpectAny({ PlusPlus, MinusMinus, Period, LBracket }, 1))
+	{
+		Expr = ParseUnaryExpr();
+		CurrentToken;
+		if (Expect(Semicolon))
+		{
+			Accept(); // Consume ';'
+		}
 	}
 	// int MyVar = ...;
 	else if (Expect({ Type, Name, Assign }))
@@ -728,9 +815,14 @@ ASTNode* AST::ParseExpression()
 	}
 	else
 	{
-		Error("Unable to parse expression.");
+		Error(std::format("Unable to parse expression: {}", CurrentToken->ToString()));
 		return nullptr;
 	}
+
+	// while (Expect(Semicolon))
+	//{
+	//	Accept(); // Consume semicolon if there's a lingering one
+	// }
 
 	Debug("Exiting parsing expression.");
 	return Expr;
@@ -738,10 +830,10 @@ ASTNode* AST::ParseExpression()
 
 void AST::ParseBody()
 {
-	Debug("Parsing body.");
+	Debug(std::format("Parsing {}.", __FUNCTION__));
 
 	Program = new ASTBody();
-	while (CurrentToken != NULL && CurrentToken != &Tokens.back())
+	while (CurrentToken != nullptr && CurrentToken != &Tokens.back())
 	{
 		auto Expr = ParseExpression();
 		if (!Expr)
@@ -750,4 +842,5 @@ void AST::ParseBody()
 		}
 		Program->Expressions.push_back(Expr);
 	}
+	Debug(std::format("Expression count: {}", Program->Expressions.size()));
 }
