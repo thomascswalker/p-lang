@@ -159,7 +159,7 @@ namespace Values
 		operator float() const { return Value; }
 
 		// Float -> Int
-		operator int() const { return Value; }
+		operator int() const { return (int)Value; }
 		operator TIntValue() const;
 
 		// Float -> String
@@ -174,12 +174,14 @@ namespace Values
 	public:
 		TStringValue(const std::string& InValue) : Value(InValue){};
 		std::string GetValue() const { return Value; }
-		std::string ToString() override { return Value; }
-		std::string ToString() const override { return Value; }
+		std::string ToString() override { return "\"" + Value + "\""; }
+		std::string ToString() const override { return ToString(); }
+
+		static std::string Join(const TArray& Iterator, const std::string& Separator);
 
 		// String -> String
-
 		operator std::string() const { return Value; }
+		operator bool() const { return Value != ""; }
 		TStringValue operator+(const TStringValue& Other) const;
 	};
 
@@ -188,11 +190,20 @@ namespace Values
 		TArray Value;
 
 	public:
+		TArrayValue(){};
 		TArrayValue(const TArray& InValue) : Value(InValue){};
 		TArray		GetValue() const { return Value; }
-		std::string ToString() override { return "Array"; }
-		std::string ToString() const override { return "Array"; }
+		std::string ToString() override { return "#[" + TStringValue::Join(Value, ",") + "]"; }
+		std::string ToString() const override { return ToString(); }
 
+		void Append(const TObject& InValue) { Value.push_back(InValue); }
+		// void	  Remove(int Index) { Value.erase(Value.begin() + Index); }
+		void	  Empty() { Value.clear(); }
+		TIntValue Size() const { return (int)Value.size(); }
+		TObject&  At(int Index) { return Value[Index]; }
+		bool	  Contains(const TObject& InValue);
+
+		operator bool() const { return !Value.empty(); }
 		TObject& operator[](int Index) { return Value[Index]; }
 	};
 
@@ -206,6 +217,10 @@ namespace Values
 		std::string ToString() override { return "Map"; }
 		std::string ToString() const override { return "Map"; }
 
+		TArrayValue GetKeys() const;
+		TArrayValue GetValues() const;
+
+		operator bool() const { return !Value.empty(); }
 		TObject& operator[](const std::string& Key) { return Value[Key]; }
 	};
 
@@ -248,7 +263,6 @@ namespace Values
 			}
 
 			friend bool operator==(const Iterator& Left, const Iterator& Right) { return Left.Ptr == Right.Ptr; };
-
 			friend bool operator!=(const Iterator& Left, const Iterator& Right) { return Left.Ptr != Right.Ptr; };
 		};
 
@@ -256,42 +270,68 @@ namespace Values
 		std::map<int, std::function<void()>> FunctionMap;
 
 		// Constructors
-		TObject()
+		TObject() noexcept
 		{
 			Value = nullptr;
 			Type = NullType;
 		};
-		TObject(const TObject& Other)
+		TObject(const TObject& Other) noexcept
 		{
 			*this = Other;
 			Type = Other.Type;
 		};
-		TObject(bool InValue)
+		~TObject() noexcept {};
+		TObject(bool InValue) noexcept
 		{
 			Value = std::make_unique<TBoolValue>(InValue);
 			Type = BoolType;
 		}; // Bool
-		TObject(int InValue)
+		TObject(const TBoolValue& InValue) noexcept
+		{
+			Value = std::make_unique<TBoolValue>(InValue);
+			Type = BoolType;
+		}; // Bool
+		TObject(int InValue) noexcept
 		{
 			Value = std::make_unique<TIntValue>(InValue);
 			Type = IntType;
 		}; // Integer
-		TObject(float InValue)
+		TObject(const TIntValue& InValue) noexcept
+		{
+			Value = std::make_unique<TIntValue>(InValue);
+			Type = IntType;
+		}; // Integer
+		TObject(float InValue) noexcept
 		{
 			Value = std::make_unique<TFloatValue>(InValue);
 			Type = FloatType;
 		}; // Float
-		TObject(const std::string& InValue)
+		TObject(const TFloatValue& InValue) noexcept
+		{
+			Value = std::make_unique<TFloatValue>(InValue);
+			Type = FloatType;
+		}; // Float
+		TObject(const std::string& InValue) noexcept
 		{
 			Value = std::make_unique<TStringValue>(InValue);
 			Type = StringType;
 		}; // String
-		TObject(const TArrayValue& InValue)
+		TObject(const TStringValue& InValue) noexcept
+		{
+			Value = std::make_unique<TStringValue>(InValue);
+			Type = StringType;
+		}; // String
+		TObject(const TArrayValue& InValue) noexcept
 		{
 			Value = std::make_unique<TArrayValue>(InValue);
 			Type = ArrayType;
 		}; // Array
-		TObject(const TMapValue& InValue)
+		TObject(const std::initializer_list<TObject>& InValue) noexcept
+		{
+			Value = std::make_unique<TArrayValue>(InValue);
+			Type = ArrayType;
+		}
+		TObject(const TMapValue& InValue) noexcept
 		{
 			Value = std::make_unique<TMapValue>(InValue);
 			Type = MapType;
@@ -307,13 +347,14 @@ namespace Values
 		TArrayValue&  AsArray() const { return *Core::Cast<TArrayValue>(Value.get()); }
 		TMapValue&	  AsMap() const { return *Core::Cast<TMapValue>(Value.get()); }
 
-		TBoolValue	 GetBool() const { return AsBool().GetValue(); }
-		TIntValue	 GetInt() const { return AsInt().GetValue(); }
-		TFloatValue	 GetFloat() const { return AsFloat().GetValue(); }
-		TStringValue GetString() const { return AsString().GetValue(); }
-		TArrayValue	 GetArray() const { return AsArray().GetValue(); }
-		TMapValue	 GetMap() const { return AsMap().GetValue(); }
+		TBoolValue	 GetBool() const { return AsBool(); }
+		TIntValue	 GetInt() const { return AsInt(); }
+		TFloatValue	 GetFloat() const { return AsFloat(); }
+		TStringValue GetString() const { return AsString(); }
+		TArrayValue	 GetArray() const { return AsArray(); }
+		TMapValue	 GetMap() const { return AsMap(); }
 
+		EValueType GetType() const { return Type; }
 		bool HasKey(const std::string& Key)
 		{
 			if (Type != MapType)
@@ -328,6 +369,9 @@ namespace Values
 		std::string ToString() const { return Value->ToString(); }
 
 		// Operators
+
+		friend std::ostringstream& operator<<(std::ostringstream& Stream, const TObject& Object);
+
 		TObject& operator=(const TObject& Other)
 		{
 			switch (Other.Type)
@@ -398,12 +442,22 @@ namespace Values
 		}
 
 		TObject operator+(const TObject& Other) const;
+		TObject operator+=(const TObject& Other) const { return *this + Other; }
 		TObject operator-(const TObject& Other) const;
 		TObject operator*(const TObject& Other) const;
 		TObject operator/(const TObject& Other) const;
 		TObject operator<(const TObject& Other) const;
 		TObject operator>(const TObject& Other) const;
-		TObject operator==(const TObject& Other) const;
-		TObject operator!=(const TObject& Other) const;
+
+		TBoolValue operator==(TObject& Other);
+		TBoolValue operator==(const TObject& Other) const;
+		TBoolValue operator!=(const TObject& Other) const;
+
+		operator bool() { return (bool)Value.get(); }
+		operator bool() const { return (bool)*this; }
+		operator std::string() { return ToString(); }
+		operator std::string() const { return ToString(); }
 	};
+
+	static bool IsType(const TObject& Value, EValueType Type);
 } // namespace Values

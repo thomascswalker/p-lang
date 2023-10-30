@@ -1,4 +1,5 @@
 #include <functional>
+
 #include "value.h"
 
 using namespace Values;
@@ -218,9 +219,58 @@ TFloatValue::operator TStringValue() const
 	return std::to_string(Value);
 }
 
+inline std::string Values::TStringValue::Join(const TArray& Iterator, const std::string& Separator)
+{
+	std::string Result;
+
+	for (size_t I = 0; I < Iterator.size(); ++I)
+	{
+		Result += Iterator[I].ToString();
+		if (I != Iterator.size() - 1)
+		{
+			Result += Separator + " ";
+		}
+	}
+
+	return Result;
+}
+
 TStringValue Values::TStringValue::operator+(const TStringValue& Other) const
 {
 	return TStringValue(Value + Other.GetValue());
+}
+
+inline bool Values::TArrayValue::Contains(const TObject& InValue)
+{
+	for (int Index = 0; Index < Value.size(); Index++)
+	{
+		if (Value[Index] == InValue)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+TArrayValue Values::TMapValue::GetKeys() const
+{
+	TArray Keys;
+	for (const auto& [K, V] : Value)
+	{
+		Keys.push_back(K);
+	}
+	return TArrayValue(Keys);
+}
+
+TArrayValue Values::TMapValue::GetValues() const
+{
+	TArray Values;
+	for (const auto& [K, V] : Value)
+	{
+		Values.push_back(V);
+	}
+	return TArrayValue(Values);
 }
 
 TObject Values::TObject::operator+(const TObject& Other) const
@@ -393,9 +443,45 @@ TObject Values::TObject::operator<(const TObject& Other) const { TOBJECT_COMPARE
 
 TObject Values::TObject::operator>(const TObject& Other) const { TOBJECT_COMPARE_OP_BODY(>) }
 
-TObject Values::TObject::operator==(const TObject& Other) const { TOBJECT_COMPARE_OP_BODY(==) }
-
-TObject Values::TObject::operator!=(const TObject& Other) const
+TBoolValue Values::TObject::operator==(TObject& Other)
 {
-	TOBJECT_COMPARE_OP_BODY(!=)
+	if (Type == Other.Type)
+	{
+		switch (Type)
+		{
+			case BoolType :
+				return GetBool().GetValue() == Other.GetBool().GetValue();
+			case IntType :
+				return GetInt().GetValue() == Other.GetInt().GetValue();
+			case FloatType :
+				return GetFloat().GetValue() == Other.GetFloat().GetValue();
+			case StringType :
+				return GetString().GetValue() == Other.GetString().GetValue();
+			default :
+				return false;
+		}
+	}
+	return false;
 }
+
+TBoolValue Values::TObject::operator==(const TObject& Other) const
+{
+	return *this == Other;
+}
+
+TBoolValue Values::TObject::operator!=(const TObject& Other) const
+{
+	return !(*this == Other);
+}
+
+std::ostringstream& Values::operator<<(std::ostringstream& Stream, const TObject& Object)
+{
+	Stream << std::string(Object.ToString().data(), Object.ToString().size());
+	return Stream;
+}
+
+bool Values::IsType(const TObject& Value, EValueType Type)
+{
+	return Value.GetType() == Type;
+}
+
