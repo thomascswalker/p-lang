@@ -91,5 +91,4 @@ namespace Core
 	/// <param name="FileName">The file to read.</param>
 	/// ///<returns>The contents of the file.</returns>
 	std::string ReadFile(const std::string& FileName);
-
 } // namespace Core

@@ -29,6 +29,9 @@ void Visitor::Visit(ASTValue* Node)
 	Debug("Visiting value.");
 	switch (Node->Value.GetType())
 	{
+		case BoolType :
+			Push(TObject(Node->GetBool().GetValue()));
+			break;
 		case IntType :
 			Push(TObject(Node->GetInt().GetValue()));
 			break;
@@ -38,8 +41,8 @@ void Visitor::Visit(ASTValue* Node)
 		case StringType :
 			Push(TObject(Node->GetString().GetValue()));
 			break;
-		case BoolType :
-			Push(TObject(Node->GetBool().GetValue()));
+		case ArrayType :
+			Push(TObject(Node->GetArray()));
 			break;
 		default :
 			Error("Invalid type.");
@@ -123,7 +126,7 @@ void Visitor::Visit(ASTBinOp* Node)
 			Result = Left == Right;
 			break;
 		case NotEquals :
-			Result = Left != Right;
+			Result = !(Left == Right);
 			break;
 	}
 
@@ -411,6 +414,49 @@ ASTNode* AST::ParseParenExpr()
 	return Expr;
 }
 
+ASTNode* AST::ParseBracketExpr()
+{
+	Debug("Parsing bracket.");
+
+	if (!Expect(LBracket))
+	{
+		Error(std::format("Expected '{}' starting block. Got '{}'.", "{", CurrentToken->Content));
+		return nullptr;
+	}
+	Accept(); // Consume '['
+
+	TArrayValue Values{};
+	while (!Expect(RBracket))
+	{
+		auto Value = ParseExpression();
+		auto CastValue = Cast<ASTValue>(Value);
+		if (!CastValue)
+		{
+			Error("Unable to cast value.");
+			return nullptr;
+		}
+		Values.Append(CastValue->GetValue());
+		if (Expect(RBracket))
+		{
+			break;
+		}
+
+		if (!Expect(Comma))
+		{
+			Error("Expected comma.");
+			return nullptr;
+		}
+		Accept(); // Consume ','
+	}
+
+	Accept(); // Consume ']'
+
+	Debug("Exiting parse bracket.");
+
+	Nodes.push_back(new ASTValue(Values));
+	return Nodes.back();
+}
+
 ASTNode* AST::ParseCurlyExpr()
 {
 	Debug("Parsing curly.");
@@ -666,6 +712,11 @@ ASTNode* AST::ParseExpression()
 	else if (Expect(Bool) || Expect(Number) || Expect(String) || Expect(Name) || Expect(LParen))
 	{
 		Expr = ParseEqualityExpr();
+	}
+	// [1,2,3 ...]
+	else if (Expect(LBracket))
+	{
+		Expr = ParseBracketExpr();
 	}
 	else if (Expect(If))
 	{

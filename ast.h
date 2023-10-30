@@ -113,11 +113,8 @@ class ASTValue : public ASTNode
 public:
 	TObject Value;
 
-	ASTValue(TObject& InValue) : Value(InValue) {}
-	ASTValue(int InValue) : Value(InValue){};
-	ASTValue(float InValue) : Value(InValue){};
-	ASTValue(const std::string& InValue) : Value(InValue){};
-	ASTValue(const bool InValue) : Value(InValue){};
+	ASTValue(TObject& InValue) : Value(InValue){};
+	ASTValue(const TObject& InValue) : Value(InValue){};
 
 	void Accept(Visitor& V) override { V.Visit(this); }
 
@@ -125,11 +122,38 @@ public:
 	bool IsFloat() { return Value.GetType() == FloatType; }
 	bool IsString() { return Value.GetType() == StringType; }
 	bool IsBool() { return Value.GetType() == BoolType; }
+	bool IsArray() { return Value.GetType() == ArrayType; }
 
+	TBoolValue	 GetBool() const { return Value.GetBool(); }
 	TIntValue	 GetInt() const { return Value.GetInt(); }
 	TFloatValue	 GetFloat() const { return Value.GetFloat(); }
 	TStringValue GetString() const { return Value.GetString(); }
-	TBoolValue	 GetBool() const { return Value.GetBool(); }
+	TArrayValue	 GetArray() const { return Value.GetArray(); }
+
+	TObject GetValue()
+	{
+		if (IsBool())
+		{
+			return GetBool().GetValue();
+		}
+		else if (IsInt())
+		{
+			return GetInt().GetValue();
+		}
+		else if (IsFloat())
+		{
+			return GetFloat().GetValue();
+		}
+		else if (IsString())
+		{
+			return GetString().GetValue();
+		}
+		else if (IsArray())
+		{
+			return GetArray();
+		}
+		throw std::runtime_error("Unable to get value for this object.");
+	}
 
 	virtual std::string ToString() const
 	{
@@ -258,12 +282,12 @@ public:
 class AST
 {
 private:
-	ASTBody*						  Program;
-	std::vector<Token>				  Tokens{};
-	std::vector<ASTNode*>			  Nodes{};
-	std::vector<ASTNode*>			  Expressions{};
-	Token*							  CurrentToken;
-	int								  Position;
+	ASTBody*								Program;
+	std::vector<Token>						Tokens{};
+	std::vector<ASTNode*>					Nodes{};
+	std::vector<ASTNode*>					Expressions{};
+	Token*									CurrentToken;
+	int										Position;
 	const std::map<std::string, EValueType> StringTypeMap{
 		{ "void", NullType },
 		{ "bool", BoolType },
@@ -304,6 +328,7 @@ private:
 
 	ASTNode* ParseValueExpr();
 	ASTNode* ParseParenExpr();
+	ASTNode* ParseBracketExpr();
 	ASTNode* ParseCurlyExpr();
 	ASTNode* ParseMultiplicativeExpr();
 	ASTNode* ParseAdditiveExpr();
