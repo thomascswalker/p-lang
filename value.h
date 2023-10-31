@@ -211,8 +211,12 @@ namespace Values
 		// void	  Remove(int Index) { Value.erase(Value.begin() + Index); }
 		void	  Empty() { Value.clear(); }
 		TIntValue Size() const { return (int)Value.size(); }
-		TObject&  At(int Index) { return Value[Index]; }
-		bool	  Contains(const TObject& InValue);
+		TObject&  At(int Index)
+		{
+			Error(std::to_string(Index));
+			return Value.at(Index);
+		}
+		bool Contains(const TObject& InValue);
 
 		operator bool() const { return !Value.empty(); }
 		TObject& operator[](int Index) { return Value[Index]; }
@@ -287,6 +291,11 @@ namespace Values
 			Value = nullptr;
 			Type = NullType;
 		};
+		TObject(TObject& Other) noexcept
+		{
+			*this = Other;
+			Type = Other.Type;
+		};
 		TObject(const TObject& Other) noexcept
 		{
 			*this = Other;
@@ -328,6 +337,12 @@ namespace Values
 			Value = std::make_unique<TStringValue>(InValue);
 			Type = StringType;
 		}; // String
+		TObject(char InChar) noexcept
+		{
+			std::string InValue = std::string(1, InChar);
+			Value = std::make_unique<TStringValue>(InValue);
+			Type = StringType;
+		}
 		TObject(const TStringValue& InValue) noexcept
 		{
 			Value = std::make_unique<TStringValue>(InValue);
@@ -352,19 +367,19 @@ namespace Values
 		// Methods
 		EValueType GetType() { return Type; }
 
-		TBoolValue&	  AsBool() const { return *Cast<TBoolValue>(Value.get()); }
-		TIntValue&	  AsInt() const { return *Cast<TIntValue>(Value.get()); }
-		TFloatValue&  AsFloat() const { return *Cast<TFloatValue>(Value.get()); }
-		TStringValue& AsString() const { return *Cast<TStringValue>(Value.get()); }
-		TArrayValue&  AsArray() const { return *Cast<TArrayValue>(Value.get()); }
-		TMapValue&	  AsMap() const { return *Cast<TMapValue>(Value.get()); }
+		TBoolValue*	  AsBool() const { return Cast<TBoolValue>(Value.get()); }
+		TIntValue*	  AsInt() const { return Cast<TIntValue>(Value.get()); }
+		TFloatValue*  AsFloat() const { return Cast<TFloatValue>(Value.get()); }
+		TStringValue* AsString() const { return Cast<TStringValue>(Value.get()); }
+		TArrayValue*  AsArray() const { return Cast<TArrayValue>(Value.get()); }
+		TMapValue*	  AsMap() const { return Cast<TMapValue>(Value.get()); }
 
-		TBoolValue	 GetBool() const { return AsBool(); }
-		TIntValue	 GetInt() const { return AsInt(); }
-		TFloatValue	 GetFloat() const { return AsFloat(); }
-		TStringValue GetString() const { return AsString(); }
-		TArrayValue	 GetArray() const { return AsArray(); }
-		TMapValue	 GetMap() const { return AsMap(); }
+		TBoolValue	 GetBool() const { return *AsBool(); }
+		TIntValue	 GetInt() const { return *AsInt(); }
+		TFloatValue	 GetFloat() const { return *AsFloat(); }
+		TStringValue GetString() const { return *AsString(); }
+		TArrayValue	 GetArray() const { return *AsArray(); }
+		TMapValue	 GetMap() const { return *AsMap(); }
 
 		EValueType GetType() const { return Type; }
 		bool	   HasKey(const std::string& Key)
@@ -373,7 +388,7 @@ namespace Values
 			{
 				throw std::runtime_error("Object is not subscriptable.");
 			}
-			auto MapType = AsMap().GetValue();
+			auto MapType = AsMap()->GetValue();
 			return MapType.find(Key) != MapType.end();
 		}
 
@@ -389,14 +404,14 @@ namespace Values
 		{
 			switch (Other.Type)
 			{
-				case (BoolType) :
-				{
-					Value = std::make_unique<TBoolValue>(Other.GetBool());
-					break;
-				}
 				case (IntType) :
 				{
 					Value = std::make_unique<TIntValue>(Other.GetInt());
+					break;
+				}
+				case (BoolType) :
+				{
+					Value = std::make_unique<TBoolValue>(Other.GetBool());
 					break;
 				}
 				case (FloatType) :
@@ -440,18 +455,41 @@ namespace Values
 			}
 		}
 
+		TObject& operator[](const TStringValue& Key) { return this[Key]; }
+
 		TObject& operator[](int Index)
 		{
 			if (Type != ArrayType || Value == nullptr)
 			{
 				throw std::runtime_error("Invalid type.");
 			}
-			TArrayValue ArrayType = AsArray();
+			TArrayValue ArrayType = GetArray();
 			if (ArrayType.GetValue().size() < Index)
 			{
 				throw std::runtime_error("Index out of bounds.");
 			}
 			return ArrayType[Index];
+		}
+
+		TObject& operator[](const TIntValue& Index) { return this[Index.GetValue()]; }
+
+		TObject& operator[](const TObject& Arg)
+		{
+			if (!IsSubscriptable())
+			{
+				throw std::runtime_error("Object is not indexable.");
+			}
+
+			if (Type == ArrayType)
+			{
+				auto Index = Arg.GetInt();
+				return this[Index.GetValue()];
+			}
+			else // Only the map type is left
+			{
+				auto Key = Arg.GetString();
+				return this[Key];
+			}
 		}
 
 		TObject operator+(const TObject& Other) const;
@@ -498,7 +536,6 @@ namespace Values
 					throw std::runtime_error("Cannot increment this value.");
 			}
 		} // Postfix
-
 
 		TObject& operator--() // Prefix
 		{

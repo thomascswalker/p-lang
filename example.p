@@ -1,2 +1,8 @@
+test = "this is a test string";
 i = 0;
-while (i < 10) { i++; }
+a = "";
+while (i != 10)
+{
+    a = a + "a";
+    i++;
+}

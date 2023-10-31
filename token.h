@@ -78,7 +78,7 @@ static ETokenType GetTokenTypeFromString(const std::string& InString)
 }
 
 const std::vector<char> TOKENS{ '+', '-', '/', '*', '=', '!', ';', '<', '>', '(', ')', '[', ']', '{', '}', ',', '.' };
-const std::vector<char> OPERATORS{ '+', '-', '/', '*', '=', '.' };
+const std::vector<char> OPERATORS{ '+', '-', '/', '*', '=', '.', '!' };
 const std::vector<std::string> TYPES{
 	"int",
 	"float",

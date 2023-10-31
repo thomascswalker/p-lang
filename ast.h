@@ -44,9 +44,17 @@ public:
 
 class Visitor : public VisitorBase
 {
+	bool bExited = false;
+	void Exit(const std::string& Msg)
+	{
+		Error(Msg);
+		bExited = true;
+	}
 	void	Push(const TObject& V);
 	TObject Pop();
 	bool	IsVariable(const std::string& Name);
+	TObject GetVariable(const std::string& Name);
+	void	SetVariable(const std::string& Name, const TObject& InValue);
 
 public:
 	std::map<std::string, TObject> Variables;
@@ -74,14 +82,7 @@ public:
 	void Visit(ASTReturn* Node) override;
 	void Visit(ASTBody* Node) override;
 
-	void Dump()
-	{
-		std::cout << "Variables:" << std::endl;
-		for (const auto& Var : Variables)
-		{
-			std::cout << Var.first << " : " << Var.second.ToString() << std::endl;
-		}
-	}
+	void Dump();
 };
 
 struct ASTError
@@ -169,8 +170,9 @@ class ASTVariable : public ASTNode
 {
 public:
 	std::string Name;
-	ASTVariable(const std::string& InName) : Name(InName){};
-	virtual std::string ToString() const { return "Variable: " + Name; }
+	TObject		Value;
+	ASTVariable(const std::string& InName, const TObject& InValue = TObject()) : Name(InName), Value(InValue){};
+	virtual std::string ToString() const { return "Variable: " + Name + ", " + Value.ToString(); }
 	void				Accept(Visitor& V) override { V.Visit(this); }
 };
 
@@ -178,11 +180,11 @@ class ASTUnaryExpr : public ASTNode
 {
 public:
 	std::string Name;
-	std::string Op;
+	ETokenType	Op;
 	ASTNode*	OpArg = nullptr;
-	bool		bRightHand = true;
-	ASTUnaryExpr(const std::string& InName, const std::string& InOp, ASTNode* InOpArg = nullptr) : Name(InName), Op(InOp), OpArg(InOpArg){};
-	virtual std::string ToString() const { return "UnaryExpr: " + Name + Op + "(" + OpArg->ToString() + ")"; }
+	ASTUnaryExpr(const std::string& InName, ETokenType InOp, ASTNode* InOpArg = nullptr)
+		: Name(InName), Op(InOp), OpArg(InOpArg){};
+	virtual std::string ToString() const { return "UnaryExpr: " + Name + "(" + OpArg->ToString() + ")"; }
 	void				Accept(Visitor& V) override { V.Visit(this); }
 };
 
@@ -191,8 +193,8 @@ class ASTBinOp : public ASTNode
 	std::string OpString;
 
 public:
-	ASTNode*  Left;
-	ASTNode*  Right;
+	ASTNode*   Left;
+	ASTNode*   Right;
 	ETokenType Op = Invalid;
 
 	ASTBinOp(ASTNode* InLeft, ASTNode* InRight, const std::string& InOp)

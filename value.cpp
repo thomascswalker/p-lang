@@ -282,9 +282,9 @@ TObject Values::TObject::operator+(const TObject& Other) const
 			switch (Other.Type)
 			{
 				case IntType :
-					return AsInt().GetValue() + Other.AsInt().GetValue();
+					return AsInt()->GetValue() + Other.AsInt()->GetValue();
 				case FloatType :
-					return AsInt().GetValue() + Other.AsFloat().GetValue();
+					return AsInt()->GetValue() + Other.AsFloat()->GetValue();
 				default :
 					break;
 			}
@@ -295,9 +295,9 @@ TObject Values::TObject::operator+(const TObject& Other) const
 			switch (Other.Type)
 			{
 				case IntType :
-					return AsFloat().GetValue() + Other.AsInt().GetValue();
+					return AsFloat()->GetValue() + Other.AsInt()->GetValue();
 				case FloatType :
-					return AsFloat().GetValue() + Other.AsFloat().GetValue();
+					return AsFloat()->GetValue() + Other.AsFloat()->GetValue();
 				default :
 					break;
 			}
@@ -305,7 +305,7 @@ TObject Values::TObject::operator+(const TObject& Other) const
 		}
 		case StringType :
 		{
-			return AsString().GetValue() + Other.AsString().GetValue();
+			return AsString()->GetValue() + Other.AsString()->GetValue();
 		}
 		default :
 			break;
@@ -322,9 +322,9 @@ TObject Values::TObject::operator-(const TObject& Other) const
 			switch (Other.Type)
 			{
 				case IntType :
-					return AsInt().GetValue() - Other.AsInt().GetValue();
+					return AsInt()->GetValue() - Other.AsInt()->GetValue();
 				case FloatType :
-					return AsInt().GetValue() - Other.AsFloat().GetValue();
+					return AsInt()->GetValue() - Other.AsFloat()->GetValue();
 				default :
 					break;
 			}
@@ -335,9 +335,9 @@ TObject Values::TObject::operator-(const TObject& Other) const
 			switch (Other.Type)
 			{
 				case IntType :
-					return AsFloat().GetValue() - Other.AsInt().GetValue();
+					return AsFloat()->GetValue() - Other.AsInt()->GetValue();
 				case FloatType :
-					return AsFloat().GetValue() - Other.AsFloat().GetValue();
+					return AsFloat()->GetValue() - Other.AsFloat()->GetValue();
 				default :
 					break;
 			}
@@ -358,9 +358,9 @@ TObject Values::TObject::operator*(const TObject& Other) const
 			switch (Other.Type)
 			{
 				case IntType :
-					return AsInt().GetValue() * Other.AsInt().GetValue();
+					return AsInt()->GetValue() * Other.AsInt()->GetValue();
 				case FloatType :
-					return AsInt().GetValue() * Other.AsFloat().GetValue();
+					return AsInt()->GetValue() * Other.AsFloat()->GetValue();
 				default :
 					break;
 			}
@@ -371,9 +371,9 @@ TObject Values::TObject::operator*(const TObject& Other) const
 			switch (Other.Type)
 			{
 				case IntType :
-					return AsFloat().GetValue() * Other.AsInt().GetValue();
+					return AsFloat()->GetValue() * Other.AsInt()->GetValue();
 				case FloatType :
-					return AsFloat().GetValue() * Other.AsFloat().GetValue();
+					return AsFloat()->GetValue() * Other.AsFloat()->GetValue();
 				default :
 					break;
 			}
@@ -394,9 +394,9 @@ TObject Values::TObject::operator/(const TObject& Other) const
 			switch (Other.Type)
 			{
 				case IntType :
-					return AsInt().GetValue() / Other.AsInt().GetValue();
+					return AsInt()->GetValue() / Other.AsInt()->GetValue();
 				case FloatType :
-					return AsInt().GetValue() / Other.AsFloat().GetValue();
+					return AsInt()->GetValue() / Other.AsFloat()->GetValue();
 				default :
 					break;
 			}
@@ -407,9 +407,9 @@ TObject Values::TObject::operator/(const TObject& Other) const
 			switch (Other.Type)
 			{
 				case IntType :
-					return AsFloat().GetValue() / Other.AsInt().GetValue();
+					return AsFloat()->GetValue() / Other.AsInt()->GetValue();
 				case FloatType :
-					return AsFloat().GetValue() / Other.AsFloat().GetValue();
+					return AsFloat()->GetValue() / Other.AsFloat()->GetValue();
 				default :
 					break;
 			}
