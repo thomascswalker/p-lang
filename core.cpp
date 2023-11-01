@@ -1,12 +1,14 @@
 #include <string>
 #include <fstream>
 #include <format>
+#include <chrono>
 
 #include "core.h"
 
 void Core::Log(const std::string& InMsg)
 {
-	auto Fmt = InMsg + "\n";
+	auto Time = std::chrono::system_clock::now();
+	auto Fmt = std::format("[{0:%F_%T}] ", Time) + InMsg + "\n";
 	printf(Fmt.c_str());
 }
 
