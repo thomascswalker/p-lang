@@ -27,39 +27,23 @@ class ASTFunctionDef;
 class ASTReturn;
 class ASTBody;
 
-class VisitorBase
-{
-public:
-	virtual void Visit(ASTValue* Node) = 0;
-	virtual void Visit(ASTVariable* Node) = 0;
-	virtual void Visit(ASTUnaryExpr* Node) = 0;
-	virtual void Visit(ASTBinOp* Node) = 0;
-	virtual void Visit(ASTAssignment* Node) = 0;
-	virtual void Visit(ASTIf* Node) = 0;
-	virtual void Visit(ASTWhile* Node) = 0;
-	virtual void Visit(ASTFunctionDef* Node) = 0;
-	virtual void Visit(ASTReturn* Node) = 0;
-	virtual void Visit(ASTBody* Node) = 0;
-};
-
-#define CHECK_EXIT if (bExited) { return; }
-
-class Visitor : public VisitorBase
-{
-	bool bExited = false;
-	void Exit(const std::string& Msg)
-	{
-		Error(Msg);
-		bExited = true;
+#define CHECK_EXIT         \
+	if (Errors.size() > 0) \
+	{                      \
+		return;            \
 	}
-	
+
+class Visitor
+{
 	void	Push(const TObject& V);
 	TObject Pop();
 	bool	IsVariable(const std::string& Name);
 	TObject GetVariable(const std::string& Name);
 	void	SetVariable(const std::string& Name, const TObject& InValue);
+	void	Error(const std::string& Msg) { Errors.push_back(Msg); }
 
 public:
+	std::vector<std::string>	   Errors;
 	std::map<std::string, TObject> Variables;
 	std::vector<TObject>		   Stack;
 
@@ -74,33 +58,21 @@ public:
 		Variables = Other.Variables;
 		Stack = Other.Stack;
 	}
-	void Visit(ASTValue* Node) override;
-	void Visit(ASTVariable* Node) override;
-	void Visit(ASTUnaryExpr* Node) override;
-	void Visit(ASTBinOp* Node) override;
-	void Visit(ASTAssignment* Node) override;
-	void Visit(ASTIf* Node) override;
-	void Visit(ASTWhile* Node) override;
-	void Visit(ASTFunctionDef* Node) override;
-	void Visit(ASTReturn* Node) override;
-	void Visit(ASTBody* Node) override;
+	void Visit(ASTValue* Node);
+	void Visit(ASTVariable* Node);
+	void Visit(ASTUnaryExpr* Node);
+	void Visit(ASTBinOp* Node);
+	void Visit(ASTAssignment* Node);
+	void Visit(ASTIf* Node);
+	void Visit(ASTWhile* Node);
+	void Visit(ASTFunctionDef* Node);
+	void Visit(ASTReturn* Node);
+	void Visit(ASTBody* Node);
 
-	bool Succeeded() { return !bExited; }
+	bool Succeeded() { return Errors.size() == 0; }
 	void Dump();
 };
 
-struct ASTError
-{
-	std::string Msg;
-	int			Line;
-	int			Pos;
-
-	ASTError(const std::string& InMsg, int InLine, int InPos) : Msg(InMsg), Line(InLine), Pos(InPos){};
-	std::string ToString() const
-	{
-		return (Msg + " (line " + std::to_string(Line) + ", pos " + std::to_string(Pos) + ")");
-	}
-};
 
 // Base AST Node class
 class ASTNode
@@ -282,7 +254,7 @@ class ASTBody : public ASTNode
 {
 public:
 	ASTBody*			  Parent = nullptr;
-	std::vector<ASTError> Errors;
+	std::vector<std::string> Errors;
 	std::vector<ASTNode*> Expressions;
 	ASTBody(std::vector<ASTNode*> InBody = {}) : Expressions(InBody){};
 	virtual std::string ToString() const
@@ -405,8 +377,11 @@ private:
 		return false;
 	}
 
-	bool ExpectValue() { return ExpectAny({ Name, Bool, Number, String }); }
-	bool ExpectUnaryOperator() { return ExpectAny({ Minus, PlusPlus, MinusMinus, Period, LBracket }); }
+	bool ExpectValue(int Offset = 0) { return ExpectAny({ Name, Bool, Number, String }, Offset); }
+	bool ExpectUnaryOperator(int Offset = 0)
+	{
+		return ExpectAny({ Minus, PlusPlus, MinusMinus, Period, LBracket }, Offset);
+	}
 
 	ASTNode* ParseValueExpr();
 	ASTNode* ParseUnaryExpr();
@@ -440,11 +415,13 @@ public:
 	{
 		if (CurrentToken != nullptr)
 		{
-			Program->Errors.push_back({ InMsg, CurrentToken->Line, CurrentToken->Column });
+			std::string Msg = std::format("{}: {}, {}", InMsg, CurrentToken->Line, CurrentToken->Column);
+			Program->Errors.push_back(Msg);
 		}
 		else
 		{
-			Program->Errors.push_back({ InMsg, -1, -1 });
+			std::string Msg = std::format("{}: {}, {}", InMsg, -1, -1);
+			Program->Errors.push_back(Msg);
 		}
 	}
 

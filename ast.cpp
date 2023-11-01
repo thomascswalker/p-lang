@@ -68,7 +68,7 @@ void Visitor::Visit(ASTValue* Node)
 			Push(TObject(Node->GetArray()));
 			break;
 		default :
-			Exit("Invalid type.");
+			Error("Invalid type.");
 			break;
 	}
 }
@@ -79,7 +79,7 @@ void Visitor::Visit(ASTVariable* Node)
 
 	if (!IsVariable(Node->Name))
 	{
-		Exit(std::format("Variable '{}' is undefined.", Node->Name));
+		Error(std::format("Variable '{}' is undefined.", Node->Name));
 		return;
 	}
 	Node->Value = GetVariable(Node->Name);
@@ -131,7 +131,7 @@ void Visitor::Visit(ASTUnaryExpr* Node)
 	}
 	else
 	{
-		Exit(std::format("ERROR: undefined variable '{}'", Node->Name));
+		Error(std::format("ERROR: undefined variable '{}'", Node->Name));
 	}
 }
 
@@ -241,7 +241,7 @@ void Visitor::Visit(ASTWhile* Node)
 
 		if (Count == WHILE_MAX_LOOP)
 		{
-			Exit(std::format("Hit max loop count ({}).", WHILE_MAX_LOOP));
+			Error(std::format("Hit max loop count ({}).", WHILE_MAX_LOOP));
 			break;
 		}
 	}
@@ -723,19 +723,8 @@ ASTNode* AST::ParseExpression()
 		return nullptr;
 	}
 
-	// int MyFunc() { ... }
-	if (ExpectSequence({ Type, Name, LParen }))
-	{
-		Expr = ParseFunctionDef();
-	}
-	// int MyVar = ...;
-	else if (ExpectSequence({ Type, Name, Assign }))
-	{
-		Expr = ParseAssignment();
-		Accept(); // Consume ';'
-	}
 	// MyVar = ...;
-	else if (ExpectSequence({ Name, Assign }))
+	if (ExpectSequence({ Name, Assign }))
 	{
 		Expr = ParseAssignment();
 		Accept(); // Consume ';'
@@ -744,7 +733,7 @@ ASTNode* AST::ParseExpression()
 	// MyVar--;
 	// MyVar.Func();
 	// MyArr[Index];
-	else if (Expect(Name) && Expect(PlusPlus, 1) || Expect(MinusMinus, 1) || Expect(Period, 1) || Expect(LBracket, 1))
+	else if (Expect(Name) && ExpectUnaryOperator(1))
 	{
 		Expr = ParseUnaryExpr();
 	}
@@ -752,7 +741,7 @@ ASTNode* AST::ParseExpression()
 	// 5 + ...;
 	// "Test" + ...;
 	// MyVar + ...;
-	else if (Expect(Bool) || Expect(Number) || Expect(String) || Expect(Name) || Expect(LParen))
+	else if (ExpectValue() || Expect(LParen))
 	{
 		Expr = ParseEqualityExpr();
 	}
@@ -771,7 +760,7 @@ ASTNode* AST::ParseExpression()
 	}
 	else
 	{
-		Error(std::format("Unable to parse expression: {}", CurrentToken->ToString()));
+		Error(std::format("Unable to parse expression"));
 		Debug(std::format("Exiting {}.", __FUNCTION__));
 		return nullptr;
 	}
