@@ -27,6 +27,11 @@ void Core::Error(const std::string& InMsg)
 	Log(std::format("\x1B[31m{}\033[37m", InMsg));
 }
 
+void Core::Success(const std::string& InMsg)
+{
+	Log(std::format("\x1B[32m{}\033[37m", InMsg));
+}
+
 std::string Core::ReadFile(const std::string& FileName)
 {
 	std::ifstream Stream(FileName.c_str());

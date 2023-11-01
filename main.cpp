@@ -22,19 +22,26 @@ int Compile(std::string FileName)
 	// Construct a syntax tree from the tokens
 	AST		 Ast(Tokens);
 	ASTBody* Program = Ast.GetTree();
-	if (Program->Errors.size() == 0)
+	if (!Program->Succeeded())
 	{
-		auto V = std::make_unique<Visitor>();
-		V->Visit(Program);
-		V->Dump();
-	}
-	else
-	{
+		Error("Parsing failed.");
 		for (const auto& E : Program->Errors)
 		{
 			Error(E.ToString());
 		}
 		return 1;
+	}
+	
+	auto V = std::make_unique<Visitor>();
+	V->Visit(Program);
+	if (!V->Succeeded())
+	{
+		Error("Visiting failed.");
+	}
+	else
+	{
+		Success("Compilation successful.");
+		V->Dump();
 	}
 
 	return 0;

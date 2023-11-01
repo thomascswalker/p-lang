@@ -42,6 +42,8 @@ public:
 	virtual void Visit(ASTBody* Node) = 0;
 };
 
+#define CHECK_EXIT if (bExited) { return; }
+
 class Visitor : public VisitorBase
 {
 	bool bExited = false;
@@ -50,6 +52,7 @@ class Visitor : public VisitorBase
 		Error(Msg);
 		bExited = true;
 	}
+	
 	void	Push(const TObject& V);
 	TObject Pop();
 	bool	IsVariable(const std::string& Name);
@@ -82,6 +85,7 @@ public:
 	void Visit(ASTReturn* Node) override;
 	void Visit(ASTBody* Node) override;
 
+	bool Succeeded() { return !bExited; }
 	void Dump();
 };
 
@@ -291,6 +295,7 @@ public:
 		return Out;
 	}
 	void Accept(Visitor& V) override { V.Visit(this); }
+	bool Succeeded() { return Errors.size() == 0; }
 };
 
 /// <summary>
@@ -325,7 +330,29 @@ private:
 	/// Accept the current token. This will increment the <paramref name="CurrentToken"/> pointer as well as increment
 	/// the <paramref name="Position"/> value.
 	/// </summary>
-	void Accept();
+	void Accept()
+	{
+		// Get the last token in the token list
+		Token* End = &Tokens.back();
+
+		if (!CurrentToken)
+		{
+			return;
+		}
+
+		// If we're at the end, set the CurrentToken to be null
+		if (CurrentToken == End)
+		{
+			CurrentToken = nullptr;
+		}
+		// Otherwise increment the CurrentToken pointer and the position
+		else
+		{
+			Debug(std::format("Accept(): {}", CurrentToken->Content));
+			CurrentToken++;
+			Position++;
+		}
+	}
 
 	/// <summary>
 	/// Expect the specified <paramref name="Type"/> at the specified <paramref name="Offset"/>, relative to the current
@@ -334,16 +361,52 @@ private:
 	/// <param name="Type">The type to check for.</param>
 	/// <param name="Offset">The offset position.</param>
 	/// <returns>Whether the type is found.</returns>
-	bool Expect(ETokenType Type, int Offset = 0);
+	bool Expect(ETokenType Type, int Offset = 0)
+	{
+		// Make sure the offset is valid
+		if (Position + Offset > Tokens.size())
+		{
+			Error("WARNING: Outside token bounds.");
+			return false;
+		}
+
+		// Debug(std::format("Expect(): {} at {}: {}", (int)Type, Position + Offset, Tokens[Position +
+		// Offset].ToString()));
+
+		return Tokens[Position + Offset].Type == Type;
+	}
 
 	/// <summary>
 	/// Expect the given <paramref name="Types"/> in sequential order at the current position.
 	/// </summary>
 	/// <param name="Types">The types to check for.</param>
 	/// <returns>Whether the types are all found.</returns>
-	bool Expect(const std::initializer_list<ETokenType>& Types, int Offset = 0);
+	bool ExpectSequence(const std::initializer_list<ETokenType>& Types, int Offset = 0)
+	{
+		for (auto [I, T] : Enumerate(Types))
+		{
+			if (!Expect(T, Offset + (int)I))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
 
-	bool ExpectAny(const std::initializer_list<ETokenType>& Types, int Offset = 0);
+	bool ExpectAny(const std::initializer_list<ETokenType>& Types, int Offset = 0)
+	{
+		for (const auto& T : Types)
+		{
+			if (Expect(T, Offset))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool ExpectValue() { return ExpectAny({ Name, Bool, Number, String }); }
+	bool ExpectUnaryOperator() { return ExpectAny({ Minus, PlusPlus, MinusMinus, Period, LBracket }); }
 
 	ASTNode* ParseValueExpr();
 	ASTNode* ParseUnaryExpr();
