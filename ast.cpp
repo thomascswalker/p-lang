@@ -402,24 +402,33 @@ ASTNode* AST::ParseUnaryExpr()
 		std::string Name = CurrentToken->Content; // Get the name
 		Accept();								  // Consume name
 		auto Op = CurrentToken->Type;			  // Get the operator used
-		//Accept();								  // Consume the operator
+		Accept();								  // Consume the operator
 
 		ASTNode* Expr = nullptr;
 		switch (Op)
 		{
 			case PlusPlus :
-				Accept(); // Consume '++'
 				break;
 			case MinusMinus :
-				Accept(); // Consume '--'
 				break;
 			case LBracket :
-				Expr = ParseBracketExpr();
-				break;
+				if (Expect(ETokenType::Name) || Expect(Bool) || Expect(Number) || Expect(String))
+				{
+					Expr = ParseValueExpr(); // Parse the value argument
+					if (!Expect(RBracket))
+					{
+						Error("Missing ']'.");
+						return nullptr;
+					}
+					break;
+				}
+				Error(std::format("Invalid value '{}' passed to [] operator", CurrentToken->Content));
+				return nullptr;
 			case Period :
 				break;
 			default :
-				break;
+				Error(std::format("Unary operator not supported: '{}'", CurrentToken->Content));
+				return nullptr;
 		}
 
 		Nodes.push_back(new ASTUnaryExpr(Name, Op, Expr)); // Construct a new unary expression
@@ -768,7 +777,6 @@ ASTNode* AST::ParseExpression()
 	{
 		Expr = ParseFunctionDef();
 	}
-
 	// int MyVar = ...;
 	else if (Expect({ Type, Name, Assign }))
 	{

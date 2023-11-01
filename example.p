@@ -1,8 +1,8 @@
-test = "this is a test string";
+test = "a = 5;";
 i = 0;
-a = "";
-while (i != 10)
+while (i != 4)
 {
-    a = a + "a";
+    c = test[i];
+    a = a + c;
     i++;
 }
