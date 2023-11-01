@@ -11,7 +11,7 @@
 using namespace Core;
 
 // Tokens
-enum TokenType
+enum ETokenType
 {
 	Invalid,
 	Eof,
@@ -43,20 +43,29 @@ enum TokenType
 	For,
 	While,
 	Return,
-	Count
+	Count,
+	Period,
+	PlusEquals,
+	MinusEquals,
+	MultEquals,
+	DivEquals,
+	PlusPlus,
+	MinusMinus,
 };
 
-static int TokenTypeCount = (int)TokenType::Count;
+static int TokenTypeCount = (int)ETokenType::Count;
 
-static std::map<TokenType, std::string> TokenStringMap{
-	{ Eof, "/0" },		 { Type, "Type" },	 { Plus, "+" },		{ Minus, "-" },		  { Multiply, "*" },
-	{ Divide, "/" },	 { Comma, "," },	 { Not, "!" },		{ Assign, "=" },	  { Equals, "==" },
-	{ NotEquals, "!=" }, { Semicolon, ";" }, { LessThan, "<" }, { GreaterThan, ">" }, { LParen, "(" },
-	{ RParen, ")" },	 { LBracket, "[" },	 { RBracket, "]" }, { LCurly, "{" },	  { RCurly, "}" },
-	{ If, "if" },		 { Else, "else" },	 { For, "for" },	{ While, "while" },	  { Return, "return" }
+static std::map<ETokenType, std::string> TokenStringMap{
+	{ Eof, "/0" },		 { Type, "Type" },	   { Plus, "+" },		  { Minus, "-" },		{ Multiply, "*" },
+	{ Divide, "/" },	 { Comma, "," },	   { Not, "!" },		  { Assign, "=" },		{ Equals, "==" },
+	{ NotEquals, "!=" }, { Semicolon, ";" },   { LessThan, "<" },	  { GreaterThan, ">" }, { LParen, "(" },
+	{ RParen, ")" },	 { LBracket, "[" },	   { RBracket, "]" },	  { LCurly, "{" },		{ RCurly, "}" },
+	{ If, "if" },		 { Else, "else" },	   { For, "for" },		  { While, "while" },	{ Return, "return" },
+	{ Period, "." },	 { PlusEquals, "+=" }, { MinusEquals, "-=" }, { MultEquals, "*=" }, { DivEquals, "/=" },
+	{ PlusPlus, "++" },	 { MinusMinus, "--" }
 };
 
-static TokenType GetTokenTypeFromString(const std::string& InString)
+static ETokenType GetTokenTypeFromString(const std::string& InString)
 {
 	for (auto& [K, V] : TokenStringMap)
 	{
@@ -68,7 +77,8 @@ static TokenType GetTokenTypeFromString(const std::string& InString)
 	return Invalid;
 }
 
-const std::vector<char>		   TOKENS{ '+', '-', '/', '*', '=', '!', ';', '<', '>', '(', ')', '[', ']', '{', '}', ',' };
+const std::vector<char> TOKENS{ '+', '-', '/', '*', '=', '!', ';', '<', '>', '(', ')', '[', ']', '{', '}', ',', '.' };
+const std::vector<char> OPERATORS{ '+', '-', '/', '*', '=', '.', '!' };
 const std::vector<std::string> TYPES{
 	"int",
 	"float",
@@ -86,14 +96,14 @@ typedef std::vector<std::shared_ptr<Token>> TokenArray;
 struct Token
 {
 	// Properties
-	TokenType	Type;
+	ETokenType	Type;
 	std::string Content = "";
 	int			Line = 0;
 	int			Column = 0;
 
 	// Constructors
 	Token() : Type(Invalid){};
-	Token(TokenType InType, const std::string& InContent, int InLine, int InColumn)
+	Token(ETokenType InType, const std::string& InContent, int InLine, int InColumn)
 		: Type(InType), Content(InContent), Line(InLine), Column(InColumn){};
 
 	// Methods
@@ -160,32 +170,23 @@ public:
 		// Operators, blocks
 		if (IsSymbol(C))
 		{
+			ETokenType	Type;
 			std::string Op;
 			// Equals operator
-			if (C == '=' && GetNextChar() == '=')
+			if (Contains(OPERATORS, C) && Contains(OPERATORS, GetNextChar()))
 			{
-				Op = "==";
-				Advance(2); // Consume double char operator
-			}
-			// Not equals operator
-			else if (C == '!' && GetNextChar() == '=')
-			{
-				Op = "!=";
-				Advance(2); // Consume double char operator
-			}
-			// Returns operator
-			else if (C == '-' && GetNextChar() == '>')
-			{
-				Op = "->";
-				Advance(2); // Consume double char operator
+				Op = std::string(Source.begin() + Position, Source.begin() + Position + 2);
+				Type = GetTokenTypeFromString(Op);
+				Advance(2);
 			}
 			else
 			{
 				Op = std::string(1, C);
+				Type = GetTokenTypeFromString(Op);
 				Advance(); // Consume single char operator
 			}
 
-			return Token{ GetTokenTypeFromString(Op), Op, Line, Column };
+			return Token{ Type, Op, Line, Column };
 		}
 		// Numbers
 		else if (IsDigit(C))
@@ -197,7 +198,7 @@ public:
 				C = Advance();
 			}
 
-			return Token{ TokenType::Number, Number, Line, Column };
+			return Token{ ETokenType::Number, Number, Line, Column };
 		}
 		// Types, Names
 		else if (IsAscii(C))
@@ -211,7 +212,7 @@ public:
 
 			if (Contains(TYPES, String))
 			{
-				return Token{ TokenType::Type, String, Line, Column };
+				return Token{ ETokenType::Type, String, Line, Column };
 			}
 
 			if (Contains(KEYWORDS, String))
@@ -221,10 +222,10 @@ public:
 
 			if (Contains({ "true", "false" }, String))
 			{
-				return Token{ TokenType::Bool, String, Line, Column };
+				return Token{ ETokenType::Bool, String, Line, Column };
 			}
 
-			return Token{ TokenType::Name, String, Line, Column };
+			return Token{ ETokenType::Name, String, Line, Column };
 		}
 		// Strings
 		else if (C == '"' || C == '\'')
@@ -239,12 +240,12 @@ public:
 				C = Advance();
 			}
 			Advance(); // Skip last quotation
-			return Token{ TokenType::String, String, Line, Column };
+			return Token{ ETokenType::String, String, Line, Column };
 		}
 		// End of file
 		else if (C == '\0')
 		{
-			return Token{ TokenType::Eof, "\0", Line, Column };
+			return Token{ ETokenType::Eof, "\0", Line, Column };
 		}
 		else
 		{

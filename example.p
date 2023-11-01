@@ -1,2 +1,8 @@
-int_array = [1,2,3,4,5,6,7,8,9,10];
-mixed_array = [1,2,3,"4","5","6","seven",true,false];
+test = "a = 5;";
+i = 0;
+while (i != 4)
+{
+    c = test[i];
+    a = a + c;
+    i++;
+}

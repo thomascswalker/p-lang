@@ -18,6 +18,7 @@ class Visitor;
 class ASTNode;
 class ASTValue;
 class ASTVariable;
+class ASTUnaryExpr;
 class ASTBinOp;
 class ASTAssignment;
 class ASTIf;
@@ -31,6 +32,7 @@ class VisitorBase
 public:
 	virtual void Visit(ASTValue* Node) = 0;
 	virtual void Visit(ASTVariable* Node) = 0;
+	virtual void Visit(ASTUnaryExpr* Node) = 0;
 	virtual void Visit(ASTBinOp* Node) = 0;
 	virtual void Visit(ASTAssignment* Node) = 0;
 	virtual void Visit(ASTIf* Node) = 0;
@@ -42,9 +44,17 @@ public:
 
 class Visitor : public VisitorBase
 {
+	bool bExited = false;
+	void Exit(const std::string& Msg)
+	{
+		Error(Msg);
+		bExited = true;
+	}
 	void	Push(const TObject& V);
 	TObject Pop();
 	bool	IsVariable(const std::string& Name);
+	TObject GetVariable(const std::string& Name);
+	void	SetVariable(const std::string& Name, const TObject& InValue);
 
 public:
 	std::map<std::string, TObject> Variables;
@@ -63,6 +73,7 @@ public:
 	}
 	void Visit(ASTValue* Node) override;
 	void Visit(ASTVariable* Node) override;
+	void Visit(ASTUnaryExpr* Node) override;
 	void Visit(ASTBinOp* Node) override;
 	void Visit(ASTAssignment* Node) override;
 	void Visit(ASTIf* Node) override;
@@ -71,14 +82,7 @@ public:
 	void Visit(ASTReturn* Node) override;
 	void Visit(ASTBody* Node) override;
 
-	void Dump()
-	{
-		std::cout << "Variables:" << std::endl;
-		for (const auto& Var : Variables)
-		{
-			std::cout << Var.first << " : " << Var.second.ToString() << std::endl;
-		}
-	}
+	void Dump();
 };
 
 struct ASTError
@@ -166,8 +170,21 @@ class ASTVariable : public ASTNode
 {
 public:
 	std::string Name;
-	ASTVariable(const std::string& InName) : Name(InName){};
-	virtual std::string ToString() const { return "Variable: " + Name; }
+	TObject		Value;
+	ASTVariable(const std::string& InName, const TObject& InValue = TObject()) : Name(InName), Value(InValue){};
+	virtual std::string ToString() const { return "Variable: " + Name + ", " + Value.ToString(); }
+	void				Accept(Visitor& V) override { V.Visit(this); }
+};
+
+class ASTUnaryExpr : public ASTNode
+{
+public:
+	std::string Name;
+	ETokenType	Op;
+	ASTNode*	OpArg = nullptr;
+	ASTUnaryExpr(const std::string& InName, ETokenType InOp, ASTNode* InOpArg = nullptr)
+		: Name(InName), Op(InOp), OpArg(InOpArg){};
+	virtual std::string ToString() const { return "UnaryExpr: " + Name + "(" + OpArg->ToString() + ")"; }
 	void				Accept(Visitor& V) override { V.Visit(this); }
 };
 
@@ -176,9 +193,9 @@ class ASTBinOp : public ASTNode
 	std::string OpString;
 
 public:
-	ASTNode*  Left;
-	ASTNode*  Right;
-	TokenType Op = Invalid;
+	ASTNode*   Left;
+	ASTNode*   Right;
+	ETokenType Op = Invalid;
 
 	ASTBinOp(ASTNode* InLeft, ASTNode* InRight, const std::string& InOp)
 		: Left(InLeft), Right(InRight), Op(GetTokenTypeFromString(InOp)){};
@@ -317,16 +334,19 @@ private:
 	/// <param name="Type">The type to check for.</param>
 	/// <param name="Offset">The offset position.</param>
 	/// <returns>Whether the type is found.</returns>
-	bool Expect(TokenType Type, int Offset = 0);
+	bool Expect(ETokenType Type, int Offset = 0);
 
 	/// <summary>
 	/// Expect the given <paramref name="Types"/> in sequential order at the current position.
 	/// </summary>
 	/// <param name="Types">The types to check for.</param>
 	/// <returns>Whether the types are all found.</returns>
-	bool Expect(const std::initializer_list<TokenType>& Types);
+	bool Expect(const std::initializer_list<ETokenType>& Types, int Offset = 0);
+
+	bool ExpectAny(const std::initializer_list<ETokenType>& Types, int Offset = 0);
 
 	ASTNode* ParseValueExpr();
+	ASTNode* ParseUnaryExpr();
 	ASTNode* ParseParenExpr();
 	ASTNode* ParseBracketExpr();
 	ASTNode* ParseCurlyExpr();
