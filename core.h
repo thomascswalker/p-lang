@@ -12,6 +12,7 @@ namespace Core
 	void Log(const std::string& InMsg);
 	void Warning(const std::string& InMsg);
 	void Error(const std::string& InMsg);
+	void Success(const std::string& InMsg);
 	void Debug(const std::string& InMsg);
 
 	/// <summary>

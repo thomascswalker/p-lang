@@ -77,10 +77,15 @@ void Visitor::Visit(ASTVariable* Node)
 {
 	Debug(std::format("Visiting {}.", __FUNCSIG__));
 
+	if (!IsVariable(Node->Name))
+	{
+		Exit(std::format("Variable '{}' is undefined.", Node->Name));
+		return;
+	}
 	Node->Value = GetVariable(Node->Name);
 
 	// If the variable is found, push the variable's value to the stack
-	Debug(std::format("Variable {} is {}.", Node->Name, Node->Value.ToString()));
+	Debug(std::format("Variable '{}' is {}.", Node->Name, Node->Value.ToString()));
 	Push(Node->Value);
 }
 
@@ -126,7 +131,7 @@ void Visitor::Visit(ASTUnaryExpr* Node)
 	}
 	else
 	{
-		Error(std::format("Unable to parse unary expression: undefined variable {}", Node->Name));
+		Exit(std::format("ERROR: undefined variable '{}'", Node->Name));
 	}
 }
 
@@ -135,13 +140,17 @@ void Visitor::Visit(ASTBinOp* Node)
 	Debug(std::format("Visiting {}.", __FUNCSIG__));
 	// Visit the left value
 	Node->Left->Accept(*this);
+	CHECK_EXIT
+
 	// After visiting the left value, pop it off the stack and store it here
-	auto Left = Pop();
+	TObject Left = Pop();
 
 	// Visit the right value
 	Node->Right->Accept(*this);
+	CHECK_EXIT
+
 	// After visiting the right value, pop it off the stack and store it here
-	auto Right = Pop();
+	TObject Right = Pop();
 
 	// Execute the operator on the left and right value
 	TObject Result;
@@ -182,7 +191,9 @@ void Visitor::Visit(ASTAssignment* Node)
 	Debug(std::format("Visiting {}.", __FUNCSIG__));
 
 	Node->Right->Accept(*this);
-	auto Value = Pop();
+	CHECK_EXIT
+
+	TObject Value = Pop();
 	SetVariable(Node->Name, Value);
 
 	Debug(std::format("Variable {} assigned value of {}", Node->Name, Value.ToString()));
@@ -194,6 +205,7 @@ void Visitor::Visit(ASTIf* Node)
 	TObject bResult;
 
 	Node->Cond->Accept(*this);
+	CHECK_EXIT
 
 	bResult = Pop();
 	Debug(std::format("Conditional result is {}", bResult ? "true" : "false"));
@@ -216,6 +228,7 @@ void Visitor::Visit(ASTWhile* Node)
 	while (bResult)
 	{
 		Node->Cond->Accept(*this);
+		CHECK_EXIT
 
 		bResult = Pop().GetBool();
 		Debug(std::format("While result is {}", bResult ? "true" : "false"));
@@ -228,7 +241,7 @@ void Visitor::Visit(ASTWhile* Node)
 
 		if (Count == WHILE_MAX_LOOP)
 		{
-			Error(std::format("Hit max loop count ({}).", WHILE_MAX_LOOP));
+			Exit(std::format("Hit max loop count ({}).", WHILE_MAX_LOOP));
 			break;
 		}
 	}
@@ -259,68 +272,6 @@ void Visitor::Dump()
 /////////
 // AST //
 /////////
-
-void AST::Accept()
-{
-	// Get the last token in the token list
-	Token* End = &Tokens.back();
-
-	if (!CurrentToken)
-	{
-		return;
-	}
-
-	// If we're at the end, set the CurrentToken to be null
-	if (CurrentToken == End)
-	{
-		CurrentToken = nullptr;
-	}
-	// Otherwise increment the CurrentToken pointer and the position
-	else
-	{
-		Debug(std::format("Accept(): {}", CurrentToken->Content));
-		CurrentToken++;
-		Position++;
-	}
-}
-
-bool AST::Expect(ETokenType Type, int Offset)
-{
-	// Make sure the offset is valid
-	if (Position + Offset > Tokens.size())
-	{
-		Error("WARNING: Outside token bounds.");
-		return false;
-	}
-
-	//Debug(std::format("Expect(): {} at {}: {}", (int)Type, Position + Offset, Tokens[Position + Offset].ToString()));
-
-	return Tokens[Position + Offset].Type == Type;
-}
-
-bool AST::Expect(const std::initializer_list<ETokenType>& Types, int Offset)
-{
-	for (auto [I, T] : Enumerate(Types))
-	{
-		if (!Expect(T, Offset + (int)I))
-		{
-			return false;
-		}
-	}
-	return true;
-}
-
-bool AST::ExpectAny(const std::initializer_list<ETokenType>& Types, int Offset)
-{
-	for (const auto& T : Types)
-	{
-		if (!Expect(T, Offset))
-		{
-			return false;
-		}
-	}
-	return true;
-}
 
 ASTNode* AST::ParseValueExpr()
 {
@@ -773,18 +724,18 @@ ASTNode* AST::ParseExpression()
 	}
 
 	// int MyFunc() { ... }
-	if (Expect({ Type, Name, LParen }))
+	if (ExpectSequence({ Type, Name, LParen }))
 	{
 		Expr = ParseFunctionDef();
 	}
 	// int MyVar = ...;
-	else if (Expect({ Type, Name, Assign }))
+	else if (ExpectSequence({ Type, Name, Assign }))
 	{
 		Expr = ParseAssignment();
 		Accept(); // Consume ';'
 	}
 	// MyVar = ...;
-	else if (Expect({ Name, Assign }))
+	else if (ExpectSequence({ Name, Assign }))
 	{
 		Expr = ParseAssignment();
 		Accept(); // Consume ';'
