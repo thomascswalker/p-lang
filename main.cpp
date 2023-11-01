@@ -24,10 +24,10 @@ int Compile(std::string FileName)
 	ASTBody* Program = Ast.GetTree();
 	if (!Program->Succeeded())
 	{
-		Error("Parsing failed.");
+		Error("Compilation failed.");
 		for (const auto& E : Program->Errors)
 		{
-			Error(E.ToString());
+			Error(E);
 		}
 		return 1;
 	}
@@ -36,7 +36,12 @@ int Compile(std::string FileName)
 	V->Visit(Program);
 	if (!V->Succeeded())
 	{
-		Error("Visiting failed.");
+		Error("Compilation failed.");
+		for (const auto& E : V->Errors)
+		{
+			Error(E);
+		}
+		return 1;
 	}
 	else
 	{
