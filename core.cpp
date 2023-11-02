@@ -6,7 +6,7 @@
 
 void Core::Log(const std::string& InMsg)
 {
-	auto Fmt = InMsg + "\n";
+	auto Fmt = std::format("[{}] ", __TIMESTAMP__) + InMsg + "\n";
 	printf(Fmt.c_str());
 }
 
@@ -19,7 +19,7 @@ void Core::Debug(const std::string& InMsg)
 
 void Core::Warning(const std::string& InMsg)
 {
-	Log(std::format("\x1B[44m{}\033[37m", InMsg));
+	Log(std::format("\x1B[33m{}\033[37m", InMsg));
 }
 
 void Core::Error(const std::string& InMsg)

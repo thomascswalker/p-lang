@@ -27,15 +27,9 @@ class ASTFunctionDef;
 class ASTReturn;
 class ASTBody;
 
-#define CHECK_EXIT         \
-	if (Errors.size() > 0) \
-	{                      \
-		return;            \
-	}
-
 class Visitor
 {
-	void	Push(const TObject& V);
+	void	Push(const TObject& Value);
 	TObject Pop();
 	bool	IsVariable(const std::string& Name);
 	TObject GetVariable(const std::string& Name);
@@ -72,7 +66,6 @@ public:
 	bool Succeeded() { return Errors.size() == 0; }
 	void Dump();
 };
-
 
 // Base AST Node class
 class ASTNode
@@ -155,12 +148,11 @@ public:
 class ASTUnaryExpr : public ASTNode
 {
 public:
-	std::string Name;
 	ETokenType	Op;
-	ASTNode*	OpArg = nullptr;
-	ASTUnaryExpr(const std::string& InName, ETokenType InOp, ASTNode* InOpArg = nullptr)
-		: Name(InName), Op(InOp), OpArg(InOpArg){};
-	virtual std::string ToString() const { return "UnaryExpr: " + Name + "(" + OpArg->ToString() + ")"; }
+	ASTNode*	Right;
+	ASTUnaryExpr(ETokenType InOp, ASTNode* InRight)
+		: Op(InOp), Right(InRight){};
+	virtual std::string ToString() const { return std::format("UnaryExpr: {}{}", TokenStringMap[Op], Right->ToString() ); }
 	void				Accept(Visitor& V) override { V.Visit(this); }
 };
 
@@ -177,7 +169,8 @@ public:
 		: Left(InLeft), Right(InRight), Op(GetTokenTypeFromString(InOp)){};
 	virtual std::string ToString() const
 	{
-		return "BinOp{\"Left: " + Left->ToString() + ", \"Op: \"" + OpString + "\", Right: " + Right->ToString() + "}";
+		return "BinOp{\"Left: " + Left->ToString() + ", \"Op: \"" + OpString
+			   + "\", Right: " + (Right ? Right->ToString() : "none") + "}";
 	}
 
 	void Accept(Visitor& V) override { V.Visit(this); }
@@ -186,15 +179,14 @@ public:
 class ASTAssignment : public ASTNode
 {
 public:
-	std::string Type;
 	std::string Name;
 	ASTNode*	Right;
 
-	ASTAssignment(const std::string& InType, const std::string& InName, ASTNode* InRight)
-		: Type(InType), Name(InName), Right(InRight){};
+	ASTAssignment(const std::string& InName, ASTNode* InRight)
+		: Name(InName), Right(InRight){};
 	virtual std::string ToString() const
 	{
-		return "Assign: (" + Type + ") " + Name + " => {" + Right->ToString() + "}";
+		return "Assign: " + Name + " => {" + Right->ToString() + "}";
 	}
 
 	void Accept(Visitor& V) override { V.Visit(this); }
@@ -253,9 +245,9 @@ public:
 class ASTBody : public ASTNode
 {
 public:
-	ASTBody*			  Parent = nullptr;
+	ASTBody*				 Parent = nullptr;
 	std::vector<std::string> Errors;
-	std::vector<ASTNode*> Expressions;
+	std::vector<ASTNode*>	 Expressions;
 	ASTBody(std::vector<ASTNode*> InBody = {}) : Expressions(InBody){};
 	virtual std::string ToString() const
 	{
@@ -320,7 +312,7 @@ private:
 		// Otherwise increment the CurrentToken pointer and the position
 		else
 		{
-			Debug(std::format("Accept(): {}", CurrentToken->Content));
+			// Debug(std::format("{}Accept(): {}", GetIndent(), CurrentToken->Content));
 			CurrentToken++;
 			Position++;
 		}
@@ -341,9 +333,6 @@ private:
 			Error("WARNING: Outside token bounds.");
 			return false;
 		}
-
-		// Debug(std::format("Expect(): {} at {}: {}", (int)Type, Position + Offset, Tokens[Position +
-		// Offset].ToString()));
 
 		return Tokens[Position + Offset].Type == Type;
 	}
@@ -378,6 +367,10 @@ private:
 	}
 
 	bool ExpectValue(int Offset = 0) { return ExpectAny({ Name, Bool, Number, String }, Offset); }
+	bool ExpectAssignOperator(int Offset = 0)
+	{
+		return ExpectAny({ Assign, PlusEquals, MinusEquals, MultEquals, DivEquals });
+	}
 	bool ExpectUnaryOperator(int Offset = 0)
 	{
 		return ExpectAny({ Minus, PlusPlus, MinusMinus, Period, LBracket }, Offset);
@@ -385,14 +378,14 @@ private:
 
 	ASTNode* ParseValueExpr();
 	ASTNode* ParseUnaryExpr();
-	ASTNode* ParseParenExpr();
-	ASTNode* ParseBracketExpr();
-	ASTNode* ParseCurlyExpr();
 	ASTNode* ParseMultiplicativeExpr();
 	ASTNode* ParseAdditiveExpr();
 	ASTNode* ParseEqualityExpr();
 	ASTNode* ParseAssignment();
 	ASTNode* ParseReturnExpr();
+	ASTNode* ParseParenExpr();
+	ASTNode* ParseBracketExpr();
+	ASTNode* ParseCurlyExpr();
 	ASTNode* ParseIf();
 	ASTNode* ParseWhile();
 	ASTNode* ParseFunctionDef();
