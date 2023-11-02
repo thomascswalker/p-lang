@@ -15,7 +15,7 @@ void Visitor::Push(const TObject& Value)
 		Error("Cannot push null object.");
 		return;
 	}
-	LOG(std::format("PUSH: '{}'", Value.ToString()));
+	DEBUG(std::format("PUSH: '{}'", Value.ToString()));
 	Stack.push_back(Value);
 }
 
@@ -27,7 +27,7 @@ TObject Visitor::Pop()
 		return TObject();
 	}
 	TObject Value = Stack.back();
-	LOG(std::format("POP: '{}'", Value.ToString()));
+	DEBUG(std::format("POP: '{}'", Value.ToString()));
 	Stack.pop_back();
 	return Value;
 }
@@ -96,7 +96,7 @@ void Visitor::Visit(ASTIdentifier* Node)
 	}
 
 	// If the variable is found, push the variable's value to the stack
-	LOG(std::format("VARIABLE: '{}' is {}.", Node->Name, Node->Value.ToString()));
+	DEBUG(std::format("VARIABLE: '{}' is {}.", Node->Name, Node->Value.ToString()));
 	Push(Node->Value);
 	DEBUG_EXIT
 }
@@ -182,7 +182,7 @@ void Visitor::Visit(ASTBinOp* Node)
 
 	// Push the resulting value to the stack
 	Push(Result);
-	LOG(std::format("BINOP: {} {} {} = {}", Left.ToString(), TokenStringMap[Node->Op], Right.ToString(),
+	DEBUG(std::format("BINOP: {} {} {} = {}", Left.ToString(), TokenStringMap[Node->Op], Right.ToString(),
 					Result.ToString()));
 	DEBUG_EXIT
 }
@@ -199,7 +199,7 @@ void Visitor::Visit(ASTAssignment* Node)
 
 	SetIdentifierValue(Node->Name, Value);
 
-	LOG(std::format("ASSIGN: {} <= {}", Node->Name, Value.ToString()));
+	DEBUG(std::format("ASSIGN: {} <= {}", Node->Name, Value.ToString()));
 	DEBUG_EXIT
 }
 
@@ -282,7 +282,7 @@ void Visitor::Visit(ASTIf* Node)
 		return;
 	}
 
-	LOG(std::format("IF: {}", bResult.GetBool().GetValue() ? "true" : "false"));
+	DEBUG(std::format("IF: {}", bResult.GetBool().GetValue() ? "true" : "false"));
 	if (bResult.GetBool().GetValue())
 	{
 		Node->TrueBody->Accept(*this);
@@ -306,14 +306,15 @@ void Visitor::Visit(ASTWhile* Node)
 		CHECK_ERRORS
 
 		bResult = Pop().GetBool();
-		LOG(std::format("WHILE ({}): {}", Count, bResult ? "true" : "false"));
+		DEBUG(std::format("WHILE ({}): {}", Count, bResult ? "true" : "false"));
 		if (!bResult)
 		{
 			break;
 		}
 		Node->Body->Accept(*this);
-		Count++;
+		CHECK_ERRORS
 
+		Count++;
 		if (Count == WHILE_MAX_LOOP)
 		{
 			Error(std::format("ERROR: Hit max loop count ({}).", WHILE_MAX_LOOP));
@@ -409,6 +410,7 @@ ASTNode* AST::ParseIdentifier()
 
 	if (!ExpectAny({ LParen, LBracket, Period }))
 	{
+		DEBUG_EXIT
 		return Identifier;
 	}
 
@@ -427,6 +429,7 @@ ASTNode* AST::ParseIdentifier()
 			break;
 		default :
 			Error("Token not supported.");
+			DEBUG_EXIT
 			return nullptr;
 	}
 	std::vector<ASTNode*> Args;
@@ -456,6 +459,7 @@ ASTNode* AST::ParseIdentifier()
 
 	Accept(); // Consume ']'
 	Nodes.push_back(new ASTCall(Identifier->Name, CallType, Args));
+	DEBUG_EXIT
 	return Nodes.back();
 }
 
@@ -667,7 +671,7 @@ ASTNode* AST::ParseIf()
 		return nullptr;
 	}
 
-	LOG("IF: Parsing 'if' block.");
+	DEBUG("IF: Parsing 'if' block.");
 	auto TrueBody = ParseCurlyExpr();
 	if (!TrueBody)
 	{
@@ -680,7 +684,7 @@ ASTNode* AST::ParseIf()
 	if (Expect(Else))
 	{
 		Accept(); // Consume 'else'
-		LOG("IF: Parsing 'else' block.");
+		DEBUG("IF: Parsing 'else' block.");
 		FalseBody = ParseCurlyExpr();
 		if (!FalseBody)
 		{
