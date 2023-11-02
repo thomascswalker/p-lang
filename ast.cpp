@@ -10,39 +10,49 @@ using namespace Core;
 
 void Visitor::Push(const TObject& Value)
 {
+	if (!Value.IsValid())
+	{
+		Error("Cannot push null object.");
+		return;
+	}
 	LOG(std::format("PUSH: '{}'", Value.ToString()));
 	Stack.push_back(Value);
 }
 
 TObject Visitor::Pop()
 {
+	if (Stack.size() == 0)
+	{
+		Error("Stack is empty.");
+		return TObject();
+	}
 	TObject Value = Stack.back();
 	LOG(std::format("POP: '{}'", Value.ToString()));
 	Stack.pop_back();
 	return Value;
 }
 
-bool Visitor::IsVariable(const std::string& Name)
+bool Visitor::IsIdentifier(const std::string& Name)
 {
-	auto Variable = GetVariable(Name);
+	auto Variable = GetIdentifier(Name);
 	return (Variable.GetType() != NullType);
 }
 
-TObject Visitor::GetVariable(const std::string& Name)
+TObject Visitor::GetIdentifier(const std::string& Name)
 {
-	for (const auto& [K, V] : Variables)
+	for (const auto& [K, V] : Identifiers)
 	{
 		if (K == Name)
 		{
-			return Variables.at(K);
+			return Identifiers.at(K);
 		}
 	}
 	return TObject();
 }
 
-void Visitor::SetVariable(const std::string& Name, const TObject& InValue)
+void Visitor::SetIdentifierValue(const std::string& Name, const TObject& InValue)
 {
-	Variables[Name] = InValue;
+	Identifiers[Name] = InValue;
 }
 
 void Visitor::Visit(ASTValue* Node)
@@ -72,17 +82,18 @@ void Visitor::Visit(ASTValue* Node)
 	DEBUG_EXIT
 }
 
-void Visitor::Visit(ASTVariable* Node)
+void Visitor::Visit(ASTIdentifier* Node)
 {
 	DEBUG_ENTER
 
-	if (!IsVariable(Node->Name))
+	auto Temp = GetIdentifier(Node->Name);
+	Node->Value = GetIdentifier(Node->Name);
+	if (Node->Value.GetType() == NullType)
 	{
 		Error(std::format("VARIABLE: '{}' is undefined.", Node->Name));
 		DEBUG_EXIT
 		return;
 	}
-	Node->Value = GetVariable(Node->Name);
 
 	// If the variable is found, push the variable's value to the stack
 	LOG(std::format("VARIABLE: '{}' is {}.", Node->Name, Node->Value.ToString()));
@@ -95,26 +106,10 @@ void Visitor::Visit(ASTUnaryExpr* Node)
 	DEBUG_ENTER
 	TObject CurrentValue;
 	TObject NewValue;
-	if (Cast<ASTValue>(Node->Right))
-	{
-		auto Expr = Cast<ASTValue>(Node->Right);
-		Visit(Expr);
-		CHECK_ERRORS
-		CurrentValue = Pop();
-	}
-	else if (Cast<ASTVariable>(Node->Right))
-	{
-		auto Expr = Cast<ASTVariable>(Node->Right);
-		Visit(Expr);
-		CHECK_ERRORS
-		CurrentValue = Pop();
-	}
-	else
-	{
-		ERROR("Invalid rhs for unary expr");
-		DEBUG_EXIT
-		return;
-	}
+
+	Node->Right->Accept(*this);
+	CHECK_ERRORS
+	CurrentValue = Pop();
 
 	switch (Node->Op)
 	{
@@ -200,7 +195,9 @@ void Visitor::Visit(ASTAssignment* Node)
 	CHECK_ERRORS
 
 	TObject Value = Pop();
-	SetVariable(Node->Name, Value);
+	CHECK_ERRORS
+
+	SetIdentifierValue(Node->Name, Value);
 
 	LOG(std::format("ASSIGN: {} <= {}", Node->Name, Value.ToString()));
 	DEBUG_EXIT
@@ -210,26 +207,61 @@ void Visitor::Visit(ASTCall* Node)
 {
 	DEBUG_ENTER
 
-	auto V = GetVariable(Node->Name);
-	auto A = V.AsArray();
-
+	// The first argument is always implicitly the object the function is called on
 	Node->Args[0]->Accept(*this);
 	CHECK_ERRORS
 
-	TObject RawValue = Pop();
-	auto	Index = RawValue.GetInt().GetValue();
-	auto	Size = A->Size().GetValue();
-	if (Index < -Size || Index >= Size)
+	TObject Object = Pop();
+	CHECK_ERRORS
+
+	TObject Result;
+	TObject Index;
+	int		IndexValue;
+
+	switch (Node->Type)
 	{
-		Error(std::format("Array '{}' index '{}' out of range (max is {}).", Node->Name, Index, Size - 1));
-		DEBUG_EXIT
-		return;
+		case IndexOf :
+			if (Node->Args.size() != 2)
+			{
+				Error("Invalid argument count for subscript operator.");
+				DEBUG_EXIT
+				return;
+			}
+			Node->Args[1]->Accept(*this);
+			CHECK_ERRORS
+
+			Index = Pop();
+			CHECK_ERRORS
+			IndexValue = Index.GetInt().GetValue();
+
+			switch (Object.GetType())
+			{
+				case StringType :
+					Result = Object.AsString()->At(IndexValue);
+					if (Result.GetType() == NullType)
+					{
+						DEBUG_EXIT
+						return;
+					}
+					Push(Result);
+					break;
+				case ArrayType :
+					Result = Object.AsArray()->At(IndexValue);
+					if (Result.GetType() == NullType)
+					{
+						DEBUG_EXIT
+						return;
+					}
+					Push(Result);
+					break;
+			}
+
+			break;
+
+		case Function :
+			DEBUG_EXIT
+			return;
 	}
-	if (Index < 0)
-	{
-		Index = Size - abs(Index);
-	}
-	Push(A->At(Index));
 
 	DEBUG_EXIT
 }
@@ -304,7 +336,7 @@ void Visitor::Visit(ASTBody* Node)
 void Visitor::Dump()
 {
 	std::cout << "Variables:" << std::endl;
-	for (const auto& [K, V] : Variables)
+	for (const auto& [K, V] : Identifiers)
 	{
 		std::cout << K << " : " << V.ToString() << std::endl;
 	}
@@ -354,7 +386,7 @@ ASTNode* AST::ParseValueExpr()
 	// Parse names (Variables, functions, etc.)
 	else if (Expect(Name))
 	{
-		return ParseVariable();
+		return ParseIdentifier();
 	}
 	else if (Expect(Bool))
 	{
@@ -370,30 +402,45 @@ ASTNode* AST::ParseValueExpr()
 	return nullptr;
 }
 
-ASTNode* AST::ParseVariable()
+ASTNode* AST::ParseIdentifier()
 {
-	std::string Name = CurrentToken->Content;
+	auto Identifier = new ASTIdentifier(CurrentToken->Content);
 	Accept(); // Consume the variable
 
 	if (!ExpectAny({ LParen, LBracket, Period }))
 	{
-		return new ASTVariable(Name);
+		return Identifier;
 	}
 
 	auto StartTok = CurrentToken->Type;
+	auto EndTok = BLOCK_PAIRS.at(CurrentToken->Type);
 	Accept(); // Consume '['
 
-	std::vector<ASTNode*> Args;
-	if (!Expect(RBracket))
+	ECallType CallType;
+	switch (StartTok)
 	{
-		while (!Expect(RBracket))
+		case LBracket :
+			CallType = IndexOf;
+			break;
+		case LParen :
+			CallType = Function;
+			break;
+		default :
+			Error("Token not supported.");
+			return nullptr;
+	}
+	std::vector<ASTNode*> Args;
+	if (!Expect(EndTok))
+	{
+		Args.push_back(Identifier);
+		while (!Expect(EndTok))
 		{
 			auto Arg = ParseExpression();
 			if (Arg)
 			{
 				Args.push_back(Arg);
 			}
-			if (Expect(RBracket))
+			if (Expect(EndTok))
 			{
 				break;
 			}
@@ -408,7 +455,7 @@ ASTNode* AST::ParseVariable()
 	}
 
 	Accept(); // Consume ']'
-	Nodes.push_back(new ASTCall(Name, Args));
+	Nodes.push_back(new ASTCall(Identifier->Name, CallType, Args));
 	return Nodes.back();
 }
 
@@ -491,7 +538,7 @@ ASTNode* AST::ParseAssignment()
 	auto Expr = ParseExpression();
 	if (Op == PlusEquals || Op == MinusEquals || Op == MultEquals || Op == DivEquals)
 	{
-		Expr = new ASTBinOp(new ASTVariable(Name), Expr, Op);
+		Expr = new ASTBinOp(new ASTIdentifier(Name), Expr, Op);
 	}
 	Nodes.push_back(new ASTAssignment(Name, Expr));
 	DEBUG_EXIT

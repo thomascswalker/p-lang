@@ -219,6 +219,21 @@ TFloatValue::operator TStringValue() const
 	return std::to_string(Value);
 }
 
+std::string Values::TStringValue::At(int Index) const
+{
+	auto ThisSize = (int)Value.size();
+	if (Index < -ThisSize || Index >= ThisSize)
+	{
+		auto R = TObject();
+		return R;
+	}
+	if (Index < 0)
+	{
+		Index = ThisSize - abs(Index);
+	}
+	return std::string(1, Value.at(Index));
+}
+
 inline std::string Values::TStringValue::Join(const TArray& Iterator, const std::string& Separator)
 {
 	std::string Result;
@@ -240,7 +255,22 @@ TStringValue Values::TStringValue::operator+(const TStringValue& Other) const
 	return TStringValue(Value + Other.GetValue());
 }
 
-inline bool Values::TArrayValue::Contains(const TObject& InValue)
+TObject& Values::TArrayValue::At(int Index)
+{
+	auto ThisSize = Size().GetValue();
+	if (Index < -ThisSize || Index >= ThisSize)
+	{
+		auto R = TObject();
+		return R;
+	}
+	if (Index < 0)
+	{
+		Index = ThisSize - abs(Index);
+	}
+	return Value[Index];
+}
+
+bool Values::TArrayValue::Contains(const TObject& InValue)
 {
 	for (int Index = 0; Index < Value.size(); Index++)
 	{
