@@ -1,5 +1,17 @@
 # Penguin Language
 
+<!--TOC-->
+  - [Goals](#goals)
+  - [Features](#features)
+  - [Development](#development)
+  - [Example](#example)
+    - [Basic arithmetic](#basic-arithmetic)
+    - [Strings](#strings)
+    - [Arrays](#arrays)
+    - [Loops](#loops)
+  - [Grammar](#grammar)
+<!--/TOC-->
+
 ## Goals
 Feature set similar to Python with optional type-safety and brackets.
 
@@ -8,14 +20,16 @@ Feature set similar to Python with optional type-safety and brackets.
 - Ignores whitespace
 - Basic mutable types
 
-## TODO:
+## Development
 - [x] Variables
 - [x] Arithmetic
 - [x] `if`, `else`
 - [x] `while`
-- [x] Unary operators (`++`, `--`, `[]`, etc.)
-- [ ] Compound operators (`+=`, `-=`, etc.)
-- [ ] Negative numbers
+- [x] Unary operators
+- [x] Index operator
+- [x] Negative numbers
+- [x] Compound operators
+- [ ] ++ and -- operators
 - [ ] `else if`
 - [ ] `and`, `or`
 - [ ] Printing
@@ -23,6 +37,61 @@ Feature set similar to Python with optional type-safety and brackets.
 - [ ] Function definitions
 - [ ] Function call
 - [ ] Type method call (`list.size()`)
+
+## Example
+
+### Basic arithmetic
+```c
+var1 = 1;
+var2 = 3.14159;
+var3 = var1 + var2;
+>>> 4.14159;
+```
+
+### Strings
+```c
+my_string = "This is a very long test string.";
+my_string[0];
+>>> "T"
+my_string[-1];
+>>> "."
+```
+
+### Arrays
+```c
+my_array = [1,2,3]
+my_array[-1]
+>>> 3
+
+my_variant_array = [false, 1, "two", 3.0];
+my_array[0]
+>>> false
+my_array[1]
+>>> 1
+```
+
+### Loops
+```c
+my_array = [0,1,2,3,4,5];
+i = 0;
+while (i < 6)
+{
+	my_array[i]
+	>>> 0, 1, 2 ...
+	i += 1;
+}
+
+my_long_string = "abcdefghijklmnopqrstuvwxyz";
+i = 0;
+my_new_string = "";
+while (i < 10)
+{
+	my_new_string += my_long_string[i];
+	i += 1;
+}
+my_new_string
+>>> "abcdefghij"
+```
 
 ## Grammar
 
