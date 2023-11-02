@@ -17,50 +17,55 @@ class Visitor;
 
 class ASTNode;
 class ASTValue;
-class ASTVariable;
+class ASTIdentifier;
 class ASTUnaryExpr;
 class ASTBinOp;
 class ASTAssignment;
+class ASTCall;
 class ASTIf;
 class ASTWhile;
-class ASTFunctionDef;
 class ASTReturn;
 class ASTBody;
+
+enum ECallType
+{
+	Function,
+	IndexOf
+};
 
 class Visitor
 {
 	void	Push(const TObject& Value);
 	TObject Pop();
-	bool	IsVariable(const std::string& Name);
-	TObject GetVariable(const std::string& Name);
-	void	SetVariable(const std::string& Name, const TObject& InValue);
+	bool	IsIdentifier(const std::string& Name);
+	TObject GetIdentifier(const std::string& Name);
+	void	SetIdentifierValue(const std::string& Name, const TObject& InValue);
 	void	Error(const std::string& Msg) { Errors.push_back(Msg); }
 
 public:
 	std::vector<std::string>	   Errors;
-	std::map<std::string, TObject> Variables;
+	std::map<std::string, TObject> Identifiers;
 	std::vector<TObject>		   Stack;
 
 	Visitor(){};
 	Visitor(Visitor& Other)
 	{
-		Variables = Other.Variables;
+		Identifiers = Other.Identifiers;
 		Stack = Other.Stack;
 	}
 	Visitor(const Visitor& Other)
 	{
-		Variables = Other.Variables;
+		Identifiers = Other.Identifiers;
 		Stack = Other.Stack;
 	}
 	void Visit(ASTValue* Node);
-	void Visit(ASTVariable* Node);
+	void Visit(ASTIdentifier* Node);
 	void Visit(ASTUnaryExpr* Node);
 	void Visit(ASTBinOp* Node);
 	void Visit(ASTAssignment* Node);
+	void Visit(ASTCall* Node);
 	void Visit(ASTIf* Node);
 	void Visit(ASTWhile* Node);
-	void Visit(ASTFunctionDef* Node);
-	void Visit(ASTReturn* Node);
 	void Visit(ASTBody* Node);
 
 	bool Succeeded() { return Errors.size() == 0; }
@@ -135,12 +140,12 @@ public:
 	}
 };
 
-class ASTVariable : public ASTNode
+class ASTIdentifier : public ASTNode
 {
 public:
 	std::string Name;
 	TObject		Value;
-	ASTVariable(const std::string& InName, const TObject& InValue = TObject()) : Name(InName), Value(InValue){};
+	ASTIdentifier(const std::string& InName, const TObject& InValue = TObject()) : Name(InName), Value(InValue){};
 	virtual std::string ToString() const { return "Variable: " + Name + ", " + Value.ToString(); }
 	void				Accept(Visitor& V) override { V.Visit(this); }
 };
@@ -148,12 +153,14 @@ public:
 class ASTUnaryExpr : public ASTNode
 {
 public:
-	ETokenType	Op;
-	ASTNode*	Right;
-	ASTUnaryExpr(ETokenType InOp, ASTNode* InRight)
-		: Op(InOp), Right(InRight){};
-	virtual std::string ToString() const { return std::format("UnaryExpr: {}{}", TokenStringMap[Op], Right->ToString() ); }
-	void				Accept(Visitor& V) override { V.Visit(this); }
+	ETokenType Op;
+	ASTNode*   Right;
+	ASTUnaryExpr(ETokenType InOp, ASTNode* InRight) : Op(InOp), Right(InRight){};
+	virtual std::string ToString() const
+	{
+		return std::format("UnaryExpr: {}{}", TokenStringMap[Op], Right->ToString());
+	}
+	void Accept(Visitor& V) override { V.Visit(this); }
 };
 
 class ASTBinOp : public ASTNode
@@ -165,8 +172,7 @@ public:
 	ASTNode*   Right;
 	ETokenType Op = Invalid;
 
-	ASTBinOp(ASTNode* InLeft, ASTNode* InRight, ETokenType& InOp)
-		: Left(InLeft), Right(InRight), Op(InOp){};
+	ASTBinOp(ASTNode* InLeft, ASTNode* InRight, ETokenType& InOp) : Left(InLeft), Right(InRight), Op(InOp){};
 	virtual std::string ToString() const
 	{
 		return "BinOp{\"Left: " + Left->ToString() + ", \"Op: \"" + OpString
@@ -182,12 +188,22 @@ public:
 	std::string Name;
 	ASTNode*	Right;
 
-	ASTAssignment(const std::string& InName, ASTNode* InRight)
-		: Name(InName), Right(InRight){};
-	virtual std::string ToString() const
-	{
-		return "Assign: " + Name + " => {" + Right->ToString() + "}";
-	}
+	ASTAssignment(const std::string& InName, ASTNode* InRight) : Name(InName), Right(InRight){};
+	virtual std::string ToString() const { return "Assign: " + Name + " => {" + Right->ToString() + "}"; }
+
+	void Accept(Visitor& V) override { V.Visit(this); }
+};
+
+class ASTCall : public ASTNode
+{
+public:
+	std::string			  Identifier;
+	ECallType			  Type;
+	std::vector<ASTNode*> Args;
+
+	ASTCall(const std::string& InIdentifier, ECallType InType, std::vector<ASTNode*> InArgs)
+		: Identifier(InIdentifier), Type(InType), Args(InArgs){};
+	virtual std::string ToString() const { return "Call"; }
 
 	void Accept(Visitor& V) override { V.Visit(this); }
 };
@@ -217,30 +233,6 @@ public:
 };
 
 using ArgValue = std::pair<EValueType, std::string>;
-
-class ASTFunctionDef : public ASTNode
-{
-public:
-	EValueType			  ReturnType;
-	std::string			  Name;
-	std::vector<ArgValue> Arguments;
-	ASTNode*			  Body;
-
-	ASTFunctionDef(EValueType InReturnType, const std::string& InName, std::vector<ArgValue> InArguments,
-				   ASTNode* InBody)
-		: ReturnType(InReturnType), Name(InName), Arguments(InArguments), Body(InBody){};
-	virtual std::string ToString() const { return "FunctionDef"; }
-	void				Accept(Visitor& V) override { V.Visit(this); }
-};
-
-class ASTReturn : public ASTNode
-{
-public:
-	ASTNode* Expression;
-	ASTReturn(ASTNode* InExpression) : Expression(InExpression){};
-	virtual std::string ToString() const { return "Return"; }
-	void				Accept(Visitor& V) override { V.Visit(this); }
-};
 
 class ASTBody : public ASTNode
 {
@@ -369,7 +361,7 @@ private:
 	bool ExpectValue(int Offset = 0) { return ExpectAny({ Name, Bool, Number, String }, Offset); }
 	bool ExpectAssignOperator(int Offset = 0)
 	{
-		return ExpectAny({ Assign, PlusEquals, MinusEquals, MultEquals, DivEquals });
+		return ExpectAny({ Assign, PlusEquals, MinusEquals, MultEquals, DivEquals }, Offset);
 	}
 	bool ExpectUnaryOperator(int Offset = 0)
 	{
@@ -377,18 +369,17 @@ private:
 	}
 
 	ASTNode* ParseValueExpr();
+	ASTNode* ParseIdentifier();
 	ASTNode* ParseUnaryExpr();
 	ASTNode* ParseMultiplicativeExpr();
 	ASTNode* ParseAdditiveExpr();
 	ASTNode* ParseEqualityExpr();
 	ASTNode* ParseAssignment();
-	ASTNode* ParseReturnExpr();
 	ASTNode* ParseParenExpr();
 	ASTNode* ParseBracketExpr();
 	ASTNode* ParseCurlyExpr();
 	ASTNode* ParseIf();
 	ASTNode* ParseWhile();
-	ASTNode* ParseFunctionDef();
 	ASTNode* ParseExpression();
 	void	 ParseBody();
 

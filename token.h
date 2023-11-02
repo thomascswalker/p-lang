@@ -86,6 +86,7 @@ const std::vector<std::string> TYPES{
 	"bool",
 };
 const std::vector<std::string> KEYWORDS{ "if", "else", "for", "while", "return" };
+const std::map<ETokenType, ETokenType> BLOCK_PAIRS{ { LParen, RParen }, { LBracket, RBracket }, { LCurly, RCurly } };
 
 // Forward decl
 struct Token;

@@ -32,11 +32,12 @@ namespace Core
 #endif
 
 #define LOG(X) Log(std::format("\x1B[36m{}\033[37m", GetIndent() + X))
+#define DEBUG(X) Debug(GetIndent() + X)
 #define WARNING(X) Warning(GetIndent() + X)
 #define ERROR(X) Error(GetIndent() + X)
 #define SUCCESS(X) Success(GetIndent() + X)
 
-#define CHECK_EXIT         \
+#define CHECK_ERRORS       \
 	if (Errors.size() > 0) \
 	{                      \
 		DEBUG_EXIT         \
