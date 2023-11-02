@@ -23,3 +23,17 @@ Feature set similar to Python with optional type-safety and brackets.
 - [ ] Function definitions
 - [ ] Function call
 - [ ] Type method call (`list.size()`)
+
+## Grammar
+
+| Expression | Grammar |
+| --- | --- |
+| Body       | Expr* |
+| Expr       | Equality | Assignment ; |
+| Assignment | Name ( = | += | -= | *= | /= ) Expr |
+| Equality   | Comparison ( != | == ) Comparison |
+| Comparison | Sum ( < | > | <= | >= ) Sum |
+| Sum        | Product ( + | - ) Product |
+| Product    | Unary ( * | / ) Unary |
+| Unary      | ( ! | - ) Value |
+| Value      | Number | String | Bool | Name | ( ... ) |

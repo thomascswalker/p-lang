@@ -7,6 +7,42 @@
 namespace Core
 {
 
+	static int		   Depth = 0;
+	static std::string GetIndent()
+	{
+		std::string Indent;
+		int			I = 0;
+		while (I < Depth)
+		{
+			Indent += "  ";
+			I++;
+		}
+		return Indent;
+	}
+#ifdef _DEBUG
+	#define DEBUG_ENTER                                                 \
+		Debug(std::format("{}Entering {}.", GetIndent(), __FUNCSIG__)); \
+		Depth++;
+	#define DEBUG_EXIT \
+		Depth--;       \
+		Debug(std::format("{}Exiting {}.", GetIndent(), __FUNCSIG__));
+#else
+	#define DEBUG_ENTER
+	#define DEBUG_EXIT
+#endif
+
+#define LOG(X) Log(std::format("\x1B[36m{}\033[37m", GetIndent() + X))
+#define WARNING(X) Warning(GetIndent() + X)
+#define ERROR(X) Error(GetIndent() + X)
+#define SUCCESS(X) Success(GetIndent() + X)
+
+#define CHECK_EXIT         \
+	if (Errors.size() > 0) \
+	{                      \
+		DEBUG_EXIT         \
+		return;            \
+	}
+
 	static int WHILE_MAX_LOOP = 100;
 
 	void Log(const std::string& InMsg);

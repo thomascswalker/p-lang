@@ -17,10 +17,14 @@ int Compile(std::string FileName)
 
 	// Tokenize the source code
 	Lexer			   Lex(Source);
+	Log("Lexing tokens...");
 	std::vector<Token> Tokens = Lex.Tokenize();
+	Log("Lexing complete.");
 
 	// Construct a syntax tree from the tokens
+	Log("Constructing AST...");
 	AST		 Ast(Tokens);
+	Log("AST constructed.");
 	ASTBody* Program = Ast.GetTree();
 	if (!Program->Succeeded())
 	{
@@ -33,7 +37,9 @@ int Compile(std::string FileName)
 	}
 	
 	auto V = std::make_unique<Visitor>();
+	Log("Evaluating AST...");
 	V->Visit(Program);
+	Log("Evaluation complete.");
 	if (!V->Succeeded())
 	{
 		Error("Compilation failed.");

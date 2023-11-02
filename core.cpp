@@ -1,14 +1,12 @@
 #include <string>
 #include <fstream>
 #include <format>
-#include <chrono>
 
 #include "core.h"
 
 void Core::Log(const std::string& InMsg)
 {
-	auto Time = std::chrono::system_clock::now();
-	auto Fmt = std::format("[{0:%F_%T}] ", Time) + InMsg + "\n";
+	auto Fmt = std::format("[{}] ", __TIMESTAMP__) + InMsg + "\n";
 	printf(Fmt.c_str());
 }
 
@@ -21,7 +19,7 @@ void Core::Debug(const std::string& InMsg)
 
 void Core::Warning(const std::string& InMsg)
 {
-	Log(std::format("\x1B[44m{}\033[37m", InMsg));
+	Log(std::format("\x1B[33m{}\033[37m", InMsg));
 }
 
 void Core::Error(const std::string& InMsg)
