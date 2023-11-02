@@ -156,15 +156,19 @@ void Visitor::Visit(ASTBinOp* Node)
 	switch (Node->Op)
 	{
 		case Plus :
+		case PlusEquals :
 			Result = Left + Right;
 			break;
 		case Minus :
+		case MinusEquals :
 			Result = Left - Right;
 			break;
 		case Multiply :
+		case MultEquals :
 			Result = Left * Right;
 			break;
 		case Divide :
+		case DivEquals :
 			Result = Left / Right;
 			break;
 		case LessThan :
@@ -364,7 +368,7 @@ ASTNode* AST::ParseMultiplicativeExpr()
 	ASTNode* Expr = ParseUnaryExpr();
 	while (Expect(Multiply) || Expect(Divide))
 	{
-		std::string Op = CurrentToken->Content;
+		auto Op = CurrentToken->Type;
 		Accept(); // Consume '*' or '/'
 		Nodes.push_back(new ASTBinOp(Expr, ParseUnaryExpr(), Op));
 		Expr = Nodes.back();
@@ -381,7 +385,7 @@ ASTNode* AST::ParseAdditiveExpr()
 	ASTNode* Expr = ParseMultiplicativeExpr();
 	while (Expect(Plus) || Expect(Minus))
 	{
-		std::string Op = CurrentToken->Content;
+		auto Op = CurrentToken->Type;
 		Accept(); // Consume '+' or '-'
 		Nodes.push_back(new ASTBinOp(Expr, ParseMultiplicativeExpr(), Op));
 		Expr = Nodes.back();
@@ -397,7 +401,7 @@ ASTNode* AST::ParseEqualityExpr()
 	ASTNode* Expr = ParseAdditiveExpr();
 	while (ExpectAny({ GreaterThan, LessThan, NotEquals, Equals }))
 	{
-		std::string Op = CurrentToken->Content;
+		auto Op = CurrentToken->Type;
 		Accept(); // Consume '==' or '!=' or '<' or '>'
 		Nodes.push_back(new ASTBinOp(Expr, ParseAdditiveExpr(), Op));
 		Expr = Nodes.back();
@@ -416,7 +420,12 @@ ASTNode* AST::ParseAssignment()
 	auto Op = CurrentToken->Type;			  // Get the assignment operator
 	Accept();								  // Consume assignment operator
 
-	Nodes.push_back(new ASTAssignment(Name, ParseExpression()));
+	auto Expr = ParseExpression();
+	if (Op == PlusEquals || Op == MinusEquals || Op == MultEquals || Op == DivEquals)
+	{
+		Expr = new ASTBinOp(new ASTVariable(Name), Expr, Op);
+	}
+	Nodes.push_back(new ASTAssignment(Name, Expr));
 	DEBUG_EXIT
 	return Nodes.back();
 }
@@ -676,7 +685,7 @@ ASTNode* AST::ParseExpression()
 	}
 
 	// MyVar = ...;
-	if (Expect(Name) && ExpectAny({ Assign }, 1))
+	if (Expect(Name) && ExpectAny({ Assign, PlusEquals, MinusEquals, MultEquals, DivEquals }, 1))
 	{
 		Expr = ParseAssignment();
 		Accept(); // Consume ';'

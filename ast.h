@@ -165,8 +165,8 @@ public:
 	ASTNode*   Right;
 	ETokenType Op = Invalid;
 
-	ASTBinOp(ASTNode* InLeft, ASTNode* InRight, const std::string& InOp)
-		: Left(InLeft), Right(InRight), Op(GetTokenTypeFromString(InOp)){};
+	ASTBinOp(ASTNode* InLeft, ASTNode* InRight, ETokenType& InOp)
+		: Left(InLeft), Right(InRight), Op(InOp){};
 	virtual std::string ToString() const
 	{
 		return "BinOp{\"Left: " + Left->ToString() + ", \"Op: \"" + OpString
