@@ -98,11 +98,11 @@ my_new_string
 | Expression | Grammar |
 | --- | --- |
 | Body       | ```Expr*``` |
-| Expr       | ```Equality &#124; Assignment ;``` |
-| Assignment | ```Name ( = &#124; += &#124; -= &#124; *= &#124; /= ) Expr``` |
-| Equality   | ```Comparison ( != &#124; == ) Comparison``` |
-| Comparison | ```Sum ( < &#124; > &#124; <= &#124; >= ) Sum``` |
-| Sum        | ```Product ( + &#124; - ) Product``` |
-| Product    | ```Unary ( * &#124; / ) Unary``` |
-| Unary      | ```( ! &#124; - ) Value``` |
-| Value      | ```Number &#124; String &#124; Bool &#124; Name &#124; ( ... )``` |
+| Expr       | ```Equality \| Assignment ;``` |
+| Assignment | ```Name ( = \| += \| -= \| *= \| /= ) Expr``` |
+| Equality   | ```Comparison ( != \| == ) Comparison``` |
+| Comparison | ```Sum ( < \| > \| <= \| >= ) Sum``` |
+| Sum        | ```Product ( + \| - ) Product``` |
+| Product    | ```Unary ( * \| / ) Unary``` |
+| Unary      | ```( ! \| - ) Value``` |
+| Value      | ```Number \| String \| Bool \| Name \| ( ... )``` |
