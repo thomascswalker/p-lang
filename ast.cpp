@@ -99,14 +99,14 @@ void Visitor::Visit(ASTUnaryExpr* Node)
 	{
 		auto Expr = Cast<ASTValue>(Node->Right);
 		Visit(Expr);
-		CHECK_EXIT
+		CHECK_ERRORS
 		CurrentValue = Pop();
 	}
 	else if (Cast<ASTVariable>(Node->Right))
 	{
 		auto Expr = Cast<ASTVariable>(Node->Right);
 		Visit(Expr);
-		CHECK_EXIT
+		CHECK_ERRORS
 		CurrentValue = Pop();
 	}
 	else
@@ -139,14 +139,14 @@ void Visitor::Visit(ASTBinOp* Node)
 	DEBUG_ENTER
 	// Visit the left value
 	Node->Left->Accept(*this);
-	CHECK_EXIT
+	CHECK_ERRORS
 
 	// After visiting the left value, pop it off the stack and store it here
 	TObject Left = Pop();
 
 	// Visit the right value
 	Node->Right->Accept(*this);
-	CHECK_EXIT
+	CHECK_ERRORS
 
 	// After visiting the right value, pop it off the stack and store it here
 	TObject Right = Pop();
@@ -197,12 +197,40 @@ void Visitor::Visit(ASTAssignment* Node)
 	DEBUG_ENTER
 
 	Node->Right->Accept(*this);
-	CHECK_EXIT
+	CHECK_ERRORS
 
 	TObject Value = Pop();
 	SetVariable(Node->Name, Value);
 
 	LOG(std::format("ASSIGN: {} <= {}", Node->Name, Value.ToString()));
+	DEBUG_EXIT
+}
+
+void Visitor::Visit(ASTCall* Node)
+{
+	DEBUG_ENTER
+
+	auto V = GetVariable(Node->Name);
+	auto A = V.AsArray();
+
+	Node->Args[0]->Accept(*this);
+	CHECK_ERRORS
+
+	TObject RawValue = Pop();
+	auto	Index = RawValue.GetInt().GetValue();
+	auto	Size = A->Size().GetValue();
+	if (Index < -Size || Index >= Size)
+	{
+		Error(std::format("Array '{}' index '{}' out of range (max is {}).", Node->Name, Index, Size - 1));
+		DEBUG_EXIT
+		return;
+	}
+	if (Index < 0)
+	{
+		Index = Size - abs(Index);
+	}
+	Push(A->At(Index));
+
 	DEBUG_EXIT
 }
 
@@ -212,11 +240,18 @@ void Visitor::Visit(ASTIf* Node)
 	TObject bResult;
 
 	Node->Cond->Accept(*this);
-	CHECK_EXIT
+	CHECK_ERRORS
 
 	bResult = Pop();
-	LOG(std::format("IF: {}", bResult ? "true" : "false"));
-	if (bResult)
+	if (bResult.GetType() != BoolType)
+	{
+		Error("Did not get a bool result inside if conditional.");
+		DEBUG_EXIT
+		return;
+	}
+
+	LOG(std::format("IF: {}", bResult.GetBool().GetValue() ? "true" : "false"));
+	if (bResult.GetBool().GetValue())
 	{
 		Node->TrueBody->Accept(*this);
 	}
@@ -236,7 +271,7 @@ void Visitor::Visit(ASTWhile* Node)
 	while (bResult)
 	{
 		Node->Cond->Accept(*this);
-		CHECK_EXIT
+		CHECK_ERRORS
 
 		bResult = Pop().GetBool();
 		LOG(std::format("WHILE ({}): {}", Count, bResult ? "true" : "false"));
@@ -255,10 +290,6 @@ void Visitor::Visit(ASTWhile* Node)
 	}
 	DEBUG_EXIT
 }
-
-void Visitor::Visit(ASTFunctionDef* Node) {}
-
-void Visitor::Visit(ASTReturn* Node) {}
 
 void Visitor::Visit(ASTBody* Node)
 {
@@ -296,13 +327,13 @@ ASTNode* AST::ParseValueExpr()
 		if (CurrentToken->Content.find(".") != std::string::npos)
 		{
 			Value = std::stof(CurrentToken->Content);
-			LOG(std::format("VALUE: Parsing number: {}", Value.GetFloat().GetValue()));
+			Debug(std::format("VALUE: Parsing number: {}", Value.GetFloat().GetValue()));
 		}
 		// Parse int
 		else
 		{
 			Value = std::stoi(CurrentToken->Content);
-			LOG(std::format("VALUE: Parsing number: {}", Value.GetInt().GetValue()));
+			Debug(std::format("VALUE: Parsing number: {}", Value.GetInt().GetValue()));
 		}
 
 		Accept(); // Consume number
@@ -315,7 +346,7 @@ ASTNode* AST::ParseValueExpr()
 	{
 		std::string String = CurrentToken->Content;
 		Accept(); // Consume string
-		LOG(std::format("VALUE: Parsing string: {}", String));
+		Debug(std::format("VALUE: Parsing string: {}", String));
 		Nodes.push_back(new ASTValue(String));
 		DEBUG_EXIT
 		return Nodes.back();
@@ -323,18 +354,13 @@ ASTNode* AST::ParseValueExpr()
 	// Parse names (Variables, functions, etc.)
 	else if (Expect(Name))
 	{
-		std::string Name = CurrentToken->Content;
-		Accept(); // Consume name
-		LOG(std::format("VALUE: Parsing name: {}", Name));
-		DEBUG_EXIT
-		Nodes.push_back(new ASTVariable(Name));
-		return Nodes.back();
+		return ParseVariable();
 	}
 	else if (Expect(Bool))
 	{
 		bool Value = CurrentToken->Content == "true" ? true : false;
 		Accept(); // Consume bool
-		LOG(std::format("VALUE: Parsing bool: {}", Value));
+		Debug(std::format("VALUE: Parsing bool: {}", Value));
 		Nodes.push_back(new ASTValue(Value));
 		DEBUG_EXIT
 		return Nodes.back();
@@ -342,6 +368,48 @@ ASTNode* AST::ParseValueExpr()
 
 	DEBUG_EXIT
 	return nullptr;
+}
+
+ASTNode* AST::ParseVariable()
+{
+	std::string Name = CurrentToken->Content;
+	Accept(); // Consume the variable
+
+	if (!ExpectAny({ LParen, LBracket, Period }))
+	{
+		return new ASTVariable(Name);
+	}
+
+	auto StartTok = CurrentToken->Type;
+	Accept(); // Consume '['
+
+	std::vector<ASTNode*> Args;
+	if (!Expect(RBracket))
+	{
+		while (!Expect(RBracket))
+		{
+			auto Arg = ParseExpression();
+			if (Arg)
+			{
+				Args.push_back(Arg);
+			}
+			if (Expect(RBracket))
+			{
+				break;
+			}
+			if (!Expect(Comma))
+			{
+				Error(std::format("Expected ',', got '{}'.", CurrentToken->Content));
+				DEBUG_EXIT
+				return nullptr;
+			}
+			Accept(); // Consume ','
+		}
+	}
+
+	Accept(); // Consume ']'
+	Nodes.push_back(new ASTCall(Name, Args));
+	return Nodes.back();
 }
 
 ASTNode* AST::ParseUnaryExpr()
@@ -430,16 +498,6 @@ ASTNode* AST::ParseAssignment()
 	return Nodes.back();
 }
 
-ASTNode* AST::ParseReturnExpr()
-{
-	DEBUG_ENTER
-	Accept(); // Consume return
-	ASTNode* Expr = ParseExpression();
-	Nodes.push_back(new ASTReturn(Expr));
-	DEBUG_EXIT
-	return Nodes.back();
-}
-
 ASTNode* AST::ParseParenExpr()
 {
 	DEBUG_ENTER
@@ -474,7 +532,7 @@ ASTNode* AST::ParseBracketExpr()
 		TArrayValue Values{};
 		while (!Expect(RBracket))
 		{
-			LOG(std::format("BRACKET: Parsing loop in {}.", __FUNCTION__));
+			Debug(std::format("BRACKET: Parsing loop in {}.", __FUNCTION__));
 			auto Value = ParseExpression();
 			auto CastValue = Cast<ASTValue>(Value);
 			if (!CastValue)
@@ -530,19 +588,10 @@ ASTNode* AST::ParseCurlyExpr()
 	std::vector<ASTNode*> Body;
 	while (!Expect(RCurly))
 	{
-		LOG(std::format("CURLY: Parsing loop in {}.", __FUNCTION__));
-		if (Expect(Return))
-		{
-			ASTNode* Expr = ParseReturnExpr();
-			Body.push_back(Expr);
-			break; // Early exit after the return
-		}
-		else
-		{
-			CurrentToken;
-			ASTNode* Expr = ParseExpression();
-			Body.push_back(Expr);
-		}
+		Debug(std::format("CURLY: Parsing loop in {}.", __FUNCTION__));
+		CurrentToken;
+		ASTNode* Expr = ParseExpression();
+		Body.push_back(Expr);
 
 		// Handle any dangling semicolons
 		if (Expect(Semicolon))
@@ -633,46 +682,6 @@ ASTNode* AST::ParseWhile()
 	return Nodes.back();
 }
 
-ASTNode* AST::ParseFunctionDef()
-{
-	DEBUG_ENTER
-
-	std::string TypeString = CurrentToken->Content;
-	EValueType	ReturnType = StringTypeMap.at(TypeString);
-	Accept(); // Consume return type
-	std::string Name = CurrentToken->Content;
-	Accept(); // Consume name
-	Accept(); // Parse left parenthesis
-
-	std::vector<ArgValue> Arguments;
-
-	// If there isn't immediately a right parenthesis, then parse
-	// the arguments listed
-	if (!Expect(RParen))
-	{
-		EValueType ArgType = StringTypeMap.at(CurrentToken->Content);
-		Accept(); // Consume the argument type
-		std::string ArgName = CurrentToken->Content;
-		Accept(); // Consume the argument name
-
-		while (Expect(Comma))
-		{
-			Accept(); // Consume comma
-			EValueType ArgType = StringTypeMap.at(CurrentToken->Content);
-			Accept(); // Consume the argument type
-			std::string ArgName = CurrentToken->Content;
-			Accept(); // Consume the argument name
-		}
-	}
-
-	Accept();						  // Consume right parenthesis
-	ASTNode* Body = ParseCurlyExpr(); // Parse the body, expecting a return statement
-
-	Nodes.push_back(new ASTFunctionDef(ReturnType, Name, Arguments, Body));
-	DEBUG_EXIT
-	return nullptr;
-}
-
 ASTNode* AST::ParseExpression()
 {
 	DEBUG_ENTER
@@ -685,7 +694,7 @@ ASTNode* AST::ParseExpression()
 	}
 
 	// MyVar = ...;
-	if (Expect(Name) && ExpectAny({ Assign, PlusEquals, MinusEquals, MultEquals, DivEquals }, 1))
+	if (Expect(Name) && ExpectAssignOperator(1))
 	{
 		Expr = ParseAssignment();
 		Accept(); // Consume ';'

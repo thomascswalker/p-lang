@@ -211,12 +211,8 @@ namespace Values
 		// void	  Remove(int Index) { Value.erase(Value.begin() + Index); }
 		void	  Empty() { Value.clear(); }
 		TIntValue Size() const { return (int)Value.size(); }
-		TObject&  At(int Index)
-		{
-			Error(std::to_string(Index));
-			return Value.at(Index);
-		}
-		bool Contains(const TObject& InValue);
+		TObject&  At(int Index) { return Value.at(Index); }
+		bool	  Contains(const TObject& InValue);
 
 		operator bool() const { return !Value.empty(); }
 		TObject& operator[](int Index) { return Value[Index]; }
@@ -503,6 +499,7 @@ namespace Values
 		TBoolValue operator==(TObject& Other);
 		TBoolValue operator==(const TObject& Other) const;
 		TBoolValue operator!=(const TObject& Other) const;
+		TBoolValue operator!() const;
 
 		TObject& operator++() // Prefix
 		{

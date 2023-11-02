@@ -21,9 +21,9 @@ class ASTVariable;
 class ASTUnaryExpr;
 class ASTBinOp;
 class ASTAssignment;
+class ASTCall;
 class ASTIf;
 class ASTWhile;
-class ASTFunctionDef;
 class ASTReturn;
 class ASTBody;
 
@@ -57,9 +57,9 @@ public:
 	void Visit(ASTUnaryExpr* Node);
 	void Visit(ASTBinOp* Node);
 	void Visit(ASTAssignment* Node);
+	void Visit(ASTCall* Node);
 	void Visit(ASTIf* Node);
 	void Visit(ASTWhile* Node);
-	void Visit(ASTFunctionDef* Node);
 	void Visit(ASTReturn* Node);
 	void Visit(ASTBody* Node);
 
@@ -192,6 +192,18 @@ public:
 	void Accept(Visitor& V) override { V.Visit(this); }
 };
 
+class ASTCall : public ASTNode
+{
+public:
+	std::string Name;
+	std::vector<ASTNode*> Args;
+
+	ASTCall(const std::string& InName, std::vector<ASTNode*> InArgs) : Name(InName), Args(InArgs){};
+	virtual std::string ToString() const { return "Call"; }
+
+	void Accept(Visitor& V) override { V.Visit(this); }
+};
+
 class ASTIf : public ASTNode
 {
 public:
@@ -217,30 +229,6 @@ public:
 };
 
 using ArgValue = std::pair<EValueType, std::string>;
-
-class ASTFunctionDef : public ASTNode
-{
-public:
-	EValueType			  ReturnType;
-	std::string			  Name;
-	std::vector<ArgValue> Arguments;
-	ASTNode*			  Body;
-
-	ASTFunctionDef(EValueType InReturnType, const std::string& InName, std::vector<ArgValue> InArguments,
-				   ASTNode* InBody)
-		: ReturnType(InReturnType), Name(InName), Arguments(InArguments), Body(InBody){};
-	virtual std::string ToString() const { return "FunctionDef"; }
-	void				Accept(Visitor& V) override { V.Visit(this); }
-};
-
-class ASTReturn : public ASTNode
-{
-public:
-	ASTNode* Expression;
-	ASTReturn(ASTNode* InExpression) : Expression(InExpression){};
-	virtual std::string ToString() const { return "Return"; }
-	void				Accept(Visitor& V) override { V.Visit(this); }
-};
 
 class ASTBody : public ASTNode
 {
@@ -369,7 +357,7 @@ private:
 	bool ExpectValue(int Offset = 0) { return ExpectAny({ Name, Bool, Number, String }, Offset); }
 	bool ExpectAssignOperator(int Offset = 0)
 	{
-		return ExpectAny({ Assign, PlusEquals, MinusEquals, MultEquals, DivEquals });
+		return ExpectAny({ Assign, PlusEquals, MinusEquals, MultEquals, DivEquals }, Offset);
 	}
 	bool ExpectUnaryOperator(int Offset = 0)
 	{
@@ -377,18 +365,17 @@ private:
 	}
 
 	ASTNode* ParseValueExpr();
+	ASTNode* ParseVariable();
 	ASTNode* ParseUnaryExpr();
 	ASTNode* ParseMultiplicativeExpr();
 	ASTNode* ParseAdditiveExpr();
 	ASTNode* ParseEqualityExpr();
 	ASTNode* ParseAssignment();
-	ASTNode* ParseReturnExpr();
 	ASTNode* ParseParenExpr();
 	ASTNode* ParseBracketExpr();
 	ASTNode* ParseCurlyExpr();
 	ASTNode* ParseIf();
 	ASTNode* ParseWhile();
-	ASTNode* ParseFunctionDef();
 	ASTNode* ParseExpression();
 	void	 ParseBody();
 

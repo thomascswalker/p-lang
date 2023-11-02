@@ -1,5 +1,3 @@
-i = 0;
-while (i < 10)
-{
-    i += 3;
-}
+array = [1,2,3];
+b = array[0];
+c = array[-1];

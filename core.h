@@ -36,7 +36,7 @@ namespace Core
 #define ERROR(X) Error(GetIndent() + X)
 #define SUCCESS(X) Success(GetIndent() + X)
 
-#define CHECK_EXIT         \
+#define CHECK_ERRORS       \
 	if (Errors.size() > 0) \
 	{                      \
 		DEBUG_EXIT         \

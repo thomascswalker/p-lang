@@ -474,6 +474,11 @@ TBoolValue Values::TObject::operator!=(const TObject& Other) const
 	return !(*this == Other);
 }
 
+TBoolValue Values::TObject::operator!() const
+{
+	return !AsBool()->GetValue();
+}
+
 std::ostringstream& Values::operator<<(std::ostringstream& Stream, const TObject& Object)
 {
 	Stream << std::string(Object.ToString().data(), Object.ToString().size());
