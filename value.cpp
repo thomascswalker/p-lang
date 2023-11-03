@@ -255,19 +255,18 @@ TStringValue Values::TStringValue::operator+(const TStringValue& Other) const
 	return TStringValue(Value + Other.GetValue());
 }
 
-TObject& Values::TArrayValue::At(int Index)
+TObject* Values::TArrayValue::At(int Index)
 {
 	auto ThisSize = Size().GetValue();
 	if (Index < -ThisSize || Index >= ThisSize)
 	{
-		auto R = TObject();
-		return R;
+		return nullptr;
 	}
 	if (Index < 0)
 	{
 		Index = ThisSize - abs(Index);
 	}
-	return Value[Index];
+	return &Value[Index];
 }
 
 bool Values::TArrayValue::Contains(const TObject& InValue)

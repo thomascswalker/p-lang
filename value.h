@@ -220,7 +220,7 @@ namespace Values
 		// void	  Remove(int Index) { Value.erase(Value.begin() + Index); }
 		void	  Empty() { Value.clear(); }
 		TIntValue Size() const { return (int)Value.size(); }
-		TObject&  At(int Index);
+		TObject*  At(int Index);
 		bool	  Contains(const TObject& InValue);
 
 		operator bool() const { return !Value.empty(); }

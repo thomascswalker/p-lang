@@ -5,6 +5,7 @@
 #include <variant>
 #include <typeinfo>
 #include <format>
+#include <any>
 
 #include "token.h"
 #include "value.h"
@@ -32,6 +33,12 @@ enum ECallType
 	Function,
 	IndexOf
 };
+
+static const std::vector<std::string> BuiltInFuncs{ "print", "append" };
+static bool					   IsBuiltIn(const std::string& Name)
+{
+	return Contains(BuiltInFuncs, Name);
+}
 
 class Visitor
 {

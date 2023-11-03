@@ -52,7 +52,7 @@ int Compile(std::string FileName)
 	else
 	{
 		Success("Compilation successful.");
-		V->Dump();
+		//V->Dump();
 	}
 
 	return 0;
