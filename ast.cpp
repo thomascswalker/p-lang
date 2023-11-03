@@ -183,7 +183,7 @@ void Visitor::Visit(ASTBinOp* Node)
 	// Push the resulting value to the stack
 	Push(Result);
 	DEBUG(std::format("BINOP: {} {} {} = {}", Left.ToString(), TokenStringMap[Node->Op], Right.ToString(),
-					Result.ToString()));
+					  Result.ToString()));
 	DEBUG_EXIT
 }
 
@@ -207,60 +207,110 @@ void Visitor::Visit(ASTCall* Node)
 {
 	DEBUG_ENTER
 
-	// The first argument is always implicitly the object the function is called on
-	Node->Args[0]->Accept(*this);
-	CHECK_ERRORS
-
-	TObject Object = Pop();
-	CHECK_ERRORS
-
-	TObject Result;
-	TObject Index;
-	int		IndexValue;
-
-	switch (Node->Type)
+	if (Node->Type == IndexOf)
 	{
-		case IndexOf :
-			if (Node->Args.size() != 2)
-			{
-				Error("Invalid argument count for subscript operator.");
-				DEBUG_EXIT
-				return;
-			}
-			Node->Args[1]->Accept(*this);
-			CHECK_ERRORS
-
-			Index = Pop();
-			CHECK_ERRORS
-			IndexValue = Index.GetInt().GetValue();
-
-			switch (Object.GetType())
-			{
-				case StringType :
-					Result = Object.AsString()->At(IndexValue);
-					if (Result.GetType() == NullType)
-					{
-						DEBUG_EXIT
-						return;
-					}
-					Push(Result);
-					break;
-				case ArrayType :
-					Result = Object.AsArray()->At(IndexValue);
-					if (Result.GetType() == NullType)
-					{
-						DEBUG_EXIT
-						return;
-					}
-					Push(Result);
-					break;
-			}
-
-			break;
-
-		case Function :
+		if (Node->Args.size() != 1)
+		{
+			Error("Invalid argument count for subscript operator.");
 			DEBUG_EXIT
 			return;
+		}
+		TObject Object;
+		TObject Result;
+		TObject Index;
+		int		IndexValue;
+
+		Node->Args[0]->Accept(*this);
+		CHECK_ERRORS
+
+		Index = Pop();
+		CHECK_ERRORS
+		IndexValue = Index.GetInt().GetValue();
+
+		switch (Object.GetType())
+		{
+			case StringType :
+				Result = Object.AsString()->At(IndexValue);
+				if (Result.GetType() == NullType)
+				{
+					DEBUG_EXIT
+					return;
+				}
+				Push(Result);
+				break;
+			case ArrayType :
+				auto Temp = Object.AsArray()->At(IndexValue);
+				if (!Temp)
+				{
+					DEBUG_EXIT
+					return;
+				}
+				Result = *Temp;
+				if (Result.GetType() == NullType)
+				{
+					DEBUG_EXIT
+					return;
+				}
+				Push(Result);
+				break;
+		}
+	}
+	else if (Node->Type == Function)
+	{
+		std::vector<TObject>	 ArgValues;
+		std::vector<std::string> ArgNames;
+		for (const auto& Arg : Node->Args)
+		{
+			if (Cast<ASTIdentifier>(Arg))
+			{
+				ArgNames.push_back(Cast<ASTIdentifier>(Arg)->Name);
+			}
+			else
+			{
+				ArgNames.push_back("");
+			}
+			Arg->Accept(*this);
+			CHECK_ERRORS
+			TObject ArgValue = Pop();
+			CHECK_ERRORS
+			ArgValues.push_back(ArgValue);
+		}
+
+		// Handle built-in functions
+		// TODO: Try to make this more programmatic
+		if (IsBuiltIn(Node->Identifier))
+		{
+			// Print
+			if (Node->Identifier == "print")
+			{
+				if (ArgValues.size() == 0)
+				{
+					Error("Invalid number of arguments for print()");
+					DEBUG_EXIT
+					return;
+				}
+				std::string ArgString = TStringValue::Join(ArgValues, ",");
+				printf("%s\n", ArgString.c_str());
+			}
+			else if (Node->Identifier == "append")
+			{
+				if (ArgValues.size() != 2)
+				{
+					Error("Invalid number of arguments for append()");
+					DEBUG_EXIT
+					return;
+				}
+				TArrayValue* Array = ArgValues[0].AsArray();
+				TObject*	 Value = &ArgValues[1];
+				Array->Append(*Value);
+				SetIdentifierValue(ArgNames[0], *Array);
+			}
+		}
+		// Handle user-defined functions
+		else
+		{
+			// TODO: Implement function definitions
+		}
 	}
 
 	DEBUG_EXIT
@@ -405,6 +455,8 @@ ASTNode* AST::ParseValueExpr()
 
 ASTNode* AST::ParseIdentifier()
 {
+	DEBUG_ENTER
+
 	auto Identifier = new ASTIdentifier(CurrentToken->Content);
 	Accept(); // Consume the variable
 
@@ -433,28 +485,30 @@ ASTNode* AST::ParseIdentifier()
 			return nullptr;
 	}
 	std::vector<ASTNode*> Args;
-	if (!Expect(EndTok))
+	while (!Expect(EndTok))
 	{
-		Args.push_back(Identifier);
-		while (!Expect(EndTok))
+		auto Arg = ParseExpression();
+		if (Arg)
 		{
-			auto Arg = ParseExpression();
-			if (Arg)
-			{
-				Args.push_back(Arg);
-			}
-			if (Expect(EndTok))
-			{
-				break;
-			}
-			if (!Expect(Comma))
-			{
-				Error(std::format("Expected ',', got '{}'.", CurrentToken->Content));
-				DEBUG_EXIT
-				return nullptr;
-			}
-			Accept(); // Consume ','
+			Args.push_back(Arg);
 		}
+		else
+		{
+			Error(std::format("Unable to parse argument."));
+			DEBUG_EXIT
+			return nullptr;
+		}
+		if (Expect(EndTok))
+		{
+			break;
+		}
+		if (!Expect(Comma))
+		{
+			Error(std::format("Expected ',', got '{}'.", CurrentToken->Content));
+			DEBUG_EXIT
+			return nullptr;
+		}
+		Accept(); // Consume ','
 	}
 
 	Accept(); // Consume ']'
@@ -749,6 +803,14 @@ ASTNode* AST::ParseExpression()
 	{
 		Expr = ParseAssignment();
 		Accept(); // Consume ';'
+	}
+	else if (Expect(Name) && Expect(LParen, 1))
+	{
+		Expr = ParseIdentifier();
+		if (Expect(Semicolon))
+		{
+			Accept();
+		}
 	}
 	else if (ExpectAny({ Not, Minus }))
 	{

@@ -1,16 +1,19 @@
-my_string = "This is a long and complex string meant to be parsed.";
-a = my_string[5];
+array = [1,2,3];
+append(array, 4);
+print(array);
+append(array, 5);
+print(array);
 
-my_array = [1,[1,2,3],"three",4,5];
-b = my_array[3];
+i = 0;
+a = 0;
+b = 1;
 
-b += 1 + 2 * 3;
-
-new_string = "";
-
-max_count = 40;
-while (b < max_count)
+print("Here's the fibbonaci sequence:");
+while (i < 10)
 {
-    b += 1;
-    new_string += my_string[b];
+    print(i, a);
+    temp = a + b;
+    a = b;
+    b = temp;
+    i += 1;
 }
