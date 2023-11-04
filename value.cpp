@@ -234,7 +234,7 @@ std::string Values::TStringValue::At(int Index) const
 	return std::string(1, Value.at(Index));
 }
 
-inline std::string Values::TStringValue::Join(const TArray& Iterator, const std::string& Separator)
+std::string Values::TStringValue::Join(const TArray& Iterator, const std::string& Separator)
 {
 	std::string Result;
 
@@ -248,6 +248,11 @@ inline std::string Values::TStringValue::Join(const TArray& Iterator, const std:
 	}
 
 	return Result;
+}
+
+std::string Values::TStringValue::Join(const TArrayValue& Array, const std::string& Separator)
+{
+	return Join(Array.GetValue(), Separator);
 }
 
 TStringValue Values::TStringValue::operator+(const TStringValue& Other) const

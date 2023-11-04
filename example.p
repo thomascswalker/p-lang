@@ -9,11 +9,13 @@ a = 0;
 b = 1;
 
 print("Here's the fibbonaci sequence:");
-while (i < 10)
+fib_array = [];
+while (i < 30)
 {
-    print(i, a);
+    append(fib_array, a);
     temp = a + b;
     a = b;
     b = temp;
     i += 1;
 }
+print(fib_array);

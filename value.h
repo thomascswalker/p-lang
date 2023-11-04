@@ -196,6 +196,7 @@ namespace Values
 
 		std::string		   At(int Index) const;
 		static std::string Join(const TArray& Iterator, const std::string& Separator);
+		static std::string Join(const TArrayValue& Array, const std::string& Separator);
 
 		// String -> String
 		operator std::string() const { return Value; }
