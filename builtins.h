@@ -21,21 +21,30 @@ namespace BuiltIns
 	}
 	static TFunctionMap FunctionMap = InitFunctionMap();
 
+	static TObject GetArgumentValue(TIdentifier* Arg)
+	{
+		auto ArgLiteral = Cast<TLiteral>(Arg);
+		auto ArgVariable = Cast<TVariable>(Arg);
+
+		TObject Value;
+		if (ArgLiteral)
+		{
+			Value = ArgLiteral->Value;
+		}
+		else if (ArgVariable)
+		{
+			Value = *ArgVariable->GetValue();
+		}
+		return Value;
+	}
+
 	static void PrintInternal(TArguments* InArguments, bool& bResult)
 	{
 		std::vector<TObject> Objects;
 		for (auto A : *InArguments)
 		{
-			if (Cast<TVariable>(A))
-			{
-				auto B = Cast<TVariable>(A);
-				Objects.push_back(*B->GetValue());
-			}
-			else if (Cast<TLiteral>(A))
-			{
-				auto L = Cast<TLiteral>(A);
-				Objects.push_back(L->Value);
-			}
+			auto Value = GetArgumentValue(A);
+			Objects.push_back(Value);
 		}
 		std::string Out = TStringValue::Join(Objects, ",");
 		Log(Out);
@@ -46,19 +55,9 @@ namespace BuiltIns
 	static void AppendInternal(TArguments* Arguments, bool& bResult)
 	{
 		auto Arg1 = Cast<TVariable>(Arguments->at(0));
+		auto Arg2 = Arguments->at(1);
 
-		TObject Value;
-
-		auto Arg2Literal = Cast<TLiteral>(Arguments->at(1));
-		auto Arg2Variable = Cast<TVariable>(Arguments->at(1));
-		if (Arg2Literal)
-		{
-			Value = Arg2Literal->Value;
-		}
-		else if (Arg2Variable)
-		{
-			Value = *Arg2Variable->GetValue();
-		}
+		TObject Value = GetArgumentValue(Arg2);
 
 		Arg1->GetValue()->AsArray()->Append(Value);
 		bResult = true;
