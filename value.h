@@ -650,14 +650,17 @@ namespace Values
 	public:
 		TIdentifier(){};
 		virtual ~TIdentifier() = default;
+		virtual TObject GetValue() = 0;
 	};
 
 	class TLiteral : public TIdentifier
 	{
-	public:
 		TObject Value;
+
+	public:
 		TLiteral(const TObject& InValue) : Value(InValue){};
 		std::string GetName() { return Name; }
+		TObject		GetValue() override { return Value; }
 	};
 
 	using TObjectPtr = std::unique_ptr<TObject>;
@@ -684,8 +687,8 @@ namespace Values
 		};
 
 		~TVariable() = default;
-		TObject*	GetValue() { return Value; }
-		TObject*	GetValue() const { GetValue(); }
+		TObject		GetValue() override { return *Value; }
+		TObject*	GetValuePtr() { return Value; }
 		void		SetValue(TObject* InValue) { Value = InValue; }
 		std::string GetName() { return Name; }
 

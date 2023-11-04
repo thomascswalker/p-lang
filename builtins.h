@@ -21,29 +21,12 @@ namespace BuiltIns
 	}
 	static TFunctionMap FunctionMap = InitFunctionMap();
 
-	static TObject GetArgumentValue(TIdentifier* Arg)
-	{
-		auto ArgLiteral = Cast<TLiteral>(Arg);
-		auto ArgVariable = Cast<TVariable>(Arg);
-
-		TObject Value;
-		if (ArgLiteral)
-		{
-			Value = ArgLiteral->Value;
-		}
-		else if (ArgVariable)
-		{
-			Value = *ArgVariable->GetValue();
-		}
-		return Value;
-	}
-
 	static void PrintInternal(TArguments* InArguments, bool& bResult)
 	{
 		std::vector<TObject> Objects;
-		for (auto A : *InArguments)
+		for (auto Arg : *InArguments)
 		{
-			auto Value = GetArgumentValue(A);
+			TObject Value = Arg->GetValue();
 			Objects.push_back(Value);
 		}
 		std::string Out = TStringValue::Join(Objects, ",");
@@ -57,9 +40,9 @@ namespace BuiltIns
 		auto Arg1 = Cast<TVariable>(Arguments->at(0));
 		auto Arg2 = Arguments->at(1);
 
-		TObject Value = GetArgumentValue(Arg2);
+		TObject Value = Arg2->GetValue();
 
-		Arg1->GetValue()->AsArray()->Append(Value);
+		Arg1->GetValuePtr()->AsArray()->Append(Value);
 		bResult = true;
 	}
 
