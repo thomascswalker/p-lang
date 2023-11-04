@@ -142,6 +142,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ast.h" />
+    <ClInclude Include="builtins.h" />
     <ClInclude Include="core.h" />
     <ClInclude Include="token.h" />
     <ClInclude Include="value.h" />
