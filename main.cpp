@@ -16,15 +16,15 @@ int Compile(std::string FileName)
 	std::cout << "Source:\n\"\"\"\n" << Source << "\n\"\"\"" << std::endl << std::endl;
 
 	// Tokenize the source code
-	Lexer			   Lex(Source);
-	Log("Lexing tokens...");
+	Lexer Lex(Source);
+	Debug("Lexing tokens...");
 	std::vector<Token> Tokens = Lex.Tokenize();
-	Log("Lexing complete.");
+	Debug("Lexing complete.");
 
 	// Construct a syntax tree from the tokens
-	Log("Constructing AST...");
-	AST		 Ast(Tokens);
-	Log("AST constructed.");
+	Debug("Constructing AST...");
+	AST Ast(Tokens);
+	Debug("AST constructed.");
 	ASTBody* Program = Ast.GetTree();
 	if (!Program->Succeeded())
 	{
@@ -35,11 +35,11 @@ int Compile(std::string FileName)
 		}
 		return 1;
 	}
-	
+
 	auto V = std::make_unique<Visitor>();
-	Log("Evaluating AST...");
+	Debug("Evaluating AST...");
 	V->Visit(Program);
-	Log("Evaluation complete.");
+	Debug("Evaluation complete.");
 	if (!V->Succeeded())
 	{
 		Error("Compilation failed.");
@@ -51,8 +51,8 @@ int Compile(std::string FileName)
 	}
 	else
 	{
-		Success("Compilation successful.");
-		//V->Dump();
+		Debug("Compilation successful.");
+		// V->Dump();
 	}
 
 	return 0;
@@ -81,16 +81,16 @@ int main(int argc, char* argv[])
 #endif
 	auto Result = Compile(FileName);
 
-	//auto A = TFloatValue(5.34f);
-	//auto B = TIntValue(3);
+	//TLiteral  L(5.48320f);
+	//TVariable A("A", { 1, 2, 3, {1,2,3} });
+	//TVariable B("B", { 4, 5, 6 });
+	//TVariable C("C", { 7, 8, 9 });
+	//C.GetValue()->AsArray()->Append(TStringValue("test!"));
 
-	//auto C = A == B;
-	//std::cout << (std::string)C << std::endl;
+	//auto F = TFunction(&BuiltIns::PrintInternal);
 
-	//auto StringA = TStringValue("Test");
-	//auto StringB = TStringValue("34234");
-	//std::cout << (std::string)(StringA + StringB) << std::endl;
-
+	//TArguments Args{ &A, &B, &C, &L };
+	//F.Invoke(Args);
 
 	return Result;
 }

@@ -29,14 +29,14 @@ Feature set similar to Python with optional type-safety and brackets.
 - [x] Index operator
 - [x] Negative numbers
 - [x] Compound operators
+- [x] Built-in function call
+- [x] Printing
 - [ ] ++ and -- operators
 - [ ] `else if`
 - [ ] `and`, `or`
-- [ ] Printing
-- [ ] `break`
-- [ ] Function definitions
-- [ ] Function call
-- [ ] Type method call (`list.size()`)
+- [ ] `break` in `while` statements
+- [ ] Custom function definitions
+- [ ] Custom function call
 
 ## Example
 

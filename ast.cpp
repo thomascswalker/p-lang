@@ -32,6 +32,16 @@ TObject Visitor::Pop()
 	return Value;
 }
 
+TObject Visitor::Back()
+{
+	if (Stack.size() == 0)
+	{
+		Error("Stack is empty.");
+		return TObject();
+	}
+	return Stack.back();
+}
+
 bool Visitor::IsIdentifier(const std::string& Name)
 {
 	auto Variable = GetIdentifier(Name);
@@ -50,6 +60,18 @@ TObject Visitor::GetIdentifier(const std::string& Name)
 	return TObject();
 }
 
+TObject* Visitor::GetIdentifierPtr(const std::string& Name)
+{
+	for (const auto& [K, V] : Identifiers)
+	{
+		if (K == Name)
+		{
+			return &Identifiers.at(K);
+		}
+	}
+	return nullptr;
+}
+
 void Visitor::SetIdentifierValue(const std::string& Name, const TObject& InValue)
 {
 	Identifiers[Name] = InValue;
@@ -58,22 +80,23 @@ void Visitor::SetIdentifierValue(const std::string& Name, const TObject& InValue
 void Visitor::Visit(ASTValue* Node)
 {
 	DEBUG_ENTER
+
 	switch (Node->Value.GetType())
 	{
 		case BoolType :
-			Push(TObject(Node->GetBool().GetValue()));
+			Push(*Node->AsBool());
 			break;
 		case IntType :
-			Push(TObject(Node->GetInt().GetValue()));
+			Push(*Node->AsInt());
 			break;
 		case FloatType :
-			Push(TObject(Node->GetFloat().GetValue()));
+			Push(*Node->AsFloat());
 			break;
 		case StringType :
-			Push(TObject(Node->GetString().GetValue()));
+			Push(*Node->AsString());
 			break;
 		case ArrayType :
-			Push(TObject(Node->GetArray()));
+			Push(*Node->AsArray());
 			break;
 		default :
 			Error("Invalid type.");
@@ -86,7 +109,6 @@ void Visitor::Visit(ASTIdentifier* Node)
 {
 	DEBUG_ENTER
 
-	auto Temp = GetIdentifier(Node->Name);
 	Node->Value = GetIdentifier(Node->Name);
 	if (Node->Value.GetType() == NullType)
 	{
@@ -104,20 +126,17 @@ void Visitor::Visit(ASTIdentifier* Node)
 void Visitor::Visit(ASTUnaryExpr* Node)
 {
 	DEBUG_ENTER
-	TObject CurrentValue;
-	TObject NewValue;
-
 	Node->Right->Accept(*this);
 	CHECK_ERRORS
-	CurrentValue = Pop();
+	auto CurrentValue = Pop();
 
 	switch (Node->Op)
 	{
 		case Not :
-			NewValue = TObject(1) - CurrentValue;
+			CurrentValue = CurrentValue - TObject(1);
 			break;
 		case Minus :
-			NewValue = CurrentValue * TObject(-1);
+			CurrentValue = CurrentValue * TObject(-1);
 			break;
 		default :
 			ERROR("Operator is not a valid unary operator.");
@@ -125,7 +144,7 @@ void Visitor::Visit(ASTUnaryExpr* Node)
 			return;
 	}
 
-	Push(NewValue);
+	Push(CurrentValue);
 	DEBUG_EXIT
 }
 
@@ -257,53 +276,60 @@ void Visitor::Visit(ASTCall* Node)
 	}
 	else if (Node->Type == Function)
 	{
-		std::vector<TObject>	 ArgValues;
-		std::vector<std::string> ArgNames;
+		// Parse argument values
+		TArguments Arguments;
 		for (const auto& Arg : Node->Args)
 		{
+			// Evaluate identifiers
 			if (Cast<ASTIdentifier>(Arg))
 			{
-				ArgNames.push_back(Cast<ASTIdentifier>(Arg)->Name);
+				// Cast to an identifier
+				auto Identifier = Cast<ASTIdentifier>(Arg);
+
+				// Get the corresponding identifier name and pointer
+				auto ArgName = Identifier->Name;
+				auto ArgValue = GetIdentifierPtr(Identifier->Name);
+
+				// Add this as a new variable argument. The key here is the
+				// ArgValue is a pointer to the `Identifiers` array so we can
+				// modify that value in place rather than pass around a bunch
+				// of copies.
+				Arguments.push_back(new TVariable{ ArgName, ArgValue });
+			}
+			// Evaluate literal values
+			else if (Cast<ASTValue>(Arg))
+			{
+				// Because this is a literal value, we can just do a normal
+				// accept and pop to get a copy of the value.
+				Arg->Accept(*this);
+				CHECK_ERRORS
+				auto ArgValue = Pop();
+				CHECK_ERRORS
+
+				// Add the copy of the literal value to the argument list.
+				Arguments.push_back(new TLiteral{ ArgValue });
 			}
 			else
 			{
-				ArgNames.push_back("");
+				Error("Invalid argument type.");
+				DEBUG_EXIT
+				return;
 			}
-			Arg->Accept(*this);
-			CHECK_ERRORS
-			TObject ArgValue = Pop();
-			CHECK_ERRORS
-			ArgValues.push_back(ArgValue);
 		}
 
 		// Handle built-in functions
-		// TODO: Try to make this more programmatic
 		if (IsBuiltIn(Node->Identifier))
 		{
-			// Print
-			if (Node->Identifier == "print")
+			// Get the corresponding function pointer to the identifier name
+			auto Func = BuiltIns::FunctionMap[Node->Identifier];
+
+			// Invoke the function with the arguments parsed above
+			bool bResult = Func.Invoke(&Arguments);
+			if (!bResult)
 			{
-				if (ArgValues.size() == 0)
-				{
-					Error("Invalid number of arguments for print()");
-					DEBUG_EXIT
-					return;
-				}
-				std::string ArgString = TStringValue::Join(ArgValues, ",");
-				printf("%s\n", ArgString.c_str());
-			}
-			else if (Node->Identifier == "append")
-			{
-				if (ArgValues.size() != 2)
-				{
-					Error("Invalid number of arguments for append()");
-					DEBUG_EXIT
-					return;
-				}
-				TArrayValue* Array = ArgValues[0].AsArray();
-				TObject*	 Value = &ArgValues[1];
-				Array->Append(*Value);
-				SetIdentifierValue(ArgNames[0], *Array);
+				Error(std::format("Error executing internal function {}.", Node->Identifier));
+				DEBUG_EXIT
+				return;
 			}
 		}
 		// Handle user-defined functions

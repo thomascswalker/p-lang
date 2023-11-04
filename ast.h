@@ -9,6 +9,7 @@
 
 #include "token.h"
 #include "value.h"
+#include "builtins.h"
 
 using namespace Core;
 using namespace Values;
@@ -35,7 +36,7 @@ enum ECallType
 };
 
 static const std::vector<std::string> BuiltInFuncs{ "print", "append" };
-static bool					   IsBuiltIn(const std::string& Name)
+static bool							  IsBuiltIn(const std::string& Name)
 {
 	return Contains(BuiltInFuncs, Name);
 }
@@ -44,10 +45,20 @@ class Visitor
 {
 	void	Push(const TObject& Value);
 	TObject Pop();
+	TObject Back();
 	bool	IsIdentifier(const std::string& Name);
+
+	/// <summary>
+	/// Returns a copy of the specified identifier.
+	/// </summary>
 	TObject GetIdentifier(const std::string& Name);
-	void	SetIdentifierValue(const std::string& Name, const TObject& InValue);
-	void	Error(const std::string& Msg) { Errors.push_back(Msg); }
+
+	/// <summary>
+	/// Returns a pointer to the specified identifier.
+	/// </summary>
+	TObject* GetIdentifierPtr(const std::string& Name);
+	void	 SetIdentifierValue(const std::string& Name, const TObject& InValue);
+	void	 Error(const std::string& Msg) { Errors.push_back(Msg); }
 
 public:
 	std::vector<std::string>	   Errors;
@@ -114,6 +125,12 @@ public:
 	TFloatValue	 GetFloat() const { return Value.GetFloat(); }
 	TStringValue GetString() const { return Value.GetString(); }
 	TArrayValue	 GetArray() const { return Value.GetArray(); }
+
+	TBoolValue*	  AsBool() const { return Value.AsBool(); }
+	TIntValue*	  AsInt() const { return Value.AsInt(); }
+	TFloatValue*  AsFloat() const { return Value.AsFloat(); }
+	TStringValue* AsString() const { return Value.AsString(); }
+	TArrayValue*  AsArray() const { return Value.AsArray(); }
 
 	TObject GetValue()
 	{

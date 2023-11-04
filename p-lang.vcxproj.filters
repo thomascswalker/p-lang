@@ -41,6 +41,9 @@
     <ClInclude Include="value.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="builtins.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="example.p">

@@ -196,6 +196,7 @@ namespace Values
 
 		std::string		   At(int Index) const;
 		static std::string Join(const TArray& Iterator, const std::string& Separator);
+		static std::string Join(const TArrayValue& Array, const std::string& Separator);
 
 		// String -> String
 		operator std::string() const { return Value; }
@@ -640,4 +641,79 @@ namespace Values
 	};
 
 	static bool IsType(const TObject& Value, EValueType Type);
+
+	class TIdentifier
+	{
+	protected:
+		std::string Name;
+
+	public:
+		TIdentifier(){};
+		virtual ~TIdentifier() = default;
+		virtual TObject GetValue() = 0;
+	};
+
+	class TLiteral : public TIdentifier
+	{
+		TObject Value;
+
+	public:
+		TLiteral(const TObject& InValue) : Value(InValue){};
+		std::string GetName() { return Name; }
+		TObject		GetValue() override { return Value; }
+	};
+
+	using TObjectPtr = std::unique_ptr<TObject>;
+	class TVariable : public TIdentifier
+	{
+		TObject* Value;
+
+	public:
+		TVariable(const std::string& InName, TObject* InValue)
+		{
+			Name = InName;
+			SetValue(InValue);
+		}
+
+		TVariable(TVariable& Other) noexcept
+		{
+			Name = Other.Name;
+			*this = Other;
+		};
+		TVariable(const TVariable& Other) noexcept
+		{
+			Name = Other.Name;
+			*this = Other;
+		};
+
+		~TVariable() = default;
+		TObject		GetValue() override { return *Value; }
+		TObject*	GetValuePtr() { return Value; }
+		void		SetValue(TObject* InValue) { Value = InValue; }
+		std::string GetName() { return Name; }
+
+		TVariable& operator=(const TVariable& Other)
+		{
+			Name = Other.Name;
+			SetValue(Other.Value);
+		}
+	};
+
+	using TArguments = std::vector<TIdentifier*>;
+
+	typedef void (*TFunctor)(TArguments* InArguments, bool& bResult);
+	class TFunction
+	{
+		TFunctor Func;
+
+	public:
+		TFunction(){};
+		TFunction(TFunctor InFunc) { Func = InFunc; }
+		bool Invoke(TArguments* Arguments)
+		{
+			bool bResult = false;
+			Func(Arguments, bResult);
+			return bResult;
+		}
+	};
 } // namespace Values
