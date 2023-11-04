@@ -1,7 +1,6 @@
 #include <functional>
 
 #include "ast.h"
-#include "builtins.h"
 
 using namespace Core;
 
@@ -110,7 +109,6 @@ void Visitor::Visit(ASTIdentifier* Node)
 {
 	DEBUG_ENTER
 
-	auto Temp = GetIdentifier(Node->Name);
 	Node->Value = GetIdentifier(Node->Name);
 	if (Node->Value.GetType() == NullType)
 	{
@@ -282,23 +280,34 @@ void Visitor::Visit(ASTCall* Node)
 		TArguments Arguments;
 		for (const auto& Arg : Node->Args)
 		{
-			std::string ArgName;
-			TObject		ArgValue;
+			// Evaluate identifiers
 			if (Cast<ASTIdentifier>(Arg))
 			{
+				// Cast to an identifier
 				auto Identifier = Cast<ASTIdentifier>(Arg);
-				ArgName = Identifier->Name;
-				Identifier->Accept(*this);
-				CHECK_ERRORS
-				ArgValue = Pop();
-				CHECK_ERRORS
+
+				// Get the corresponding identifier name and pointer
+				auto ArgName = Identifier->Name;
+				auto ArgValue = GetIdentifierPtr(Identifier->Name);
+
+				// Add this as a new variable argument. The key here is the
+				// ArgValue is a pointer to the `Identifiers` array so we can
+				// modify that value in place rather than pass around a bunch
+				// of copies.
+				Arguments.push_back(new TVariable{ ArgName, ArgValue });
 			}
+			// Evaluate literal values
 			else if (Cast<ASTValue>(Arg))
 			{
+				// Because this is a literal value, we can just do a normal
+				// accept and pop to get a copy of the value.
 				Arg->Accept(*this);
 				CHECK_ERRORS
-				ArgValue = Pop();
+				auto ArgValue = Pop();
 				CHECK_ERRORS
+
+				// Add the copy of the literal value to the argument list.
+				Arguments.push_back(new TLiteral{ ArgValue });
 			}
 			else
 			{
@@ -306,27 +315,21 @@ void Visitor::Visit(ASTCall* Node)
 				DEBUG_EXIT
 				return;
 			}
-
-			Arguments.push_back(TArgument{ArgName, ArgValue});
 		}
 
 		// Handle built-in functions
-		// TODO: Try to make this more programmatic
 		if (IsBuiltIn(Node->Identifier))
 		{
-			// Print
-			if (Node->Identifier == "print")
+			// Get the corresponding function pointer to the identifier name
+			auto Func = BuiltIns::FunctionMap[Node->Identifier];
+
+			// Invoke the function with the arguments parsed above
+			bool bResult = Func.Invoke(&Arguments);
+			if (!bResult)
 			{
-				bool bResult = BuiltIns::PrintInternal(Arguments);
-			}
-			else if (Node->Identifier == "append")
-			{
-				TArrayValue Array;
-				bool		bResult = BuiltIns::AppendInternal(Arguments, Array);
-				if (bResult)
-				{
-					SetIdentifierValue(Arguments[0].first, Array);
-				}
+				Error(std::format("Error executing internal function {}.", Node->Identifier));
+				DEBUG_EXIT
+				return;
 			}
 		}
 		// Handle user-defined functions

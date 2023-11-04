@@ -9,6 +9,7 @@
 
 #include "token.h"
 #include "value.h"
+#include "builtins.h"
 
 using namespace Core;
 using namespace Values;

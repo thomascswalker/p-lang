@@ -3,41 +3,65 @@
 #include "value.h"
 
 using namespace Values;
-using TArgument = std::pair<std::string, TObject>;
-using TArguments = std::vector<TArgument>;
 
 namespace BuiltIns
 {
-	static bool PrintInternal(const TArguments& Arguments)
+	// Forward declaration of all built-in functions
+	static void PrintInternal(TArguments* InArguments, bool& bResult);
+	static void AppendInternal(TArguments* Arguments, bool& bResult);
+
+	// Initialize the function map of keywords to actual C++ functions
+	typedef std::map<std::string, TFunction> TFunctionMap;
+	static TFunctionMap						 InitFunctionMap()
 	{
-		if (Arguments.size() == 0)
-		{
-			Error("Invalid number of arguments for print()");
-			return false;
-		}
-		TArrayValue Values;
-		for (const auto& Arg : Arguments)
-		{
-			Values.Append(Arg.second);
-		}
-		std::string ArgString = TStringValue::Join(Values, ",");
-		printf("%s\n", ArgString.c_str());
-		return true;
+		TFunctionMap Map;
+		Map["print"] = &PrintInternal;
+		Map["append"] = &AppendInternal;
+		return Map;
 	}
+	static TFunctionMap FunctionMap = InitFunctionMap();
 
-	static bool AppendInternal(TArguments& Arguments, TArrayValue& Result)
+	static void PrintInternal(TArguments* InArguments, bool& bResult)
 	{
-		if (Arguments.size() != 2)
+		std::vector<TObject> Objects;
+		for (auto A : *InArguments)
 		{
-			Error("Invalid number of arguments for append()");
-			return false;
+			if (Cast<TVariable>(A))
+			{
+				auto B = Cast<TVariable>(A);
+				Objects.push_back(*B->GetValue());
+			}
+			else if (Cast<TLiteral>(A))
+			{
+				auto L = Cast<TLiteral>(A);
+				Objects.push_back(L->Value);
+			}
 		}
-		TArrayValue* Array = Arguments[0].second.AsArray();
-		TObject		 Value = Arguments[1].second;
-		Array->Append(Value);
-		Result = *Array;
+		std::string Out = TStringValue::Join(Objects, ",");
+		Log(Out);
 
-		return true;
+		bResult = true;
+	};
+
+	static void AppendInternal(TArguments* Arguments, bool& bResult)
+	{
+		auto Arg1 = Cast<TVariable>(Arguments->at(0));
+
+		TObject Value;
+
+		auto Arg2Literal = Cast<TLiteral>(Arguments->at(1));
+		auto Arg2Variable = Cast<TVariable>(Arguments->at(1));
+		if (Arg2Literal)
+		{
+			Value = Arg2Literal->Value;
+		}
+		else if (Arg2Variable)
+		{
+			Value = *Arg2Variable->GetValue();
+		}
+
+		Arg1->GetValue()->AsArray()->Append(Value);
+		bResult = true;
 	}
 
 } // namespace BuiltIns

@@ -641,4 +641,76 @@ namespace Values
 	};
 
 	static bool IsType(const TObject& Value, EValueType Type);
+
+	class TIdentifier
+	{
+	protected:
+		std::string Name;
+
+	public:
+		TIdentifier(){};
+		virtual ~TIdentifier() = default;
+	};
+
+	class TLiteral : public TIdentifier
+	{
+	public:
+		TObject Value;
+		TLiteral(const TObject& InValue) : Value(InValue){};
+		std::string GetName() { return Name; }
+	};
+
+	using TObjectPtr = std::unique_ptr<TObject>;
+	class TVariable : public TIdentifier
+	{
+		TObject* Value;
+
+	public:
+		TVariable(const std::string& InName, TObject* InValue)
+		{
+			Name = InName;
+			SetValue(InValue);
+		}
+
+		TVariable(TVariable& Other) noexcept
+		{
+			Name = Other.Name;
+			*this = Other;
+		};
+		TVariable(const TVariable& Other) noexcept
+		{
+			Name = Other.Name;
+			*this = Other;
+		};
+
+		~TVariable() = default;
+		TObject*	GetValue() { return Value; }
+		TObject*	GetValue() const { GetValue(); }
+		void		SetValue(TObject* InValue) { Value = InValue; }
+		std::string GetName() { return Name; }
+
+		TVariable& operator=(const TVariable& Other)
+		{
+			Name = Other.Name;
+			SetValue(Other.Value);
+		}
+	};
+
+	using TArguments = std::vector<TIdentifier*>;
+
+	typedef void (*TFunctor)(TArguments* InArguments, bool& bResult);
+	class TFunction
+	{
+		TFunctor Func;
+
+	public:
+		TFunction(){};
+		TFunction(TFunctor InFunc) { Func = InFunc; }
+		bool Invoke(TArguments* Arguments)
+		{
+			bool bResult = false;
+			Func(Arguments, bResult);
+			return bResult;
+		}
+	};
 } // namespace Values
