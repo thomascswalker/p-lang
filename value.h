@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <tuple>
+#include <functional>
 
 #include "core.h"
 
@@ -651,6 +652,7 @@ namespace Values
 		TIdentifier(){};
 		virtual ~TIdentifier() = default;
 		virtual TObject GetValue() = 0;
+		virtual TObject* GetValuePtr() = 0;
 	};
 
 	class TLiteral : public TIdentifier
@@ -661,6 +663,7 @@ namespace Values
 		TLiteral(const TObject& InValue) : Value(InValue){};
 		std::string GetName() { return Name; }
 		TObject		GetValue() override { return Value; }
+		TObject*	GetValuePtr() override { return &Value; }
 	};
 
 	using TObjectPtr = std::unique_ptr<TObject>;
@@ -688,7 +691,7 @@ namespace Values
 
 		~TVariable() = default;
 		TObject		GetValue() override { return *Value; }
-		TObject*	GetValuePtr() { return Value; }
+		TObject*	GetValuePtr() override { return Value; }
 		void		SetValue(TObject* InValue) { Value = InValue; }
 		std::string GetName() { return Name; }
 
