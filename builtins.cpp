@@ -54,7 +54,7 @@ void BuiltIns::ReadFileInternal(TArguments* Arguments, bool& bResult)
 		return;
 	}
 
-	auto FileName = Arg1.GetString();
+	auto		  FileName = Arg1.GetString();
 	std::ifstream Stream(FileName.GetValue().c_str());
 	if (!Stream.good())
 	{
@@ -62,7 +62,6 @@ void BuiltIns::ReadFileInternal(TArguments* Arguments, bool& bResult)
 		Logging::Error("File '{}' not found.", FileName.GetValue());
 		return;
 	}
-
 
 	auto Content = Core::ReadFile(FileName);
 	auto OutString = Arguments->at(1)->GetValuePtr()->AsString();
@@ -75,9 +74,13 @@ void BuiltIns::ReadFileInternal(TArguments* Arguments, bool& bResult)
 TFunctionMap BuiltIns::InitFunctionMap()
 {
 	TFunctionMap Map;
+
+	// IO
 	Map["print"] = &PrintInternal;
-	Map["append"] = &AppendInternal;
 	Map["read_file"] = &ReadFileInternal;
+
+	// Strings
+	Map["append"] = &AppendInternal;
+
 	return Map;
 }
-
