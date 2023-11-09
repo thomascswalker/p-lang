@@ -27,6 +27,9 @@
     <ClCompile Include="value.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="builtins.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="token.h">
@@ -54,5 +57,11 @@
     </None>
     <None Include=".clang-format" />
     <None Include="cpp.hint" />
+    <None Include="io.p" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="arithmetic.p">
+      <Filter>Resource Files</Filter>
+    </Text>
   </ItemGroup>
 </Project>

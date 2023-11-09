@@ -35,10 +35,18 @@ enum ECallType
 	IndexOf
 };
 
-static const std::vector<std::string> BuiltInFuncs{ "print", "append" };
-static bool							  IsBuiltIn(const std::string& Name)
+static TFunctionMap FunctionMap = BuiltIns::InitFunctionMap();
+
+static bool IsBuiltIn(const std::string& Name)
 {
-	return Contains(BuiltInFuncs, Name);
+	for (const auto& [K, V] : FunctionMap)
+	{
+		if (K == Name)
+		{
+			return true;
+		}
+	}
+	return false;
 }
 
 class Visitor

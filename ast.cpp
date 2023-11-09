@@ -321,7 +321,7 @@ void Visitor::Visit(ASTCall* Node)
 		if (IsBuiltIn(Node->Identifier))
 		{
 			// Get the corresponding function pointer to the identifier name
-			auto Func = BuiltIns::FunctionMap[Node->Identifier];
+			auto Func = FunctionMap[Node->Identifier];
 
 			// Invoke the function with the arguments parsed above
 			bool bResult = Func.Invoke(&Arguments);
@@ -463,7 +463,9 @@ ASTNode* AST::ParseValueExpr()
 	// Parse names (Variables, functions, etc.)
 	else if (Expect(Name))
 	{
-		return ParseIdentifier();
+		auto Expr = ParseIdentifier();
+		DEBUG_EXIT
+		return Expr;
 	}
 	else if (Expect(Bool))
 	{
