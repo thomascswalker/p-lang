@@ -16,6 +16,7 @@ namespace Values
 {
 	enum EValueType
 	{
+		Void,
 		NullType,
 		BoolType,
 		IntType,
@@ -700,6 +701,12 @@ namespace Values
 			Name = Other.Name;
 			SetValue(Other.Value);
 		}
+	};
+
+	class TArgument : public TIdentifier
+	{
+		std::string Name;
+		EValueType	Type;
 	};
 
 	using TArguments = std::vector<TIdentifier*>;

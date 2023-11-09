@@ -151,7 +151,7 @@
   <ItemGroup>
     <None Include=".clang-format" />
     <None Include="cpp.hint" />
-    <None Include="example.p" />
+    <None Include="functions.p" />
     <None Include="io.p" />
     <None Include="README.md" />
   </ItemGroup>

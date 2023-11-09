@@ -26,6 +26,7 @@ class ASTAssignment;
 class ASTCall;
 class ASTIf;
 class ASTWhile;
+class ASTFunction;
 class ASTReturn;
 class ASTBody;
 
@@ -55,6 +56,7 @@ class Visitor
 	TObject Pop();
 	TObject Back();
 	bool	IsIdentifier(const std::string& Name);
+	bool	IsFunctionDeclared(const std::string& Name);
 
 	/// <summary>
 	/// Returns a copy of the specified identifier.
@@ -66,12 +68,17 @@ class Visitor
 	/// </summary>
 	TObject* GetIdentifierPtr(const std::string& Name);
 	void	 SetIdentifierValue(const std::string& Name, const TObject& InValue);
+
+	ASTFunction* GetFunction(const std::string& Name);
+
+
 	void	 Error(const std::string& Msg) { Errors.push_back(Msg); }
 
 public:
-	std::vector<std::string>	   Errors;
-	std::map<std::string, TObject> Identifiers;
-	std::vector<TObject>		   Stack;
+	std::vector<std::string>			Errors;
+	std::map<std::string, TObject>		Identifiers;
+	std::map<std::string, ASTFunction*> Functions;
+	std::vector<TObject>				Stack;
 
 	Visitor(){};
 	Visitor(Visitor& Other)
@@ -92,6 +99,7 @@ public:
 	void Visit(ASTCall* Node);
 	void Visit(ASTIf* Node);
 	void Visit(ASTWhile* Node);
+	void Visit(ASTFunction* Node);
 	void Visit(ASTBody* Node);
 
 	bool Succeeded() { return Errors.size() == 0; }
@@ -186,7 +194,7 @@ class ASTUnaryExpr : public ASTNode
 {
 public:
 	ETokenType Op;
-	ASTNode*   Right;
+	ASTNode*   Right = nullptr;
 	ASTUnaryExpr(ETokenType InOp, ASTNode* InRight) : Op(InOp), Right(InRight){};
 	virtual std::string ToString() const
 	{
@@ -200,8 +208,8 @@ class ASTBinOp : public ASTNode
 	std::string OpString;
 
 public:
-	ASTNode*   Left;
-	ASTNode*   Right;
+	ASTNode*   Left = nullptr;
+	ASTNode*   Right = nullptr;
 	ETokenType Op = Invalid;
 
 	ASTBinOp(ASTNode* InLeft, ASTNode* InRight, ETokenType& InOp) : Left(InLeft), Right(InRight), Op(InOp){};
@@ -243,9 +251,9 @@ public:
 class ASTIf : public ASTNode
 {
 public:
-	ASTNode* Cond;
-	ASTNode* TrueBody;
-	ASTNode* FalseBody;
+	ASTNode* Cond = nullptr;
+	ASTNode* TrueBody = nullptr;
+	ASTNode* FalseBody = nullptr;
 
 	ASTIf(ASTNode* InCond, ASTNode* InTrueBody, ASTNode* InFalseBody = nullptr)
 		: Cond(InCond), TrueBody(InTrueBody), FalseBody(InFalseBody){};
@@ -256,16 +264,27 @@ public:
 class ASTWhile : public ASTNode
 {
 public:
-	ASTNode* Cond;
-	ASTNode* Body;
+	ASTNode* Cond = nullptr;
+	ASTNode* Body = nullptr;
 
 	ASTWhile(ASTNode* InCond, ASTNode* InBody) : Cond(InCond), Body(InBody){};
 	virtual std::string ToString() const { return "While"; }
 	void				Accept(Visitor& V) override { V.Visit(this); }
 };
 
-using ArgValue = std::pair<EValueType, std::string>;
+class ASTFunction : public ASTNode
+{
+public:
+	std::string				 Name;
+	std::vector<std::string> Args;
+	EValueType				 ReturnType = Void;
+	ASTNode*				 Body = nullptr;
 
+	ASTFunction(const std::string& InName, std::vector<std::string> InArgs, ASTNode* InBody)
+		: Name(InName), Args(InArgs), Body(InBody){};
+	virtual std::string ToString() const { return "FunctionDecl"; }
+	void				Accept(Visitor& V) override { V.Visit(this); }
+};
 class ASTBody : public ASTNode
 {
 public:
@@ -336,7 +355,6 @@ private:
 		// Otherwise increment the CurrentToken pointer and the position
 		else
 		{
-			// Debug(std::format("{}Accept(): {}", GetIndent(), CurrentToken->Content));
 			CurrentToken++;
 			Position++;
 		}
@@ -412,6 +430,7 @@ private:
 	ASTNode* ParseCurlyExpr();
 	ASTNode* ParseIf();
 	ASTNode* ParseWhile();
+	ASTNode* ParseFunctionDecl();
 	ASTNode* ParseExpression();
 	void	 ParseBody();
 
