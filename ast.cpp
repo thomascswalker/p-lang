@@ -48,6 +48,12 @@ bool Visitor::IsIdentifier(const std::string& Name)
 	return (Variable.GetType() != NullType);
 }
 
+bool Visitor::IsFunctionDeclared(const std::string& Name)
+{
+	auto Func = GetFunction(Name);
+	return (Func != nullptr);
+}
+
 TObject Visitor::GetIdentifier(const std::string& Name)
 {
 	for (const auto& [K, V] : Identifiers)
@@ -75,6 +81,18 @@ TObject* Visitor::GetIdentifierPtr(const std::string& Name)
 void Visitor::SetIdentifierValue(const std::string& Name, const TObject& InValue)
 {
 	Identifiers[Name] = InValue;
+}
+
+ASTFunction* Visitor::GetFunction(const std::string& Name)
+{
+	for (const auto& [K, V] : Functions)
+	{
+		if (K == Name)
+		{
+			return Functions.at(K);
+		}
+	}
+	return nullptr;
 }
 
 void Visitor::Visit(ASTValue* Node)
@@ -277,7 +295,7 @@ void Visitor::Visit(ASTCall* Node)
 	else if (Node->Type == Function)
 	{
 		// Parse argument values
-		TArguments Arguments;
+		TArguments InArgs;
 		for (const auto& Arg : Node->Args)
 		{
 			// Evaluate identifiers
@@ -294,7 +312,7 @@ void Visitor::Visit(ASTCall* Node)
 				// ArgValue is a pointer to the `Identifiers` array so we can
 				// modify that value in place rather than pass around a bunch
 				// of copies.
-				Arguments.push_back(new TVariable{ ArgName, ArgValue });
+				InArgs.push_back(new TVariable{ ArgName, ArgValue });
 			}
 			// Evaluate literal values
 			else if (Cast<ASTValue>(Arg))
@@ -307,7 +325,7 @@ void Visitor::Visit(ASTCall* Node)
 				CHECK_ERRORS
 
 				// Add the copy of the literal value to the argument list.
-				Arguments.push_back(new TLiteral{ ArgValue });
+				InArgs.push_back(new TLiteral{ ArgValue });
 			}
 			else
 			{
@@ -324,7 +342,7 @@ void Visitor::Visit(ASTCall* Node)
 			auto Func = FunctionMap[Node->Identifier];
 
 			// Invoke the function with the arguments parsed above
-			bool bResult = Func.Invoke(&Arguments);
+			bool bResult = Func.Invoke(&InArgs);
 			if (!bResult)
 			{
 				Error(std::format("Error executing internal function {}.", Node->Identifier));
@@ -333,9 +351,33 @@ void Visitor::Visit(ASTCall* Node)
 			}
 		}
 		// Handle user-defined functions
+		else if (IsFunctionDeclared(Node->Identifier))
+		{
+			// Get the function AST node for this identifier
+			auto Func = Functions[Node->Identifier];
+
+			// Make sure in arguments are the same count as expected arguments
+			if (InArgs.size() != Func->Args.size())
+			{
+				Error(std::format("Argument count mismatch for '{}'. Got {}, wanted {}.", Node->Identifier, InArgs.size(), Func->Args.size()));
+				DEBUG_EXIT
+				return;
+			}
+
+			// Push arguments to the variable table
+			for (const auto& [Index, InArg] : Enumerate(InArgs))
+			{
+				SetIdentifierValue(Func->Args[Index], InArg->GetValue());
+			}
+
+			// Execute the function body
+			Func->Body->Accept(*this);
+		}
 		else
 		{
-			// TODO: Implement function definitions
+			Error(std::format("Function '{}' is undeclared.", Node->Identifier));
+			DEBUG_EXIT
+			return;
 		}
 	}
 
@@ -398,6 +440,14 @@ void Visitor::Visit(ASTWhile* Node)
 		}
 	}
 	DEBUG_EXIT
+}
+
+void Visitor::Visit(ASTFunction* Node)
+{
+	if (Functions.find(Node->Name) == Functions.end())
+	{
+		Functions[Node->Name] = Node;
+	}
 }
 
 void Visitor::Visit(ASTBody* Node)
@@ -538,8 +588,8 @@ ASTNode* AST::ParseIdentifier()
 		}
 		Accept(); // Consume ','
 	}
+	Accept(); // Consume end token
 
-	Accept(); // Consume ']'
 	Nodes.push_back(new ASTCall(Identifier->Name, CallType, Args));
 	DEBUG_EXIT
 	return Nodes.back();
@@ -815,6 +865,77 @@ ASTNode* AST::ParseWhile()
 	return Nodes.back();
 }
 
+ASTNode* AST::ParseFunctionDecl()
+{
+	DEBUG_ENTER
+	if (!Expect(Func))
+	{
+		Error("Expected function declaration.");
+		DEBUG_EXIT
+		return nullptr;
+	}
+	Accept(); // Consume 'func'
+
+	if (!Expect(Name))
+	{
+		Error("Expected function name.");
+		DEBUG_EXIT
+		return nullptr;
+	}
+
+	std::string FuncName = CurrentToken->Content;
+	Accept(); // Consume function name
+
+	if (!Expect(LParen))
+	{
+		Error("Expected '('.");
+		DEBUG_EXIT
+		return nullptr;
+	}
+	Accept(); // Consume '('
+
+	std::vector<std::string> Args;
+	while (!Expect(RParen))
+	{
+		if (Expect(Name))
+		{
+			Args.push_back(CurrentToken->Content);
+		}
+		else
+		{
+			Error(std::format("Unable to parse argument."));
+			DEBUG_EXIT
+			return nullptr;
+		}
+		Accept(); // Consume argument name
+		if (Expect(RParen))
+		{
+			break;
+		}
+		if (!Expect(Comma))
+		{
+			Error(std::format("Expected ',', got '{}'.", CurrentToken->Content));
+			DEBUG_EXIT
+			return nullptr;
+		}
+		Accept(); // Consume ','
+	}
+	Accept(); // Consume ')'
+
+	auto Body = ParseCurlyExpr();
+	if (!Body)
+	{
+		Error("Unable to parse function def body.");
+		DEBUG_EXIT
+		return nullptr;
+	}
+
+	Nodes.push_back(new ASTFunction(FuncName, Args, Body));
+	DEBUG_EXIT
+	return Nodes.back();
+}
+
+
 ASTNode* AST::ParseExpression()
 {
 	DEBUG_ENTER
@@ -864,6 +985,10 @@ ASTNode* AST::ParseExpression()
 	{
 		Expr = ParseWhile();
 	}
+	else if (Expect(Func))
+	{
+		Expr = ParseFunctionDecl();
+	}
 	else
 	{
 		WARNING(std::format("Unable to parse expression: {}", CurrentToken->ToString()));
@@ -890,3 +1015,4 @@ void AST::ParseBody()
 	}
 	DEBUG_EXIT
 }
+

@@ -16,6 +16,7 @@ enum ETokenType
 	Invalid,
 	Eof,
 	Type,
+	Func,
 	Name,
 	Number,
 	String,
@@ -56,13 +57,13 @@ enum ETokenType
 static int TokenTypeCount = (int)ETokenType::Count;
 
 static std::map<ETokenType, std::string> TokenStringMap{
-	{ Eof, "/0" },		 { Type, "Type" },	   { Plus, "+" },		  { Minus, "-" },		{ Multiply, "*" },
-	{ Divide, "/" },	 { Comma, "," },	   { Not, "!" },		  { Assign, "=" },		{ Equals, "==" },
-	{ NotEquals, "!=" }, { Semicolon, ";" },   { LessThan, "<" },	  { GreaterThan, ">" }, { LParen, "(" },
-	{ RParen, ")" },	 { LBracket, "[" },	   { RBracket, "]" },	  { LCurly, "{" },		{ RCurly, "}" },
-	{ If, "if" },		 { Else, "else" },	   { For, "for" },		  { While, "while" },	{ Return, "return" },
-	{ Period, "." },	 { PlusEquals, "+=" }, { MinusEquals, "-=" }, { MultEquals, "*=" }, { DivEquals, "/=" },
-	{ PlusPlus, "++" },	 { MinusMinus, "--" }
+	{ Eof, "/0" },		  { Type, "Type" },	   { Func, "func" },	 { Plus, "+" },			{ Minus, "-" },
+	{ Multiply, "*" },	  { Divide, "/" },	   { Comma, "," },		 { Not, "!" },			{ Assign, "=" },
+	{ Equals, "==" },	  { NotEquals, "!=" }, { Semicolon, ";" },	 { LessThan, "<" },		{ GreaterThan, ">" },
+	{ LParen, "(" },	  { RParen, ")" },	   { LBracket, "[" },	 { RBracket, "]" },		{ LCurly, "{" },
+	{ RCurly, "}" },	  { If, "if" },		   { Else, "else" },	 { For, "for" },		{ While, "while" },
+	{ Return, "return" }, { Period, "." },	   { PlusEquals, "+=" }, { MinusEquals, "-=" }, { MultEquals, "*=" },
+	{ DivEquals, "/=" },  { PlusPlus, "++" },  { MinusMinus, "--" }
 };
 
 static ETokenType GetTokenTypeFromString(const std::string& InString)
@@ -85,8 +86,9 @@ const std::vector<std::string> TYPES{
 	"string",
 	"bool",
 };
-const std::vector<std::string> KEYWORDS{ "if", "else", "for", "while", "return" };
+const std::vector<std::string>		   KEYWORDS{ "if", "else", "for", "while", "return" };
 const std::map<ETokenType, ETokenType> BLOCK_PAIRS{ { LParen, RParen }, { LBracket, RBracket }, { LCurly, RCurly } };
+const std::vector<std::string>		   FUNCTION{ "function", "func", "fn", "def" };
 
 // Forward decl
 struct Token;
@@ -244,6 +246,11 @@ public:
 			{
 				String += C;
 				C = Advance();
+			}
+
+			if (Contains(FUNCTION, String))
+			{
+				return Token{ Func, String, Line, Column };
 			}
 
 			if (Contains(TYPES, String))

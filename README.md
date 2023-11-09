@@ -21,6 +21,8 @@ Feature set similar to Python with optional type-safety and brackets.
 - Basic mutable types
 
 ## Development
+- [x] Lexer
+- [x] AST
 - [x] Variables
 - [x] Arithmetic
 - [x] `if`, `else`
@@ -31,12 +33,17 @@ Feature set similar to Python with optional type-safety and brackets.
 - [x] Compound operators
 - [x] Built-in function call
 - [x] Printing
+- [x] Custom function definitions
+- [x] Custom function call
+- [ ] `format` print
 - [ ] ++ and -- operators
 - [ ] `else if`
 - [ ] `and`, `or`
 - [ ] `break` in `while` statements
-- [ ] Custom function definitions
-- [ ] Custom function call
+- [ ] Stack frames
+- [ ] Function type hints
+- [ ] Function type checking
+- [ ] Imports 
 
 ## Example
 
