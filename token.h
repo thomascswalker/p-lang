@@ -126,6 +126,7 @@ class Lexer
 
 	char		GetCurrentChar() { return Source[Position]; }
 	char		GetNextChar() { return Source[Position + 1]; }
+	std::string GetPair() { return Source.substr(Position, 2); }
 	std::string GetRemaining() { return Source.substr(Position); }
 	const char	Advance(int Offset = 1)
 	{
@@ -136,6 +137,40 @@ class Lexer
 	bool IsWhitespace()
 	{
 		std::string Slice = GetRemaining();
+		auto		T = GetPair();
+		if (T == "//")
+		{
+			Advance(2); // Consume '//'
+			while (GetCurrentChar() != '\n')
+			{
+				Advance();
+			}
+			Line += 1;
+			Column = 0;
+			return true;
+		}
+
+		if (GetPair() == "/*")
+		{
+			Advance(2); // Consume '/*'
+			auto C = GetCurrentChar();
+			while (GetPair() != "*/")
+			{
+				C = GetCurrentChar();
+				if (C == '\n')
+				{
+					Line += 1;
+					Column = 0;
+				}
+				Advance();
+			}
+			Advance(3); // '*/\n'
+			Line += 1;
+			Column = 0;
+
+			return true;
+		}
+
 		if (Slice[0] == ' ' || Slice[0] == '\t' || Slice[0] == '\n')
 		{
 			if (Slice[0] == '\n')
@@ -160,13 +195,13 @@ public:
 
 	Token Next()
 	{
+		char C = GetCurrentChar();
+
 		// Advance whitespace, new lines, and tabs
 		while (Position < Source.size() && IsWhitespace())
 		{
-			Advance();
+			C = Advance();
 		}
-
-		char C = GetCurrentChar();
 
 		// Operators, blocks
 		if (IsSymbol(C))

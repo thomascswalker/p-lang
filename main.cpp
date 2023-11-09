@@ -1,5 +1,4 @@
 #include <utility>
-
 #include "ast.h"
 
 using namespace Core;
@@ -13,7 +12,8 @@ int Compile(std::string FileName)
 		Error(std::format("ERROR: File not found or empty: {}", FileName));
 		return -1;
 	}
-	std::cout << "Source:\n\"\"\"\n" << Source << "\n\"\"\"" << std::endl << std::endl;
+	std::cout << "Running " << FileName << "\n-----------" << std::endl;
+	Debug("\n" + Source + "\n");
 
 	// Tokenize the source code
 	Lexer Lex(Source);
@@ -66,9 +66,6 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 	std::string FileName;
-#ifdef _DEBUG
-	FileName = "example.p";
-#else
 	if (argc == 2) // [1]cmd [2]<filename>.p
 	{
 		FileName = argv[1];
@@ -78,19 +75,7 @@ int main(int argc, char* argv[])
 		printf("Invalid argument. Please enter a filename.");
 		return -1;
 	}
-#endif
 	auto Result = Compile(FileName);
-
-	//TLiteral  L(5.48320f);
-	//TVariable A("A", { 1, 2, 3, {1,2,3} });
-	//TVariable B("B", { 4, 5, 6 });
-	//TVariable C("C", { 7, 8, 9 });
-	//C.GetValue()->AsArray()->Append(TStringValue("test!"));
-
-	//auto F = TFunction(&BuiltIns::PrintInternal);
-
-	//TArguments Args{ &A, &B, &C, &L };
-	//F.Invoke(Args);
 
 	return Result;
 }

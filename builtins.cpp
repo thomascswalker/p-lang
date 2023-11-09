@@ -11,7 +11,7 @@ void BuiltIns::PrintInternal(TArguments* Arguments, bool& bResult)
 		Objects.push_back(Value);
 	}
 	std::string Out = TStringValue::Join(Objects, ",");
-	Log(Out);
+	std::cout << Out << std::endl;
 
 	bResult = true;
 };
@@ -29,21 +29,18 @@ void BuiltIns::AppendInternal(TArguments* Arguments, bool& bResult)
 
 void BuiltIns::ReadFileInternal(TArguments* Arguments, bool& bResult)
 {
-	Log("Reading file.");
 	auto Arg1 = Arguments->at(0)->GetValue();
 	if (Arg1.GetType() != StringType)
 	{
 		bResult = false;
 		return;
 	}
-	Log(Arg1);
 	auto Arg2 = Arguments->at(1)->GetValue();
 	if (Arg2.GetType() != StringType)
 	{
 		bResult = false;
 		return;
 	}
-	Log(Arg2);
 
 	auto FileName = Arg1.GetString();
 	auto Content = Core::ReadFile(FileName);

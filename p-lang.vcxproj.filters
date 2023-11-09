@@ -57,6 +57,7 @@
     </None>
     <None Include=".clang-format" />
     <None Include="cpp.hint" />
+    <None Include="io.p" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="arithmetic.p">

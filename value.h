@@ -192,7 +192,7 @@ namespace Values
 		std::string GetValue() const { return Value; }
 		bool		IsSubscriptable() override { return true; }
 		bool		IsValid() const override { return Value != ""; }
-		std::string ToString() override { return "\"" + Value + "\""; }
+		std::string ToString() override { return Value; }
 		std::string ToString() const override { return ToString(); }
 
 		std::string		   At(int Index) const;

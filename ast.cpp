@@ -320,7 +320,6 @@ void Visitor::Visit(ASTCall* Node)
 		// Handle built-in functions
 		if (IsBuiltIn(Node->Identifier))
 		{
-			Log(std::format("Executing built-in: {}", Node->Identifier));
 			// Get the corresponding function pointer to the identifier name
 			auto Func = FunctionMap[Node->Identifier];
 
