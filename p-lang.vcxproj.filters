@@ -30,6 +30,9 @@
     <ClCompile Include="builtins.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="logging.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="token.h">
@@ -47,17 +50,22 @@
     <ClInclude Include="builtins.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="logging.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="example.p">
-      <Filter>Resource Files</Filter>
-    </None>
     <None Include="README.md">
       <Filter>Resource Files</Filter>
     </None>
     <None Include=".clang-format" />
     <None Include="cpp.hint" />
-    <None Include="io.p" />
+    <None Include="io.p">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="functions.p">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Text Include="arithmetic.p">

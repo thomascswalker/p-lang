@@ -138,6 +138,7 @@
     <ClCompile Include="ast.cpp" />
     <ClCompile Include="builtins.cpp" />
     <ClCompile Include="core.cpp" />
+    <ClCompile Include="logging.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="value.cpp" />
   </ItemGroup>
@@ -145,6 +146,7 @@
     <ClInclude Include="ast.h" />
     <ClInclude Include="builtins.h" />
     <ClInclude Include="core.h" />
+    <ClInclude Include="logging.h" />
     <ClInclude Include="token.h" />
     <ClInclude Include="value.h" />
   </ItemGroup>

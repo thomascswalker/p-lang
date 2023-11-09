@@ -71,11 +71,7 @@ class Visitor
 
 	ASTFunction* GetFunction(const std::string& Name);
 
-
-	void	 Error(const std::string& Msg) { Errors.push_back(Msg); }
-
 public:
-	std::vector<std::string>			Errors;
 	std::map<std::string, TObject>		Identifiers;
 	std::map<std::string, ASTFunction*> Functions;
 	std::vector<TObject>				Stack;
@@ -91,18 +87,18 @@ public:
 		Identifiers = Other.Identifiers;
 		Stack = Other.Stack;
 	}
-	void Visit(ASTValue* Node);
-	void Visit(ASTIdentifier* Node);
-	void Visit(ASTUnaryExpr* Node);
-	void Visit(ASTBinOp* Node);
-	void Visit(ASTAssignment* Node);
-	void Visit(ASTCall* Node);
-	void Visit(ASTIf* Node);
-	void Visit(ASTWhile* Node);
-	void Visit(ASTFunction* Node);
-	void Visit(ASTBody* Node);
+	bool Visit(ASTValue* Node);
+	bool Visit(ASTIdentifier* Node);
+	bool Visit(ASTUnaryExpr* Node);
+	bool Visit(ASTBinOp* Node);
+	bool Visit(ASTAssignment* Node);
+	bool Visit(ASTCall* Node);
+	bool Visit(ASTIf* Node);
+	bool Visit(ASTWhile* Node);
+	bool Visit(ASTFunction* Node);
+	bool Visit(ASTBody* Node);
 
-	bool Succeeded() { return Errors.size() == 0; }
+	bool Succeeded() { return true; } // TODO: Update this!
 	void Dump();
 };
 
@@ -372,7 +368,7 @@ private:
 		// Make sure the offset is valid
 		if (Position + Offset > Tokens.size())
 		{
-			Error("WARNING: Outside token bounds.");
+			Logging::Error("Outside token bounds.");
 			return false;
 		}
 
@@ -440,24 +436,6 @@ public:
 		CurrentToken = &Tokens[0];
 		Position = 0;
 		ParseBody();
-	}
-
-	/// <summary>
-	/// Logs an error with the specified <paramref name="InMsg"/> at the current line and column.
-	/// </summary>
-	/// <param name="InMsg">The error message to display.</param>
-	void Error(const std::string& InMsg)
-	{
-		if (CurrentToken != nullptr)
-		{
-			std::string Msg = std::format("{}: {}, {}", InMsg, CurrentToken->Line, CurrentToken->Column);
-			Program->Errors.push_back(Msg);
-		}
-		else
-		{
-			std::string Msg = std::format("{}: {}, {}", InMsg, -1, -1);
-			Program->Errors.push_back(Msg);
-		}
 	}
 
 	/// <summary>

@@ -302,7 +302,7 @@ public:
 		while (Position < Source.size())
 		{
 			Token T = Next();
-			Debug(std::format("Token: {}", T.ToString()));
+			Logging::Debug("Token: {}", T.ToString());
 			Tokens.push_back(T);
 		}
 		return Tokens;

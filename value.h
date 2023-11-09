@@ -652,8 +652,10 @@ namespace Values
 	public:
 		TIdentifier(){};
 		virtual ~TIdentifier() = default;
-		virtual TObject GetValue() = 0;
-		virtual TObject* GetValuePtr() = 0;
+		virtual bool		IsValid() = 0;
+		virtual TObject		GetValue() = 0;
+		virtual TObject*	GetValuePtr() = 0;
+		virtual std::string ToString() = 0;
 	};
 
 	class TLiteral : public TIdentifier
@@ -663,8 +665,20 @@ namespace Values
 	public:
 		TLiteral(const TObject& InValue) : Value(InValue){};
 		std::string GetName() { return Name; }
+		bool		IsValid() { return Value.GetType() != NullType; }
 		TObject		GetValue() override { return Value; }
 		TObject*	GetValuePtr() override { return &Value; }
+		std::string ToString() override
+		{
+			if (IsValid())
+			{
+				return GetValue().ToString();
+			}
+			else
+			{
+				return "Value is nullptr.";
+			}
+		}
 	};
 
 	using TObjectPtr = std::unique_ptr<TObject>;
@@ -691,22 +705,28 @@ namespace Values
 		};
 
 		~TVariable() = default;
+		bool		IsValid() { return Value != nullptr; }
 		TObject		GetValue() override { return *Value; }
 		TObject*	GetValuePtr() override { return Value; }
 		void		SetValue(TObject* InValue) { Value = InValue; }
 		std::string GetName() { return Name; }
+		std::string ToString() override
+		{
+			if (IsValid())
+			{
+				return std::format("{}, {}", GetName(), GetValue().ToString());
+			}
+			else
+			{
+				return std::format("{} is undefined.", GetName());
+			}
+		};
 
 		TVariable& operator=(const TVariable& Other)
 		{
 			Name = Other.Name;
 			SetValue(Other.Value);
 		}
-	};
-
-	class TArgument : public TIdentifier
-	{
-		std::string Name;
-		EValueType	Type;
 	};
 
 	using TArguments = std::vector<TIdentifier*>;
