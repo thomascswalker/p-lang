@@ -3,17 +3,18 @@
 
 using namespace Core;
 using namespace Values;
+using namespace Logging;
 
 int Compile(std::string FileName)
 {
 	std::string Source = ReadFile(FileName);
 	if (Source == "")
 	{
-		Error(std::format("ERROR: File not found or empty: {}", FileName));
+		Error("File not found or empty: {}", FileName);
 		return -1;
 	}
 	std::cout << "Running " << FileName << "\n-----------" << std::endl;
-	Debug("\n" + Source + "\n");
+	Debug("\n{}\n", Source);
 
 	// Tokenize the source code
 	Lexer Lex(Source);
@@ -26,33 +27,21 @@ int Compile(std::string FileName)
 	AST Ast(Tokens);
 	Debug("AST constructed.");
 	ASTBody* Program = Ast.GetTree();
-	if (!Program->Succeeded())
-	{
-		Error("Compilation failed.");
-		for (const auto& E : Program->Errors)
-		{
-			Error(E);
-		}
-		return 1;
-	}
 
 	auto V = std::make_unique<Visitor>();
 	Debug("Evaluating AST...");
 	V->Visit(Program);
 	Debug("Evaluation complete.");
-	if (!V->Succeeded())
+
+	int ErrorCount = GetLogger()->GetCount(_Error);
+	std::cout << std::format("Program compiled with {} errors.", ErrorCount) << std::endl;
+	if (ErrorCount > 0)
 	{
-		Error("Compilation failed.");
-		for (const auto& E : V->Errors)
+		auto ErrorMsgs = GetLogger()->GetMessages(_Error);
+		for (auto Msg : ErrorMsgs)
 		{
-			Error(E);
+			std::cout << std::format("{}ERROR: {}{}", "\033[31m", Msg, "\033[0m") << std::endl;
 		}
-		return 1;
-	}
-	else
-	{
-		Debug("Compilation successful.");
-		// V->Dump();
 	}
 
 	return 0;

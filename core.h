@@ -4,6 +4,10 @@
 #include <string>
 #include <vector>
 
+#include "logging.h"
+
+using namespace Logging;
+
 namespace Core
 {
 
@@ -19,38 +23,26 @@ namespace Core
 		}
 		return Indent;
 	}
+	static int WHILE_MAX_LOOP = 100;
+
 #ifdef _DEBUG
-	#define DEBUG_ENTER                                                 \
-		Debug(std::format("{}Entering {}.", GetIndent(), __FUNCSIG__)); \
+	#define DEBUG_ENTER                                    \
+		Debug("{}Entering {}.", GetIndent(), __FUNCSIG__); \
 		Depth++;
 	#define DEBUG_EXIT \
 		Depth--;       \
-		Debug(std::format("{}Exiting {}.", GetIndent(), __FUNCSIG__));
+		Debug("{}Exiting {}.", GetIndent(), __FUNCSIG__);
 #else
 	#define DEBUG_ENTER
 	#define DEBUG_EXIT
 #endif
 
-#define LOG(X) Log(std::format("\x1B[36m{}\033[37m", GetIndent() + X))
-#define DEBUG(X) Debug(GetIndent() + X)
-#define WARNING(X) Warning(GetIndent() + X)
-#define ERROR(X) Error(GetIndent() + X)
-#define SUCCESS(X) Success(GetIndent() + X)
-
-#define CHECK_ERRORS       \
-	if (Errors.size() > 0) \
-	{                      \
-		DEBUG_EXIT         \
-		return;            \
+#define CHECK_ERRORS         \
+	if (Logger::GetInstance()->GetCount(LogLevel::_Error) > 0) \
+	{                        \
+		DEBUG_EXIT           \
+		return false;        \
 	}
-
-	static int WHILE_MAX_LOOP = 100;
-
-	void Log(const std::string& InMsg);
-	void Warning(const std::string& InMsg);
-	void Error(const std::string& InMsg);
-	void Success(const std::string& InMsg);
-	void Debug(const std::string& InMsg);
 
 	/// <summary>
 	/// Cast the specified <paramref name="In"/> type to the specified <paramref name="Out"/> type.
