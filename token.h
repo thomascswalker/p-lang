@@ -101,6 +101,7 @@ struct Token
 	// Properties
 	ETokenType	Type;
 	std::string Content = "";
+	std::string Source = "";
 	int			Line = 0;
 	int			Column = 0;
 
@@ -121,10 +122,11 @@ struct Token
 
 class Lexer
 {
-	std::string Source = "";
-	int			Position = 0;
-	int			Line = 0;
-	int			Column = 0;
+	std::string				 Source = "";
+	int						 Position = 0;
+	int						 Line = 0;
+	int						 Column = 0;
+	std::vector<std::string> Lines;
 
 	char		GetCurrentChar() { return Source[Position]; }
 	char		GetNextChar() { return Source[Position + 1]; }
@@ -298,11 +300,20 @@ public:
 
 	std::vector<Token> Tokenize()
 	{
+		// First split the source into separate lines
+		auto Stream = std::stringstream{ Source };
+		for (std::string Line; std::getline(Stream, Line, '\n');)
+		{
+			Lines.push_back(Line);
+		}
+
+		// Then tokenize the source
 		std::vector<Token> Tokens;
 		while (Position < Source.size())
 		{
 			Token T = Next();
 			Logging::Debug("Token: {}", T.ToString());
+			T.Source = Lines[T.Line];
 			Tokens.push_back(T);
 		}
 		return Tokens;

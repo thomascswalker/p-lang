@@ -3,6 +3,7 @@
 #include <format>
 #include <string>
 #include <vector>
+#include <iostream>
 
 namespace Logging
 {
@@ -68,12 +69,14 @@ namespace Logging
 	{
 		return Logger::GetInstance();
 	}
-	// Logger* Logger::Instance = nullptr;
 
 	template <typename... Types>
 	static constexpr void Debug(std::format_string<Types...> Fmt, Types&&... Args)
 	{
+#ifdef _DEBUG
+		std::cout << std::format(Fmt, std::forward<Types>(Args)...) << std::endl;
 		Logger::GetInstance()->Log(Fmt, _Debug, std::forward<Types>(Args)...);
+#endif
 	}
 
 	template <typename... Types>

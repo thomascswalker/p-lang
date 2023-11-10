@@ -20,5 +20,5 @@ def fib_to(limit)
     }
 }
 
-fib_to(1000);
+fib_to(100000);
 print(a);
