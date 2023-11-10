@@ -48,12 +48,6 @@ bool Visitor::IsIdentifier(const std::string& Name)
 	return (Variable.GetType() != NullType);
 }
 
-bool Visitor::IsFunctionDeclared(const std::string& Name)
-{
-	auto Func = GetFunction(Name);
-	return (Func != nullptr);
-}
-
 TObject Visitor::GetIdentifier(const std::string& Name)
 {
 	for (const auto& [K, V] : Identifiers)
@@ -93,6 +87,17 @@ ASTFunction* Visitor::GetFunction(const std::string& Name)
 		}
 	}
 	return nullptr;
+}
+
+bool Visitor::IsFunctionDeclared(const std::string& Name)
+{
+	auto Func = GetFunction(Name);
+	return (Func != nullptr);
+}
+
+void Visitor::DefineFunction(const std::string& Name, ASTFunction* Func)
+{
+	Functions[Name] = Func;
 }
 
 bool Visitor::Visit(ASTValue* Node)
@@ -224,7 +229,7 @@ bool Visitor::Visit(ASTBinOp* Node)
 	// Push the resulting value to the stack
 	Push(Result);
 	Logging::Debug("BINOP: {} {} {} = {}", Left.ToString(), TokenStringMap[Node->Op], Right.ToString(),
-					  Result.ToString());
+				   Result.ToString());
 	DEBUG_EXIT
 	return true;
 }
@@ -285,7 +290,7 @@ bool Visitor::Visit(ASTCall* Node)
 	else if (Node->Type == Function)
 	{
 		// Parse argument values
-		TArguments InArgs;
+		TSignature InArgs;
 		for (const auto& Arg : Node->Args)
 		{
 			// Evaluate identifiers
@@ -350,14 +355,30 @@ bool Visitor::Visit(ASTCall* Node)
 			if (InArgs.size() != Func->Args.size())
 			{
 				Logging::Error("Argument count mismatch for '{}'. Got {}, wanted {}.", Node->Identifier, InArgs.size(),
-							Func->Args.size());
+							   Func->Args.size());
 				CHECK_ERRORS
 			}
 
 			// Push arguments to the variable table
 			for (const auto& [Index, InArg] : Enumerate(InArgs))
 			{
-				SetIdentifierValue(Func->Args[Index], InArg->GetValue());
+				auto FuncArg = Func->Args[Index];
+				auto FuncArgType = FuncArg.Type;
+				auto InArgType = InArg->GetValue().GetType();
+
+				if (InArg->GetValuePtr() == nullptr)
+				{
+					Logging::Error("Argument {} is null.", Index);
+					CHECK_ERRORS
+				}
+
+				if (FuncArgType != AnyType && !InArg->GetValuePtr()->CanCast(FuncArgType))
+				{
+					Logging::Error("Argument {} type mismatch for '{}'. Got {}, wanted {}.", Index, Node->Identifier, (int)InArgType,
+								   (int)FuncArgType);
+					CHECK_ERRORS
+				}
+				SetIdentifierValue(Func->Args[Index].Name, InArg->GetValue());
 			}
 
 			// Execute the function body
@@ -437,7 +458,7 @@ bool Visitor::Visit(ASTFunction* Node)
 {
 	if (Functions.find(Node->Name) == Functions.end())
 	{
-		Functions[Node->Name] = Node;
+		DefineFunction(Node->Name, Node);
 	}
 	else
 	{
@@ -667,10 +688,10 @@ ASTNode* AST::ParseAssignment()
 	DEBUG_ENTER
 
 	std::string Name = CurrentToken->Content; // Get the name
-	auto NameToken = *CurrentToken;
-	Accept();								  // Consume name
-	auto Op = CurrentToken->Type;			  // Get the assignment operator
-	Accept();								  // Consume assignment operator
+	auto		NameToken = *CurrentToken;
+	Accept();					  // Consume name
+	auto Op = CurrentToken->Type; // Get the assignment operator
+	Accept();					  // Consume assignment operator
 
 	auto Expr = ParseExpression();
 	if (Op == PlusEquals || Op == MinusEquals || Op == MultEquals || Op == DivEquals)
@@ -900,12 +921,27 @@ ASTNode* AST::ParseFunctionDecl()
 	}
 	Accept(); // Consume '('
 
-	std::vector<std::string> Args;
+	std::vector<TArg> Args;
 	while (!Expect(RParen))
 	{
 		if (Expect(Name))
 		{
-			Args.push_back(CurrentToken->Content);
+			std::string ArgName = CurrentToken->Content;
+			Accept(); // Consume the argument name
+			EValueType ArgType = AnyType;
+			if (Expect(Colon))
+			{
+				Accept(); // Consume ':'
+				if (!Expect(Type))
+				{
+					Logging::Error("Expected type after ':'.");
+					DEBUG_EXIT
+					return nullptr;
+				}
+				ArgType = StringValueTypeMap[CurrentToken->Content];
+				Accept(); // Consume 'type'
+			}
+			Args.push_back({ ArgName, ArgType });
 		}
 		else
 		{
@@ -913,7 +949,7 @@ ASTNode* AST::ParseFunctionDecl()
 			DEBUG_EXIT
 			return nullptr;
 		}
-		Accept(); // Consume argument name
+
 		if (Expect(RParen))
 		{
 			break;
@@ -940,7 +976,6 @@ ASTNode* AST::ParseFunctionDecl()
 	DEBUG_EXIT
 	return Nodes.back();
 }
-
 
 ASTNode* AST::ParseExpression()
 {
@@ -1021,4 +1056,3 @@ void AST::ParseBody()
 	}
 	DEBUG_EXIT
 }
-

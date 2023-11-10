@@ -55,21 +55,17 @@ class Visitor
 	void	Push(const TObject& Value);
 	TObject Pop();
 	TObject Back();
-	bool	IsIdentifier(const std::string& Name);
-	bool	IsFunctionDeclared(const std::string& Name);
 
-	/// <summary>
-	/// Returns a copy of the specified identifier.
-	/// </summary>
-	TObject GetIdentifier(const std::string& Name);
-
-	/// <summary>
-	/// Returns a pointer to the specified identifier.
-	/// </summary>
+	// Identifiers
+	TObject	 GetIdentifier(const std::string& Name);
+	bool	 IsIdentifier(const std::string& Name);
 	TObject* GetIdentifierPtr(const std::string& Name);
 	void	 SetIdentifierValue(const std::string& Name, const TObject& InValue);
 
+	// Functions
 	ASTFunction* GetFunction(const std::string& Name);
+	bool		 IsFunctionDeclared(const std::string& Name);
+	void		 DefineFunction(const std::string& Name, ASTFunction* Func);
 
 public:
 	std::map<std::string, TObject>		Identifiers;
@@ -226,7 +222,7 @@ public:
 			   + "\", Right: " + (Right ? Right->ToString() : "none") + "}";
 	}
 
-	bool Accept(Visitor& V) override { return V.Visit(this); }
+	bool  Accept(Visitor& V) override { return V.Visit(this); }
 	Token GetContext() const override { return Context; }
 };
 
@@ -241,7 +237,7 @@ public:
 		: Name(InName), Right(InRight), Context(InContext){};
 	virtual std::string ToString() const { return "Assign: " + Name + " => {" + Right->ToString() + "}"; }
 
-	bool Accept(Visitor& V) override { return V.Visit(this); }
+	bool  Accept(Visitor& V) override { return V.Visit(this); }
 	Token GetContext() const override { return Context; }
 };
 
@@ -257,7 +253,7 @@ public:
 		: Identifier(InIdentifier), Type(InType), Args(InArgs), Context(InContext){};
 	virtual std::string ToString() const { return "Call"; }
 
-	bool Accept(Visitor& V) override { return V.Visit(this); }
+	bool  Accept(Visitor& V) override { return V.Visit(this); }
 	Token GetContext() const override { return Context; }
 };
 
@@ -289,16 +285,24 @@ public:
 	Token				GetContext() const override { return Context; }
 };
 
+struct TArg
+{
+	std::string Name;
+	EValueType	Type;
+
+	void SetValueType(std::string StringType) {}
+};
+
 class ASTFunction : public ASTNode
 {
 public:
-	std::string				 Name;
-	std::vector<std::string> Args;
-	EValueType				 ReturnType = Void;
-	ASTNode*				 Body = nullptr;
-	Token					 Context;
+	std::string		  Name;
+	std::vector<TArg> Args;
+	EValueType		  ReturnType = Void;
+	ASTNode*		  Body = nullptr;
+	Token			  Context;
 
-	ASTFunction(const std::string& InName, std::vector<std::string> InArgs, ASTNode* InBody, Token InContext)
+	ASTFunction(const std::string& InName, std::vector<TArg> InArgs, ASTNode* InBody, Token InContext)
 		: Name(InName), Args(InArgs), Body(InBody), Context(InContext){};
 	virtual std::string ToString() const { return "FunctionDecl"; }
 	bool				Accept(Visitor& V) override { return V.Visit(this); }
@@ -323,7 +327,7 @@ public:
 		};
 		return Out;
 	}
-	bool Accept(Visitor& V) override { return V.Visit(this); }
+	bool  Accept(Visitor& V) override { return V.Visit(this); }
 	bool  Succeeded() { return Errors.size() == 0; }
 	Token GetContext() const override { return Context; }
 };
@@ -334,18 +338,12 @@ public:
 class AST
 {
 private:
-	ASTBody*								Program;
-	std::vector<Token>						Tokens{};
-	std::vector<ASTNode*>					Nodes{};
-	std::vector<ASTNode*>					Expressions{};
-	Token*									CurrentToken;
-	int										Position;
-	const std::map<std::string, EValueType> StringTypeMap{
-		{ "void", NullType },
-		{ "bool", BoolType },
-		{ "int", IntType },
-		{ "float", FloatType },
-	};
+	ASTBody*			  Program;
+	std::vector<Token>	  Tokens{};
+	std::vector<ASTNode*> Nodes{};
+	std::vector<ASTNode*> Expressions{};
+	Token*				  CurrentToken;
+	int					  Position;
 
 	void PrintCurrentToken()
 	{
@@ -470,4 +468,22 @@ public:
 	/// </summary>
 	/// <returns>The root AST node.</returns>
 	ASTBody* GetTree() { return Program; }
+
+	using TypeString = std::map<std::string, EValueType>;
+	static TypeString InitStringTypeMap()
+	{
+		TypeString Map;
+		Map["void"] = Void;
+		Map["null"] = NullType;
+		Map["any"] = AnyType;
+		Map["bool"] = BoolType;
+		Map["int"] = IntType;
+		Map["float"] = FloatType;
+		Map["string"] = StringType;
+		Map["array"] = ArrayType;
+		Map["map"] = MapType;
+		return Map;
+	}
 };
+
+static AST::TypeString StringValueTypeMap = AST::InitStringTypeMap();

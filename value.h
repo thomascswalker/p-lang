@@ -10,7 +10,6 @@
 
 #include "core.h"
 
-
 using namespace Core;
 
 namespace Values
@@ -19,6 +18,7 @@ namespace Values
 	{
 		Void,
 		NullType,
+		AnyType,
 		BoolType,
 		IntType,
 		FloatType,
@@ -493,6 +493,29 @@ namespace Values
 			return MapType.find(Key) != MapType.end();
 		}
 
+		bool CanCast(EValueType ToType)
+		{
+			switch (ToType)
+			{
+				case AnyType :
+					return true;
+				case BoolType :
+					return AsBool() != nullptr;
+				case IntType :
+					return AsInt() != nullptr;
+				case FloatType :
+					return AsFloat() != nullptr;
+				case StringType :
+					return AsString() != nullptr;
+				case ArrayType :
+					return AsArray() != nullptr;
+				case MapType :
+					return AsMap() != nullptr;
+				default :
+					return false;
+			}
+		}
+
 		bool		IsSubscriptable() { return Value->IsSubscriptable(); }
 		bool		IsSubscriptable() const { return Value->IsSubscriptable(); }
 		std::string ToString() { return Value->ToString(); }
@@ -570,6 +593,11 @@ namespace Values
 		TBoolValue operator==(const TObject& Other) const;
 		TBoolValue operator!=(const TObject& Other) const;
 		TBoolValue operator!() const;
+
+		//TBoolValue operator<(TObject& Other) { return Value.get() < Other.Value.get(); }
+		//TBoolValue operator>(TObject& Other) { return Value.get() > Other.Value.get(); }
+		//TBoolValue operator<=(TObject& Other) { return Value.get() <= Other.Value.get(); }
+		//TBoolValue operator>=(TObject& Other) { return Value.get() >= Other.Value.get(); }
 
 		TObject& operator++() // Prefix
 		{
@@ -730,20 +758,20 @@ namespace Values
 		}
 	};
 
-	using TArguments = std::vector<TIdentifier*>;
+	using TSignature = std::vector<TIdentifier*>;
 
-	typedef void (*TFunctor)(TArguments* InArguments, bool& bResult);
+	typedef void (TFunctor)(TSignature* InSignature, bool& bResult);
 	class TFunction
 	{
-		TFunctor Func;
+		TFunctor* Func;
 
 	public:
 		TFunction(){};
-		TFunction(TFunctor InFunc) { Func = InFunc; }
-		bool Invoke(TArguments* Arguments)
+		TFunction(TFunctor* InFunc) { Func = InFunc; }
+		bool Invoke(TSignature* Signature)
 		{
 			bool bResult = false;
-			Func(Arguments, bResult);
+			Func(Signature, bResult);
 			return bResult;
 		}
 	};

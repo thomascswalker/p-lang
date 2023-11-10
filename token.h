@@ -17,6 +17,7 @@ enum ETokenType
 	Eof,
 	Type,
 	Func,
+	Colon,
 	Name,
 	Number,
 	String,
@@ -57,13 +58,13 @@ enum ETokenType
 static int TokenTypeCount = (int)ETokenType::Count;
 
 static std::map<ETokenType, std::string> TokenStringMap{
-	{ Eof, "/0" },		  { Type, "Type" },	   { Func, "func" },	 { Plus, "+" },			{ Minus, "-" },
-	{ Multiply, "*" },	  { Divide, "/" },	   { Comma, "," },		 { Not, "!" },			{ Assign, "=" },
-	{ Equals, "==" },	  { NotEquals, "!=" }, { Semicolon, ";" },	 { LessThan, "<" },		{ GreaterThan, ">" },
-	{ LParen, "(" },	  { RParen, ")" },	   { LBracket, "[" },	 { RBracket, "]" },		{ LCurly, "{" },
-	{ RCurly, "}" },	  { If, "if" },		   { Else, "else" },	 { For, "for" },		{ While, "while" },
-	{ Return, "return" }, { Period, "." },	   { PlusEquals, "+=" }, { MinusEquals, "-=" }, { MultEquals, "*=" },
-	{ DivEquals, "/=" },  { PlusPlus, "++" },  { MinusMinus, "--" }
+	{ Eof, "/0" },		  { Type, "Type" },		{ Func, "func" },	 { Colon, ":" },	   { Plus, "+" },
+	{ Minus, "-" },		  { Multiply, "*" },	{ Divide, "/" },	 { Comma, "," },	   { Not, "!" },
+	{ Assign, "=" },	  { Equals, "==" },		{ NotEquals, "!=" }, { Semicolon, ";" },   { LessThan, "<" },
+	{ GreaterThan, ">" }, { LParen, "(" },		{ RParen, ")" },	 { LBracket, "[" },	   { RBracket, "]" },
+	{ LCurly, "{" },	  { RCurly, "}" },		{ If, "if" },		 { Else, "else" },	   { For, "for" },
+	{ While, "while" },	  { Return, "return" }, { Period, "." },	 { PlusEquals, "+=" }, { MinusEquals, "-=" },
+	{ MultEquals, "*=" }, { DivEquals, "/=" },	{ PlusPlus, "++" },	 { MinusMinus, "--" }
 };
 
 static ETokenType GetTokenTypeFromString(const std::string& InString)
@@ -78,14 +79,11 @@ static ETokenType GetTokenTypeFromString(const std::string& InString)
 	return Invalid;
 }
 
-const std::vector<char> TOKENS{ '+', '-', '/', '*', '=', '!', ';', '<', '>', '(', ')', '[', ']', '{', '}', ',', '.' };
-const std::vector<char> OPERATORS{ '+', '-', '/', '*', '=', '.', '!' };
-const std::vector<std::string> TYPES{
-	"int",
-	"float",
-	"string",
-	"bool",
+const std::vector<char> TOKENS{
+	'+', '-', '/', '*', '=', '!', ';', ':', '<', '>', '(', ')', '[', ']', '{', '}', ',', '.'
 };
+const std::vector<char>				   OPERATORS{ '+', '-', '/', '*', '=', '.', '!' };
+const std::vector<std::string>		   TYPES{ "int", "float", "string", "bool", "array", "map" };
 const std::vector<std::string>		   KEYWORDS{ "if", "else", "for", "while", "return" };
 const std::map<ETokenType, ETokenType> BLOCK_PAIRS{ { LParen, RParen }, { LBracket, RBracket }, { LCurly, RCurly } };
 const std::vector<std::string>		   FUNCTION{ "function", "func", "fn", "def" };
@@ -312,6 +310,10 @@ public:
 		while (Position < Source.size())
 		{
 			Token T = Next();
+			if (T.Type == Eof)
+			{
+				break;
+			}
 			Logging::Debug("Token: {}", T.ToString());
 			T.Source = Lines[T.Line];
 			Tokens.push_back(T);

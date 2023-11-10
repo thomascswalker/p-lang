@@ -5,10 +5,10 @@
 
 using namespace BuiltIns;
 
-void BuiltIns::PrintInternal(TArguments* Arguments, bool& bResult)
+void BuiltIns::PrintInternal(TSignature* Signature, bool& bResult)
 {
 	std::vector<TObject> Objects;
-	for (auto Arg : *Arguments)
+	for (auto Arg : *Signature)
 	{
 		if (!Arg->IsValid())
 		{
@@ -25,10 +25,10 @@ void BuiltIns::PrintInternal(TArguments* Arguments, bool& bResult)
 	bResult = true;
 };
 
-void BuiltIns::AppendInternal(TArguments* Arguments, bool& bResult)
+void BuiltIns::AppendInternal(TSignature* Signature, bool& bResult)
 {
-	auto Arg1 = Cast<TVariable>(Arguments->at(0));
-	auto Arg2 = Arguments->at(1);
+	auto Arg1 = Cast<TVariable>(Signature->at(0));
+	auto Arg2 = Signature->at(1);
 
 	TObject Value = Arg2->GetValue();
 
@@ -36,9 +36,9 @@ void BuiltIns::AppendInternal(TArguments* Arguments, bool& bResult)
 	bResult = true;
 }
 
-void BuiltIns::ReadFileInternal(TArguments* Arguments, bool& bResult)
+void BuiltIns::ReadFileInternal(TSignature* Signature, bool& bResult)
 {
-	auto Arg1 = Arguments->at(0)->GetValue();
+	auto Arg1 = Signature->at(0)->GetValue();
 	if (Arg1.GetType() != StringType)
 	{
 		bResult = false;
@@ -46,7 +46,7 @@ void BuiltIns::ReadFileInternal(TArguments* Arguments, bool& bResult)
 		return;
 	}
 
-	auto Arg2 = Arguments->at(1)->GetValue();
+	auto Arg2 = Signature->at(1)->GetValue();
 	if (Arg2.GetType() != StringType)
 	{
 		bResult = false;
@@ -64,7 +64,7 @@ void BuiltIns::ReadFileInternal(TArguments* Arguments, bool& bResult)
 	}
 
 	auto Content = Core::ReadFile(FileName);
-	auto OutString = Arguments->at(1)->GetValuePtr()->AsString();
+	auto OutString = Signature->at(1)->GetValuePtr()->AsString();
 	*OutString = Content;
 
 	bResult = true;
