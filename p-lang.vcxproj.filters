@@ -66,6 +66,12 @@
     <None Include="functions.p">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="bootstrap.p">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="simple.p">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Text Include="arithmetic.p">

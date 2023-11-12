@@ -152,10 +152,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include=".clang-format" />
+    <None Include="bootstrap.p" />
     <None Include="cpp.hint" />
     <None Include="functions.p" />
     <None Include="io.p" />
     <None Include="README.md" />
+    <None Include="simple.p" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="arithmetic.p" />

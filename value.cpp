@@ -515,7 +515,7 @@ TBoolValue Values::TObject::operator!() const
 
 std::ostringstream& Values::operator<<(std::ostringstream& Stream, const TObject& Object)
 {
-	Stream << std::string(Object.ToString().data(), Object.ToString().size());
+	//Stream << std::string(Object.ToString().data(), Object.ToString().size());
 	return Stream;
 }
 

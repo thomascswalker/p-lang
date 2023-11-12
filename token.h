@@ -56,7 +56,7 @@ enum ETokenType
 
 static int TokenTypeCount = (int)ETokenType::Count;
 
-static std::map<ETokenType, std::string> TokenStringMap{
+static std::map<ETokenType, std::string> TokenToStringMap{
 	{ Eof, "/0" },		  { Type, "Type" },	   { Func, "func" },	 { Plus, "+" },			{ Minus, "-" },
 	{ Multiply, "*" },	  { Divide, "/" },	   { Comma, "," },		 { Not, "!" },			{ Assign, "=" },
 	{ Equals, "==" },	  { NotEquals, "!=" }, { Semicolon, ";" },	 { LessThan, "<" },		{ GreaterThan, ">" },
@@ -68,7 +68,7 @@ static std::map<ETokenType, std::string> TokenStringMap{
 
 static ETokenType GetTokenTypeFromString(const std::string& InString)
 {
-	for (auto& [K, V] : TokenStringMap)
+	for (auto& [K, V] : TokenToStringMap)
 	{
 		if (InString == V)
 		{
@@ -312,7 +312,6 @@ public:
 		while (Position < Source.size())
 		{
 			Token T = Next();
-			Logging::Debug("Token: {}", T.ToString());
 			T.Source = Lines[T.Line];
 			Tokens.push_back(T);
 		}
