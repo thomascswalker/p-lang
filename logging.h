@@ -22,7 +22,10 @@ namespace Logging
 		Logger(){};
 
 	public:
-		static Logger* Instance;
+		static Logger*	   Instance;
+		static int		   Line;
+		static int		   Column;
+		static std::string Source;
 
 		Logger(Logger& Other) = delete;
 		~Logger(){};

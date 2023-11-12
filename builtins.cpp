@@ -5,6 +5,14 @@
 
 using namespace BuiltIns;
 
+#define CHECK_ARG_COUNT(Args, Count)                                                       \
+	if (Args->size() != Count)                                                             \
+	{                                                                                      \
+		Logging::Error("Invalid argument count. Wanted {}, got {}.", Count, Args->size()); \
+		bResult = false;                                                                   \
+		return;                                                                            \
+	}
+
 void BuiltIns::PrintInternal(TArguments* Arguments, bool& bResult)
 {
 	std::vector<TObject> Objects;
@@ -27,6 +35,8 @@ void BuiltIns::PrintInternal(TArguments* Arguments, bool& bResult)
 
 void BuiltIns::AppendInternal(TArguments* Arguments, bool& bResult)
 {
+	CHECK_ARG_COUNT(Arguments, 2)
+
 	auto Arg1 = Cast<TVariable>(Arguments->at(0));
 	auto Arg2 = Arguments->at(1);
 
@@ -38,6 +48,8 @@ void BuiltIns::AppendInternal(TArguments* Arguments, bool& bResult)
 
 void BuiltIns::ReadFileInternal(TArguments* Arguments, bool& bResult)
 {
+	CHECK_ARG_COUNT(Arguments, 2)
+
 	auto Arg1 = Arguments->at(0)->GetValue();
 	if (Arg1.GetType() != StringType)
 	{
@@ -63,9 +75,69 @@ void BuiltIns::ReadFileInternal(TArguments* Arguments, bool& bResult)
 		return;
 	}
 
-	auto Content = Core::ReadFile(FileName);
+	auto Content = std::string(std::istreambuf_iterator<char>(Stream), std::istreambuf_iterator<char>());
 	auto OutString = Arguments->at(1)->GetValuePtr()->AsString();
 	*OutString = Content;
+
+	bResult = true;
+}
+
+void BuiltIns::IndexOf(TArguments* Arguments, bool& bResult)
+{
+	// size_of ( iterable, index, out )
+	CHECK_ARG_COUNT(Arguments, 3);
+
+	auto Iterable = Arguments->at(0)->GetValue();
+	auto Index = Arguments->at(1)->GetValue().GetInt().GetValue();
+	auto Out = Arguments->at(2);
+
+	TObject Value;
+	switch (Iterable.GetType())
+	{
+		case StringType :
+			Value = Iterable.GetString().GetValue().at(Index);
+			break;
+		case ArrayType :
+			Value = Iterable.GetArray().GetValue().at(Index);
+			break;
+		default :
+			bResult = false;
+			Logging::Error("Type does not have an 'index'.");
+			return;
+	}
+	auto OutPtr = Out->GetValuePtr();
+	*OutPtr = Value;
+
+	bResult = true;
+}
+
+void BuiltIns::SizeOf(TArguments* Arguments, bool& bResult)
+{
+	CHECK_ARG_COUNT(Arguments, 2);
+
+	auto Arg1 = Arguments->at(0)->GetValue();
+	auto Arg2 = Arguments->at(1);
+
+	int Size = 0;
+	switch (Arg1.GetType())
+	{
+		case StringType :
+			Size = Arg1.AsString()->GetValue().size();
+			break;
+		case ArrayType :
+			Size = Arg1.AsArray()->GetValue().size();
+			break;
+		case MapType :
+			Size = Arg1.AsMap()->GetValue().size();
+			break;
+		default :
+			bResult = false;
+			Logging::Error("Type does not have a 'size'.");
+			return;
+
+	}
+	auto Arg2Ptr = Arg2->GetValuePtr()->AsInt();
+	*Arg2Ptr = Size;
 
 	bResult = true;
 }
@@ -74,6 +146,10 @@ void BuiltIns::ReadFileInternal(TArguments* Arguments, bool& bResult)
 TFunctionMap BuiltIns::InitFunctionMap()
 {
 	TFunctionMap Map;
+
+	// Misc
+	Map["size_of"] = &SizeOf;
+	Map["index_of"] = &IndexOf;
 
 	// IO
 	Map["print"] = &PrintInternal;

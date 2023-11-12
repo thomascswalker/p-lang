@@ -1,5 +1,6 @@
 #pragma once
 
+#include "logging.h"
 #include "value.h"
 
 using namespace Values;
@@ -11,6 +12,9 @@ namespace BuiltIns
 	static void PrintInternal(TArguments* Arguments, bool& bResult);
 	static void AppendInternal(TArguments* Arguments, bool& bResult);
 	static void ReadFileInternal(TArguments* Arguments, bool& bResult);
+
+	static void IndexOf(TArguments* Arguments, bool& bResult);
+	static void SizeOf(TArguments* Arguments, bool& bResult);
 
 	// Initialize the function map of keywords to actual C++ functions
 	TFunctionMap InitFunctionMap();

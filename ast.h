@@ -7,12 +7,46 @@
 #include <format>
 #include <any>
 
+#include "builtins.h"
+#include "logging.h"
 #include "token.h"
 #include "value.h"
-#include "builtins.h"
 
 using namespace Core;
 using namespace Values;
+
+static int		   Depth = 0;
+static std::string GetIndent()
+{
+	std::string Indent;
+	int			I = 0;
+	while (I < Depth)
+	{
+		Indent += "  ";
+		I++;
+	}
+	return Indent;
+}
+static int WHILE_MAX_LOOP = 10000;
+
+#ifdef _DEBUG
+	#define DEBUG_ENTER                                             \
+		Logging::Debug("{}Entering {}.", GetIndent(), __FUNCSIG__); \
+		Depth++;
+	#define DEBUG_EXIT \
+		Depth--;       \
+		Logging::Debug("{}Exiting {}.", GetIndent(), __FUNCSIG__);
+#else
+	#define DEBUG_ENTER
+	#define DEBUG_EXIT
+#endif
+
+#define CHECK_ERRORS                                                             \
+	if (Logging::Logger::GetInstance()->GetCount(Logging::LogLevel::_Error) > 0) \
+	{                                                                            \
+		DEBUG_EXIT                                                               \
+		return false;                                                            \
+	}
 
 class VisitorBase;
 class Visitor;
@@ -202,7 +236,7 @@ public:
 	ASTUnaryExpr(ETokenType InOp, ASTNode* InRight, Token InContext) : Op(InOp), Right(InRight), Context(InContext){};
 	virtual std::string ToString() const
 	{
-		return std::format("UnaryExpr: {}{}", TokenStringMap[Op], Right->ToString());
+		return std::format("UnaryExpr: {}{}", TokenToStringMap[Op], Right->ToString());
 	}
 	bool  Accept(Visitor& V) override { return V.Visit(this); }
 	Token GetContext() const override { return Context; }
@@ -226,7 +260,7 @@ public:
 			   + "\", Right: " + (Right ? Right->ToString() : "none") + "}";
 	}
 
-	bool Accept(Visitor& V) override { return V.Visit(this); }
+	bool  Accept(Visitor& V) override { return V.Visit(this); }
 	Token GetContext() const override { return Context; }
 };
 
@@ -241,7 +275,7 @@ public:
 		: Name(InName), Right(InRight), Context(InContext){};
 	virtual std::string ToString() const { return "Assign: " + Name + " => {" + Right->ToString() + "}"; }
 
-	bool Accept(Visitor& V) override { return V.Visit(this); }
+	bool  Accept(Visitor& V) override { return V.Visit(this); }
 	Token GetContext() const override { return Context; }
 };
 
@@ -257,7 +291,7 @@ public:
 		: Identifier(InIdentifier), Type(InType), Args(InArgs), Context(InContext){};
 	virtual std::string ToString() const { return "Call"; }
 
-	bool Accept(Visitor& V) override { return V.Visit(this); }
+	bool  Accept(Visitor& V) override { return V.Visit(this); }
 	Token GetContext() const override { return Context; }
 };
 
@@ -323,7 +357,7 @@ public:
 		};
 		return Out;
 	}
-	bool Accept(Visitor& V) override { return V.Visit(this); }
+	bool  Accept(Visitor& V) override { return V.Visit(this); }
 	bool  Succeeded() { return Errors.size() == 0; }
 	Token GetContext() const override { return Context; }
 };
@@ -334,12 +368,12 @@ public:
 class AST
 {
 private:
-	ASTBody*								Program;
-	std::vector<Token>						Tokens{};
-	std::vector<ASTNode*>					Nodes{};
-	std::vector<ASTNode*>					Expressions{};
-	Token*									CurrentToken;
-	int										Position;
+	ASTBody*			  Program;
+	std::vector<Token>	  Tokens{};
+	std::vector<ASTNode*> Expressions{};
+	Token*				  CurrentToken;
+	int					  Position;
+
 	const std::map<std::string, EValueType> StringTypeMap{
 		{ "void", NullType },
 		{ "bool", BoolType },
@@ -455,14 +489,14 @@ private:
 	ASTNode* ParseWhile();
 	ASTNode* ParseFunctionDecl();
 	ASTNode* ParseExpression();
-	void	 ParseBody();
+	ASTNode* ParseBody();
 
 public:
 	AST(std::vector<Token>& InTokens) : Tokens(InTokens)
 	{
 		CurrentToken = &Tokens[0];
 		Position = 0;
-		ParseBody();
+		Program = Cast<ASTBody>(ParseBody());
 	}
 
 	/// <summary>

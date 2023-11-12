@@ -9,7 +9,7 @@
 #include <functional>
 
 #include "core.h"
-
+#include "logging.h"
 
 using namespace Core;
 
@@ -732,16 +732,24 @@ namespace Values
 
 	using TArguments = std::vector<TIdentifier*>;
 
-	typedef void (*TFunctor)(TArguments* InArguments, bool& bResult);
+	typedef void (TFunctor)(TArguments* InArguments, bool& bResult);
 	class TFunction
 	{
-		TFunctor Func;
+		TFunctor* Func = nullptr;
 
 	public:
 		TFunction(){};
-		TFunction(TFunctor InFunc) { Func = InFunc; }
+		TFunction(TFunctor* InFunc) { Func = InFunc; }
 		bool Invoke(TArguments* Arguments)
 		{
+			// The function _should_ be defined by now, but in case it isn't...
+			if (Func == nullptr)
+			{
+				Logging::Error("Function is not defined.");
+				return false;
+			}
+
+			// Execute the function, passing the result by reference
 			bool bResult = false;
 			Func(Arguments, bResult);
 			return bResult;
