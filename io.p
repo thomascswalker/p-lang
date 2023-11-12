@@ -1,22 +1,25 @@
-// Print the given argument
-def print_test(arg)
+// Read the next token at the specified index.
+// i (int): The current index.
+def next(i)
 {
-    print(arg);
+    c = index_of(source, i);
+    append(tokens, c);
+    return c;
 }
 
 // Read the file
 source = read_file(".\simple.p");
 print(source);
 
+// Parse the tokens
 i = 0;
 tokens = [];
-
-// for (c : source)
 while (i < size_of(source))
 {
-    c = index_of(source, i);
-    append(tokens, c);
+    r = next(i);
+    print(r);
     i += 1;
 }
 
-print_test(tokens);
+// Print the tokens
+print(tokens);

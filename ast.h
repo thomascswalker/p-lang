@@ -135,6 +135,7 @@ public:
 	bool Visit(ASTIf* Node);
 	bool Visit(ASTWhile* Node);
 	bool Visit(ASTFunction* Node);
+	bool Visit(ASTReturn* Node);
 	bool Visit(ASTBody* Node);
 
 	bool Succeeded() { return true; } // TODO: Update this!
@@ -333,12 +334,22 @@ class ASTFunction : public ASTNode
 public:
 	std::string				 Name;
 	std::vector<std::string> Args;
-	TObject*				 ReturnValue = nullptr;
 	ASTNode*				 Body = nullptr;
 	Token					 Context;
 
 	ASTFunction(const std::string& InName, std::vector<std::string> InArgs, ASTNode* InBody, Token InContext)
 		: Name(InName), Args(InArgs), Body(InBody), Context(InContext){};
+	virtual std::string ToString() const { return "FunctionDecl"; }
+	bool				Accept(Visitor& V) override { return V.Visit(this); }
+	Token				GetContext() const override { return Context; }
+};
+
+class ASTReturn : public ASTNode
+{
+public:
+	ASTNode* Expr;
+	Token	 Context;
+	ASTReturn(ASTNode* InExpr, Token InContext) : Expr(InExpr), Context(InContext){};
 	virtual std::string ToString() const { return "FunctionDecl"; }
 	bool				Accept(Visitor& V) override { return V.Visit(this); }
 	Token				GetContext() const override { return Context; }
@@ -409,7 +420,7 @@ private:
 			return;
 		}
 
-		//std::cout << std::format("Accepting '{}': {}", CurrentToken->Content, CurrentToken->Source) << std::endl;
+		// std::cout << std::format("Accepting '{}': {}", CurrentToken->Content, CurrentToken->Source) << std::endl;
 
 		// If we're at the end, set the CurrentToken to be null
 		if (CurrentToken == End)
@@ -424,9 +435,16 @@ private:
 
 			if (CurrentToken != nullptr)
 			{
-				LINE = CurrentToken->Line;
-				COLUMN = CurrentToken->Column;
-				SOURCE = CurrentToken->Source;
+				auto C = *CurrentToken;
+				LINE = C.Line;
+				COLUMN = C.Column;
+				SOURCE = C.Source;
+			}
+			else
+			{
+				LINE = 0;
+				COLUMN = 0;
+				SOURCE = "eof";
 			}
 		}
 	}

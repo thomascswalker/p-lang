@@ -252,8 +252,22 @@ bool Visitor::Visit(ASTAssignment* Node)
 	Node->Right->Accept(*this);
 	CHECK_ERRORS
 
+	if (Stack.size() == 0)
+	{
+		Logging::Error("Assignment right-hand is null.\n{}", FormatSource());
+		DEBUG_EXIT
+		return false;
+	}
+
 	TObject Value = Pop();
 	CHECK_ERRORS
+
+	if (Value.GetType() == NullType)
+	{
+		Logging::Error("Cannot assign nulltype.\n{}", FormatSource());
+		DEBUG_EXIT
+		return false;
+	}
 
 	SetIdentifierValue(Node->Name, Value);
 
@@ -339,7 +353,6 @@ bool Visitor::Visit(ASTCall* Node)
 				CHECK_ERRORS
 			}
 		}
-
 
 		// Handle built-in functions
 		if (IsBuiltIn(Node->Identifier))
@@ -474,11 +487,24 @@ bool Visitor::Visit(ASTFunction* Node)
 	return true;
 }
 
+bool Visitor::Visit(ASTReturn* Node)
+{
+	Node->Expr->Accept(*this);
+	if (Stack.size() > 0)
+	{
+		TObject Value = Pop();
+		CHECK_ERRORS
+		Push(Value);
+	}
+	return true;
+}
+
 bool Visitor::Visit(ASTBody* Node)
 {
 	DEBUG_ENTER
 	for (const auto& E : Node->Expressions)
 	{
+		// if (Expression.)
 		E->Accept(*this);
 	}
 	DEBUG_EXIT
@@ -796,6 +822,7 @@ ASTNode* AST::ParseCurlyExpr()
 	while (!Expect(RCurly))
 	{
 		Logging::Debug("CURLY: Parsing loop in {}.", __FUNCTION__);
+
 		ASTNode* Expr = ParseExpression();
 		Body.push_back(Expr);
 
@@ -983,7 +1010,16 @@ ASTNode* AST::ParseExpression()
 		Expr = ParseIdentifier();
 		if (Expect(Semicolon))
 		{
-			Accept();
+			Accept(); // Consume ';'
+		}
+	}
+	else if (Expect(Return))
+	{
+		Accept(); // Consume 'return'
+		Expr = ParseExpression();
+		if (Expect(Semicolon))
+		{
+			Accept(); // Consume ';'
 		}
 	}
 	else if (ExpectAny({ Not, Minus }))
