@@ -312,7 +312,7 @@ public:
 		while (Position < Source.size())
 		{
 			Token T = Next();
-			T.Source = Lines[T.Line];
+			T.Source = Lines[T.Line - 1];
 			Tokens.push_back(T);
 		}
 		return Tokens;

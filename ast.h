@@ -48,6 +48,10 @@ static int WHILE_MAX_LOOP = 10000;
 		return false;                                                            \
 	}
 
+static int		   LINE;
+static int		   COLUMN;
+static std::string SOURCE;
+
 class VisitorBase;
 class Visitor;
 
@@ -87,6 +91,7 @@ static bool IsBuiltIn(const std::string& Name)
 class Visitor
 {
 	void	Push(const TObject& Value);
+	void	Push(TObject* Value);
 	TObject Pop();
 	TObject Back();
 	bool	IsIdentifier(const std::string& Name);
@@ -130,6 +135,7 @@ public:
 	bool Visit(ASTIf* Node);
 	bool Visit(ASTWhile* Node);
 	bool Visit(ASTFunction* Node);
+	bool Visit(ASTReturn* Node);
 	bool Visit(ASTBody* Node);
 
 	bool Succeeded() { return true; } // TODO: Update this!
@@ -328,12 +334,22 @@ class ASTFunction : public ASTNode
 public:
 	std::string				 Name;
 	std::vector<std::string> Args;
-	EValueType				 ReturnType = Void;
 	ASTNode*				 Body = nullptr;
 	Token					 Context;
 
 	ASTFunction(const std::string& InName, std::vector<std::string> InArgs, ASTNode* InBody, Token InContext)
 		: Name(InName), Args(InArgs), Body(InBody), Context(InContext){};
+	virtual std::string ToString() const { return "FunctionDecl"; }
+	bool				Accept(Visitor& V) override { return V.Visit(this); }
+	Token				GetContext() const override { return Context; }
+};
+
+class ASTReturn : public ASTNode
+{
+public:
+	ASTNode* Expr;
+	Token	 Context;
+	ASTReturn(ASTNode* InExpr, Token InContext) : Expr(InExpr), Context(InContext){};
 	virtual std::string ToString() const { return "FunctionDecl"; }
 	bool				Accept(Visitor& V) override { return V.Visit(this); }
 	Token				GetContext() const override { return Context; }
@@ -404,6 +420,8 @@ private:
 			return;
 		}
 
+		// std::cout << std::format("Accepting '{}': {}", CurrentToken->Content, CurrentToken->Source) << std::endl;
+
 		// If we're at the end, set the CurrentToken to be null
 		if (CurrentToken == End)
 		{
@@ -414,6 +432,20 @@ private:
 		{
 			CurrentToken++;
 			Position++;
+
+			if (CurrentToken != nullptr)
+			{
+				auto C = *CurrentToken;
+				LINE = C.Line;
+				COLUMN = C.Column;
+				SOURCE = C.Source;
+			}
+			else
+			{
+				LINE = 0;
+				COLUMN = 0;
+				SOURCE = "eof";
+			}
 		}
 	}
 

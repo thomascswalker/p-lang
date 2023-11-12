@@ -4,9 +4,10 @@
 
 using namespace Core;
 
-static int		   LINE;
-static int		   COLUMN;
-static std::string SOURCE;
+static std::string FormatSource()
+{
+	return std::format("line {}, column {}\n\t{}\n\t{}^", LINE, COLUMN, SOURCE, std::string(COLUMN, ' '));
+}
 
 //////////////
 // Visitors //
@@ -16,18 +17,29 @@ void Visitor::Push(const TObject& Value)
 {
 	if (!Value.IsValid())
 	{
-		Logging::Error("Cannot push null object.");
+		Logging::Error("Cannot push null object.\n{}", FormatSource());
 		return;
 	}
 	Logging::Debug("PUSH: '{}'", Value.ToString());
 	Stack.push_back(Value);
 }
 
+void Visitor::Push(TObject* Value)
+{
+	if (Value == nullptr)
+	{
+		Logging::Error("Cannot push null object.\n{}", FormatSource());
+		return;
+	}
+	Logging::Debug("PUSH: '{}'", Value->ToString());
+	Stack.push_back(*Value);
+}
+
 TObject Visitor::Pop()
 {
 	if (Stack.size() == 0)
 	{
-		Logging::Error("Stack is empty.");
+		Logging::Error("Cannot push null object.\n{}", FormatSource());
 		return TObject();
 	}
 	TObject Value = Stack.back();
@@ -240,8 +252,22 @@ bool Visitor::Visit(ASTAssignment* Node)
 	Node->Right->Accept(*this);
 	CHECK_ERRORS
 
+	if (Stack.size() == 0)
+	{
+		Logging::Error("Assignment right-hand is null.\n{}", FormatSource());
+		DEBUG_EXIT
+		return false;
+	}
+
 	TObject Value = Pop();
 	CHECK_ERRORS
+
+	if (Value.GetType() == NullType)
+	{
+		Logging::Error("Cannot assign nulltype.\n{}", FormatSource());
+		DEBUG_EXIT
+		return false;
+	}
 
 	SetIdentifierValue(Node->Name, Value);
 
@@ -331,17 +357,26 @@ bool Visitor::Visit(ASTCall* Node)
 		// Handle built-in functions
 		if (IsBuiltIn(Node->Identifier))
 		{
+			// Temporary return value for the function
+			TObject ReturnValue;
+
 			// Get the corresponding function pointer to the identifier name
 			auto Func = FunctionMap[Node->Identifier];
 
 			// Invoke the function with the arguments parsed above
-			bool bResult = Func.Invoke(&InArgs);
+			bool bResult = Func.Invoke(&InArgs, &ReturnValue);
 			if (!bResult)
 			{
 				auto Context = Node->GetContext();
 				auto Space = std::string(Context.Column, ' ');
 				Logging::Error("line {}, column {}\n\t{}\n\t{}^", Context.Line, Context.Column, Context.Source, Space);
 				CHECK_ERRORS
+			}
+
+			// If the function is not a void return type, push the return value
+			if (ReturnValue.GetType() != NullType)
+			{
+				Push(&ReturnValue);
 			}
 		}
 		// Handle user-defined functions
@@ -452,11 +487,24 @@ bool Visitor::Visit(ASTFunction* Node)
 	return true;
 }
 
+bool Visitor::Visit(ASTReturn* Node)
+{
+	Node->Expr->Accept(*this);
+	if (Stack.size() > 0)
+	{
+		TObject Value = Pop();
+		CHECK_ERRORS
+		Push(Value);
+	}
+	return true;
+}
+
 bool Visitor::Visit(ASTBody* Node)
 {
 	DEBUG_ENTER
 	for (const auto& E : Node->Expressions)
 	{
+		// if (Expression.)
 		E->Accept(*this);
 	}
 	DEBUG_EXIT
@@ -774,6 +822,7 @@ ASTNode* AST::ParseCurlyExpr()
 	while (!Expect(RCurly))
 	{
 		Logging::Debug("CURLY: Parsing loop in {}.", __FUNCTION__);
+
 		ASTNode* Expr = ParseExpression();
 		Body.push_back(Expr);
 
@@ -951,14 +1000,26 @@ ASTNode* AST::ParseExpression()
 	if (Expect(Name) && ExpectAssignOperator(1))
 	{
 		Expr = ParseAssignment();
-		Accept(); // Consume ';'
+		if (Expect(Semicolon))
+		{
+			Accept(); // Consume ';'
+		}
 	}
-	else if (Expect(Name) && Expect(LParen, 1))
+	else if (ExpectSequence({ Name, LParen }))
 	{
 		Expr = ParseIdentifier();
 		if (Expect(Semicolon))
 		{
-			Accept();
+			Accept(); // Consume ';'
+		}
+	}
+	else if (Expect(Return))
+	{
+		Accept(); // Consume 'return'
+		Expr = ParseExpression();
+		if (Expect(Semicolon))
+		{
+			Accept(); // Consume ';'
 		}
 	}
 	else if (ExpectAny({ Not, Minus }))

@@ -66,6 +66,7 @@ namespace Values
 	public:
 		TBoolValue(bool InValue) : Value(InValue){};
 		bool		GetValue() const { return Value; }
+		void		SetValue(bool NewValue) { Value = NewValue; }
 		bool		IsSubscriptable() override { return false; }
 		bool		IsValid() const override { return true; }
 		std::string ToString() override { return Value ? "true" : "false"; }
@@ -93,6 +94,7 @@ namespace Values
 	public:
 		TIntValue(int InValue) : Value(InValue){};
 		int			GetValue() const { return Value; }
+		void		SetValue(int NewValue) { Value = NewValue; }
 		bool		IsSubscriptable() override { return false; }
 		bool		IsValid() const override { return true; }
 		int			Increment() { return Value++; }
@@ -144,6 +146,7 @@ namespace Values
 	public:
 		TFloatValue(float InValue) : Value(InValue){};
 		float		GetValue() const { return Value; }
+		void		SetValue(float NewValue) { Value = NewValue; }
 		bool		IsSubscriptable() override { return false; }
 		bool		IsValid() const override { return true; }
 		std::string ToString() override { return std::to_string(Value); }
@@ -192,6 +195,7 @@ namespace Values
 		TStringValue(){};
 		TStringValue(const std::string& InValue) : Value(InValue){};
 		std::string GetValue() const { return Value; }
+		void		SetValue(const std::string& NewValue) { Value = NewValue; }
 		bool		IsSubscriptable() override { return true; }
 		bool		IsValid() const override { return Value != ""; }
 		std::string ToString() override { return Value; }
@@ -216,7 +220,7 @@ namespace Values
 		TArrayValue(const TArray& InValue) : Value(InValue){};
 		TArray		GetValue() const { return Value; }
 		bool		IsSubscriptable() override { return true; }
-		bool		IsValid() const override { return !Value.empty(); }
+		bool		IsValid() const override { return true; }
 		std::string ToString() override { return "#[" + TStringValue::Join(Value, ",") + "]"; }
 		std::string ToString() const override { return ToString(); }
 
@@ -239,7 +243,7 @@ namespace Values
 		TMapValue(const TMap& InValue) : Value(InValue){};
 		TMap		GetValue() const { return Value; }
 		bool		IsSubscriptable() override { return false; }
-		bool		IsValid() const override { return !Value.empty(); }
+		bool		IsValid() const override { return true; }
 		std::string ToString() override { return "Map"; }
 		std::string ToString() const override { return "Map"; }
 
@@ -253,7 +257,7 @@ namespace Values
 	class TObject
 	{
 		std::unique_ptr<TValue> Value;
-		EValueType				Type;
+		EValueType				Type = NullType;
 
 		struct Iterator
 		{
@@ -438,8 +442,8 @@ namespace Values
 		TArrayValue	 GetArray() const { return *AsArray(); }
 		TMapValue	 GetMap() const { return *AsMap(); }
 
-		bool IsValid() { return Value.get() != nullptr; }
-		bool IsValid() const { return Value.get() != nullptr; }
+		bool IsValid() { return Value->IsValid(); }
+		bool IsValid() const { return Value->IsValid(); }
 
 		TObject& At(const TObject& Index)
 		{
@@ -732,7 +736,7 @@ namespace Values
 
 	using TArguments = std::vector<TIdentifier*>;
 
-	typedef void (TFunctor)(TArguments* InArguments, bool& bResult);
+	typedef void(TFunctor)(TArguments* InArguments, TObject* ReturnValue, bool& bResult);
 	class TFunction
 	{
 		TFunctor* Func = nullptr;
@@ -740,7 +744,7 @@ namespace Values
 	public:
 		TFunction(){};
 		TFunction(TFunctor* InFunc) { Func = InFunc; }
-		bool Invoke(TArguments* Arguments)
+		bool Invoke(TArguments* Arguments, TObject* ReturnValue)
 		{
 			// The function _should_ be defined by now, but in case it isn't...
 			if (Func == nullptr)
@@ -751,7 +755,7 @@ namespace Values
 
 			// Execute the function, passing the result by reference
 			bool bResult = false;
-			Func(Arguments, bResult);
+			Func(Arguments, ReturnValue, bResult);
 			return bResult;
 		}
 	};
