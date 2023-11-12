@@ -48,6 +48,10 @@ static int WHILE_MAX_LOOP = 10000;
 		return false;                                                            \
 	}
 
+static int		   LINE;
+static int		   COLUMN;
+static std::string SOURCE;
+
 class VisitorBase;
 class Visitor;
 
@@ -87,6 +91,7 @@ static bool IsBuiltIn(const std::string& Name)
 class Visitor
 {
 	void	Push(const TObject& Value);
+	void	Push(TObject* Value);
 	TObject Pop();
 	TObject Back();
 	bool	IsIdentifier(const std::string& Name);
@@ -328,7 +333,7 @@ class ASTFunction : public ASTNode
 public:
 	std::string				 Name;
 	std::vector<std::string> Args;
-	EValueType				 ReturnType = Void;
+	TObject*				 ReturnValue = nullptr;
 	ASTNode*				 Body = nullptr;
 	Token					 Context;
 
@@ -404,6 +409,8 @@ private:
 			return;
 		}
 
+		//std::cout << std::format("Accepting '{}': {}", CurrentToken->Content, CurrentToken->Source) << std::endl;
+
 		// If we're at the end, set the CurrentToken to be null
 		if (CurrentToken == End)
 		{
@@ -414,6 +421,13 @@ private:
 		{
 			CurrentToken++;
 			Position++;
+
+			if (CurrentToken != nullptr)
+			{
+				LINE = CurrentToken->Line;
+				COLUMN = CurrentToken->Column;
+				SOURCE = CurrentToken->Source;
+			}
 		}
 	}
 

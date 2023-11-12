@@ -1,19 +1,9 @@
-def is_whitespace(ch, result)
-{
-    if (ch == " ")
-    {
-        result = true;
-    }
-    else
-    {
-        result = false;
-    }
-}
 
 // Read the file
-source = "";
-read_file(".\simple.p", source);
+source = read_file(".\simple.p");
+print(source);
 
+/*
 // Get the size of the file
 size = 0;
 size_of(source, size);
@@ -40,3 +30,4 @@ while (i < size)
 }
 
 print(tokens);
+*/

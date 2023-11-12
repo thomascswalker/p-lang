@@ -13,7 +13,7 @@ using namespace BuiltIns;
 		return;                                                                            \
 	}
 
-void BuiltIns::PrintInternal(TArguments* Arguments, bool& bResult)
+void BuiltIns::PrintInternal(TArguments* Arguments, TObject* ReturnValue, bool& bResult)
 {
 	std::vector<TObject> Objects;
 	for (auto Arg : *Arguments)
@@ -33,7 +33,7 @@ void BuiltIns::PrintInternal(TArguments* Arguments, bool& bResult)
 	bResult = true;
 };
 
-void BuiltIns::AppendInternal(TArguments* Arguments, bool& bResult)
+void BuiltIns::AppendInternal(TArguments* Arguments, TObject* ReturnValue, bool& bResult)
 {
 	CHECK_ARG_COUNT(Arguments, 2)
 
@@ -46,23 +46,15 @@ void BuiltIns::AppendInternal(TArguments* Arguments, bool& bResult)
 	bResult = true;
 }
 
-void BuiltIns::ReadFileInternal(TArguments* Arguments, bool& bResult)
+void BuiltIns::ReadFileInternal(TArguments* Arguments, TObject* ReturnValue, bool& bResult)
 {
-	CHECK_ARG_COUNT(Arguments, 2)
+	CHECK_ARG_COUNT(Arguments, 1)
 
 	auto Arg1 = Arguments->at(0)->GetValue();
 	if (Arg1.GetType() != StringType)
 	{
 		bResult = false;
 		Logging::Error("Wanted a string as the first argument.");
-		return;
-	}
-
-	auto Arg2 = Arguments->at(1)->GetValue();
-	if (Arg2.GetType() != StringType)
-	{
-		bResult = false;
-		Logging::Error("Wanted a string as the second argument.");
 		return;
 	}
 
@@ -76,20 +68,19 @@ void BuiltIns::ReadFileInternal(TArguments* Arguments, bool& bResult)
 	}
 
 	auto Content = std::string(std::istreambuf_iterator<char>(Stream), std::istreambuf_iterator<char>());
-	auto OutString = Arguments->at(1)->GetValuePtr()->AsString();
-	*OutString = Content;
+	*ReturnValue = Content;
 
 	bResult = true;
 }
 
-void BuiltIns::IndexOf(TArguments* Arguments, bool& bResult)
+void BuiltIns::IndexOf(TArguments* Arguments, TObject* ReturnValue, bool& bResult)
 {
 	// size_of ( iterable, index, out )
-	CHECK_ARG_COUNT(Arguments, 3);
+	CHECK_ARG_COUNT(Arguments, 2);
 
 	auto Iterable = Arguments->at(0)->GetValue();
 	auto Index = Arguments->at(1)->GetValue().GetInt().GetValue();
-	auto Out = Arguments->at(2);
+	//auto Out = Arguments->at(2);
 
 	TObject Value;
 	switch (Iterable.GetType())
@@ -105,18 +96,16 @@ void BuiltIns::IndexOf(TArguments* Arguments, bool& bResult)
 			Logging::Error("Type does not have an 'index'.");
 			return;
 	}
-	auto OutPtr = Out->GetValuePtr();
-	*OutPtr = Value;
 
+	*ReturnValue = Value;
 	bResult = true;
 }
 
-void BuiltIns::SizeOf(TArguments* Arguments, bool& bResult)
+void BuiltIns::SizeOf(TArguments* Arguments, TObject* ReturnValue, bool& bResult)
 {
-	CHECK_ARG_COUNT(Arguments, 2);
+	CHECK_ARG_COUNT(Arguments, 1);
 
 	auto Arg1 = Arguments->at(0)->GetValue();
-	auto Arg2 = Arguments->at(1);
 
 	int Size = 0;
 	switch (Arg1.GetType())
@@ -134,11 +123,9 @@ void BuiltIns::SizeOf(TArguments* Arguments, bool& bResult)
 			bResult = false;
 			Logging::Error("Type does not have a 'size'.");
 			return;
-
 	}
-	auto Arg2Ptr = Arg2->GetValuePtr()->AsInt();
-	*Arg2Ptr = Size;
 
+	*ReturnValue = Size;
 	bResult = true;
 }
 
