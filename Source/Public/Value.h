@@ -8,8 +8,8 @@
 #include <tuple>
 #include <functional>
 
-#include "core.h"
-#include "logging.h"
+#include "Core.h"
+#include "Logging.h"
 
 using namespace Core;
 

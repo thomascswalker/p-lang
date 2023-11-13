@@ -1,4 +1,4 @@
-#include "logging.h"
+#include "../Public/Logging.h"
 
 Logging::Logger* Logging::Logger::Instance = Logging::Logger::GetInstance();
 

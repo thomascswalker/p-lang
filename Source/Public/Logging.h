@@ -100,3 +100,21 @@ namespace Logging
 		Logger::GetInstance()->Log(Fmt, _Error, std::forward<Types>(Args)...);
 	}
 } // namespace Logging
+
+static int		   IndentDepth = 0;
+static std::string GetIndent()
+{
+	return std::string(IndentDepth, ' ');
+}
+
+#ifdef _DEBUG
+	#define DEBUG_ENTER                                             \
+		Logging::Debug("{}Entering {}.", GetIndent(), __FUNCSIG__); \
+		IndentDepth++;
+	#define DEBUG_EXIT \
+		IndentDepth--; \
+		Logging::Debug("{}Exiting {}.", GetIndent(), __FUNCSIG__);
+#else
+	#define DEBUG_ENTER
+	#define DEBUG_EXIT
+#endif

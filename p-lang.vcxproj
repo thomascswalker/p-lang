@@ -135,32 +135,30 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="ast.cpp" />
-    <ClCompile Include="builtins.cpp" />
-    <ClCompile Include="core.cpp" />
-    <ClCompile Include="logging.cpp" />
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="value.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="ast.h" />
-    <ClInclude Include="builtins.h" />
-    <ClInclude Include="core.h" />
-    <ClInclude Include="logging.h" />
-    <ClInclude Include="token.h" />
-    <ClInclude Include="value.h" />
-  </ItemGroup>
-  <ItemGroup>
     <None Include=".clang-format" />
-    <None Include="bootstrap.p" />
     <None Include="cpp.hint" />
-    <None Include="functions.p" />
-    <None Include="io.p" />
+    <None Include="Examples\arithmetic.p" />
+    <None Include="Examples\bootstrap.p" />
+    <None Include="Examples\functions.p" />
+    <None Include="Examples\io.p" />
+    <None Include="Examples\simple.p" />
     <None Include="README.md" />
-    <None Include="simple.p" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="arithmetic.p" />
+    <ClCompile Include="Source\Main.cpp" />
+    <ClCompile Include="Source\Private\Ast.cpp" />
+    <ClCompile Include="Source\Private\BuiltIns.cpp" />
+    <ClCompile Include="Source\Private\Core.cpp" />
+    <ClCompile Include="Source\Private\Logging.cpp" />
+    <ClCompile Include="Source\Private\Value.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Source\Public\Ast.h" />
+    <ClInclude Include="Source\Public\BuiltIns.h" />
+    <ClInclude Include="Source\Public\Core.h" />
+    <ClInclude Include="Source\Public\Logging.h" />
+    <ClInclude Include="Source\Public\Token.h" />
+    <ClInclude Include="Source\Public\Value.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -13,46 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="ast.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="core.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="value.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="builtins.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="logging.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="token.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ast.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="core.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="value.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="builtins.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="logging.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
+    <Filter Include="Resource Files\Examples">
+      <UniqueIdentifier>{0563e4c0-190f-48e8-9423-8ec616cebf38}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md">
@@ -60,22 +23,60 @@
     </None>
     <None Include=".clang-format" />
     <None Include="cpp.hint" />
-    <None Include="io.p">
-      <Filter>Resource Files</Filter>
+    <None Include="Examples\functions.p">
+      <Filter>Resource Files\Examples</Filter>
     </None>
-    <None Include="functions.p">
-      <Filter>Resource Files</Filter>
+    <None Include="Examples\io.p">
+      <Filter>Resource Files\Examples</Filter>
     </None>
-    <None Include="bootstrap.p">
-      <Filter>Resource Files</Filter>
+    <None Include="Examples\simple.p">
+      <Filter>Resource Files\Examples</Filter>
     </None>
-    <None Include="simple.p">
-      <Filter>Resource Files</Filter>
+    <None Include="Examples\arithmetic.p">
+      <Filter>Resource Files\Examples</Filter>
+    </None>
+    <None Include="Examples\bootstrap.p">
+      <Filter>Resource Files\Examples</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="arithmetic.p">
-      <Filter>Resource Files</Filter>
-    </Text>
+    <ClCompile Include="Source\Main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Private\Value.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Private\Ast.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Private\BuiltIns.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Private\Core.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Private\Logging.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Source\Public\Core.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Public\Logging.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Public\Token.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Public\Value.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Public\Ast.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Public\BuiltIns.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

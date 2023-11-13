@@ -6,7 +6,7 @@
 #include <sstream>
 #include <map>
 
-#include "core.h"
+#include "Core.h"
 
 using namespace Core;
 

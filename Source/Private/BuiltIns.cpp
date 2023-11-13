@@ -1,7 +1,7 @@
 #include <fstream>
 
-#include "builtins.h"
-#include "core.h"
+#include "../Public/BuiltIns.h"
+#include "../Public/Core.h"
 
 using namespace BuiltIns;
 
