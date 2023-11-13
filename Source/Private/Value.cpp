@@ -480,9 +480,12 @@ TObject Values::TObject::operator/(const TObject& Other) const
 
 TObject Values::TObject::operator<(const TObject& Other) const { TOBJECT_COMPARE_OP_BODY(<) }
 
-TObject Values::TObject::operator>(const TObject& Other) const { TOBJECT_COMPARE_OP_BODY(>) }
+TObject Values::TObject::operator>(const TObject& Other) const
+{
+    TOBJECT_COMPARE_OP_BODY(>)
+}
 
-//bool Values::TObject::operator==(TObject& Other)
+// bool Values::TObject::operator==(TObject& Other)
 //{
 //	if (GetType() != Other.GetType())
 //	{
@@ -502,7 +505,7 @@ TObject Values::TObject::operator>(const TObject& Other) const { TOBJECT_COMPARE
 //	}
 //
 //	return false;
-//}
+// }
 
 bool Values::TObject::operator==(const TObject& Other) const
 {
@@ -540,4 +543,3 @@ bool Values::IsType(const TObject& Value, EValueType Type)
 {
     return Value.GetType() == Type;
 }
-

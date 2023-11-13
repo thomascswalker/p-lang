@@ -70,7 +70,7 @@ namespace Core
         };
         struct IterableWrapper
         {
-            T	 Iterable;
+            T    Iterable;
             auto begin() { return Iterator{ 0, std::begin(Iterable) }; }
             auto end() { return Iterator{ 0, std::end(Iterable) }; }
         };

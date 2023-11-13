@@ -189,7 +189,7 @@ bool Visitor::Visit(ASTCall* Node)
         TObject Object;
         TObject Result;
         TObject Index;
-        int		IndexValue;
+        int     IndexValue;
 
         CHECK_ACCEPT(Node->Args[0]);
 
@@ -224,7 +224,7 @@ bool Visitor::Visit(ASTCall* Node)
 
                 // Get the corresponding identifier name and pointer
                 std::string ArgName = Identifier->Name;
-                TObject*	ArgValue = CurrentFrame->GetIdentifier(ArgName);
+                TObject*    ArgValue = CurrentFrame->GetIdentifier(ArgName);
                 if (ArgValue == nullptr)
                 {
                     DEBUG_EXIT
@@ -357,7 +357,7 @@ bool Visitor::Visit(ASTWhile* Node)
 {
     DEBUG_ENTER
     TBoolValue bResult = true;
-    int		   Count = 1;
+    int        Count = 1;
 
     // GoIn();
     while (bResult)
@@ -631,10 +631,10 @@ ASTNode* AST::ParseAssignment()
     DEBUG_ENTER
 
     std::string Name = CurrentToken->Content; // Get the name
-    auto		NameToken = *CurrentToken;
-    Accept();					  // Consume name
+    auto        NameToken = *CurrentToken;
+    Accept();                     // Consume name
     auto Op = CurrentToken->Type; // Get the assignment operator
-    Accept();					  // Consume assignment operator
+    Accept();                     // Consume assignment operator
 
     auto Expr = ParseExpression();
     if (Op == PlusEquals || Op == MinusEquals || Op == MultEquals || Op == DivEquals)

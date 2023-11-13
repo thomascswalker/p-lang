@@ -55,8 +55,8 @@ void BuiltIns::Printf_Internal(TArguments* Arguments, TObject* ReturnValue, bool
     }
 
     // Get the format string (first argument)
-    std::string			   Fmt = Arg1.GetString();
-    size_t				   ArgCount = 0;
+    std::string            Fmt = Arg1.GetString();
+    size_t                 ArgCount = 0;
     std::string::size_type Pos = 0;
 
     while ((Pos = Fmt.find("{}", Pos)) != std::string::npos)
@@ -94,7 +94,7 @@ void BuiltIns::Printf_Internal(TArguments* Arguments, TObject* ReturnValue, bool
         Objects.push_back(Value.ToString());
     }
 
-    int			Index = 0; // Start at the second argument as the first is the fmt string itself
+    int         Index = 0; // Start at the second argument as the first is the fmt string itself
     std::string Out = Fmt;
     while (Out.find("{}") != std::string::npos)
     {
@@ -132,7 +132,7 @@ void BuiltIns::ReadFile_Internal(TArguments* Arguments, TObject* ReturnValue, bo
         return;
     }
 
-    auto		  FileName = Arg1.GetString();
+    auto          FileName = Arg1.GetString();
     std::ifstream Stream(FileName.GetValue().c_str());
     if (!Stream.good())
     {

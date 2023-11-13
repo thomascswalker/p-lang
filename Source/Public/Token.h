@@ -57,12 +57,12 @@ enum ETokenType
 static int TokenTypeCount = (int)ETokenType::Count;
 
 static std::map<ETokenType, std::string> TokenToStringMap{
-    { Eof, "/0" },		  { Type, "Type" },	   { Func, "func" },	 { Plus, "+" },			{ Minus, "-" },
-    { Multiply, "*" },	  { Divide, "/" },	   { Comma, "," },		 { Not, "!" },			{ Assign, "=" },
-    { Equals, "==" },	  { NotEquals, "!=" }, { Semicolon, ";" },	 { LessThan, "<" },		{ GreaterThan, ">" },
-    { LParen, "(" },	  { RParen, ")" },	   { LBracket, "[" },	 { RBracket, "]" },		{ LCurly, "{" },
-    { RCurly, "}" },	  { If, "if" },		   { Else, "else" },	 { For, "for" },		{ While, "while" },
-    { Return, "return" }, { Period, "." },	   { PlusEquals, "+=" }, { MinusEquals, "-=" }, { MultEquals, "*=" },
+    { Eof, "/0" },        { Type, "Type" },    { Func, "func" },     { Plus, "+" },         { Minus, "-" },
+    { Multiply, "*" },    { Divide, "/" },     { Comma, "," },       { Not, "!" },          { Assign, "=" },
+    { Equals, "==" },     { NotEquals, "!=" }, { Semicolon, ";" },   { LessThan, "<" },     { GreaterThan, ">" },
+    { LParen, "(" },      { RParen, ")" },     { LBracket, "[" },    { RBracket, "]" },     { LCurly, "{" },
+    { RCurly, "}" },      { If, "if" },        { Else, "else" },     { For, "for" },        { While, "while" },
+    { Return, "return" }, { Period, "." },     { PlusEquals, "+=" }, { MinusEquals, "-=" }, { MultEquals, "*=" },
     { DivEquals, "/=" },  { PlusPlus, "++" },  { MinusMinus, "--" }
 };
 
@@ -86,9 +86,9 @@ const std::vector<std::string> TYPES{
     "string",
     "bool",
 };
-const std::vector<std::string>		   KEYWORDS{ "if", "else", "for", "while", "return" };
+const std::vector<std::string>         KEYWORDS{ "if", "else", "for", "while", "return" };
 const std::map<ETokenType, ETokenType> BLOCK_PAIRS{ { LParen, RParen }, { LBracket, RBracket }, { LCurly, RCurly } };
-const std::vector<std::string>		   FUNCTION{ "function", "func", "fn", "def" };
+const std::vector<std::string>         FUNCTION{ "function", "func", "fn", "def" };
 
 // Forward decl
 struct Token;
@@ -99,11 +99,11 @@ typedef std::vector<std::shared_ptr<Token>> TokenArray;
 struct Token
 {
     // Properties
-    ETokenType	Type;
+    ETokenType  Type;
     std::string Content = "";
     std::string Source = "";
-    int			Line = 1;
-    int			Column = 0;
+    int         Line = 1;
+    int         Column = 0;
 
     // Constructors
     Token() : Type(Invalid){};
@@ -122,17 +122,17 @@ struct Token
 
 class Lexer
 {
-    std::string				 Source = "";
-    int						 Position = 0;
-    int						 Line = 1;
-    int						 Column = 0;
+    std::string              Source = "";
+    int                      Position = 0;
+    int                      Line = 1;
+    int                      Column = 0;
     std::vector<std::string> Lines;
 
-    char		GetCurrentChar() { return Source[Position]; }
-    char		GetNextChar() { return Source[Position + 1]; }
+    char        GetCurrentChar() { return Source[Position]; }
+    char        GetNextChar() { return Source[Position + 1]; }
     std::string GetPair() { return Source.substr(Position, 2); }
     std::string GetRemaining() { return Source.substr(Position); }
-    const char	Advance(int Offset = 1)
+    const char  Advance(int Offset = 1)
     {
         Position += Offset;
         Column += Offset;
@@ -141,7 +141,7 @@ class Lexer
     bool IsWhitespace()
     {
         std::string Slice = GetRemaining();
-        auto		T = GetPair();
+        auto        T = GetPair();
         if (T == "//")
         {
             Advance(2); // Consume '//'
@@ -210,7 +210,7 @@ public:
         // Operators, blocks
         if (IsSymbol(C))
         {
-            ETokenType	Type;
+            ETokenType  Type;
             std::string Op;
             // Equals operator
             if (Contains(OPERATORS, C) && Contains(OPERATORS, GetNextChar()))

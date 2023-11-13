@@ -22,9 +22,9 @@ namespace Logging
         Logger(){};
 
     public:
-        static Logger*	   Instance;
-        static int		   Line;
-        static int		   Column;
+        static Logger*     Instance;
+        static int         Line;
+        static int         Column;
         static std::string Source;
 
         Logger(Logger& Other) = delete;
@@ -101,7 +101,7 @@ namespace Logging
     }
 } // namespace Logging
 
-static int		   IndentDepth = 0;
+static int         IndentDepth = 0;
 static std::string GetIndent()
 {
     return std::string(IndentDepth, ' ');
