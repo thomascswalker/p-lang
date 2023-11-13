@@ -1,3 +1,3 @@
 // Read the file
-source = read_file(".\simple.p");
+source = read_file(".\examples\simple.p");
 print(source);
