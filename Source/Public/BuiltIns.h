@@ -1,7 +1,7 @@
 #pragma once
 
-#include "logging.h"
-#include "value.h"
+#include "Logging.h"
+#include "Value.h"
 
 using namespace Values;
 

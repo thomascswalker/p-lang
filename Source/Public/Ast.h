@@ -7,39 +7,13 @@
 #include <format>
 #include <any>
 
-#include "builtins.h"
-#include "logging.h"
-#include "token.h"
-#include "value.h"
+#include "BuiltIns.h"
+#include "Logging.h"
+#include "Token.h"
+#include "Value.h"
 
 using namespace Core;
 using namespace Values;
-
-static int		   Depth = 0;
-static std::string GetIndent()
-{
-	std::string Indent;
-	int			I = 0;
-	while (I < Depth)
-	{
-		Indent += "  ";
-		I++;
-	}
-	return Indent;
-}
-static int WHILE_MAX_LOOP = 10000;
-
-#ifdef _DEBUG
-	#define DEBUG_ENTER                                             \
-		Logging::Debug("{}Entering {}.", GetIndent(), __FUNCSIG__); \
-		Depth++;
-	#define DEBUG_EXIT \
-		Depth--;       \
-		Logging::Debug("{}Exiting {}.", GetIndent(), __FUNCSIG__);
-#else
-	#define DEBUG_ENTER
-	#define DEBUG_EXIT
-#endif
 
 #define CHECK_ERRORS                                                             \
 	if (Logging::Logger::GetInstance()->GetCount(Logging::LogLevel::_Error) > 0) \
@@ -48,6 +22,7 @@ static int WHILE_MAX_LOOP = 10000;
 		return false;                                                            \
 	}
 
+static int		   WHILE_MAX_LOOP = 100000;
 static int		   LINE;
 static int		   COLUMN;
 static std::string SOURCE;

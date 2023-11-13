@@ -1,6 +1,6 @@
 #include <functional>
 
-#include "ast.h"
+#include "../Public/Ast.h"
 
 using namespace Core;
 

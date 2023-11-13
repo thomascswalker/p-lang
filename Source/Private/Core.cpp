@@ -2,7 +2,7 @@
 #include <fstream>
 #include <format>
 
-#include "core.h"
+#include "../Public/Core.h"
 
 std::string Core::ReadFile(const std::string& FileName)
 {
