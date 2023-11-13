@@ -1,10 +1,9 @@
 // Read the next token at the specified index.
 // i (int): The current index.
-def next(i)
+
+def next(idx)
 {
-    c = index_of(source, i);
-    append(tokens, c);
-    return c;
+    return index_of(source, idx);
 }
 
 // Read the file
@@ -17,7 +16,7 @@ tokens = [];
 while (i < size_of(source))
 {
     r = next(i);
-    print(r);
+    append(tokens, r);
     i += 1;
 }
 

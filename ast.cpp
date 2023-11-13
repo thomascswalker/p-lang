@@ -13,90 +13,10 @@ static std::string FormatSource()
 // Visitors //
 //////////////
 
-void Visitor::Push(const TObject& Value)
-{
-	if (!Value.IsValid())
-	{
-		Logging::Error("Cannot push null object.\n{}", FormatSource());
-		return;
-	}
-	Logging::Debug("PUSH: '{}'", Value.ToString());
-	Stack.push_back(Value);
-}
-
-void Visitor::Push(TObject* Value)
-{
-	if (Value == nullptr)
-	{
-		Logging::Error("Cannot push null object.\n{}", FormatSource());
-		return;
-	}
-	Logging::Debug("PUSH: '{}'", Value->ToString());
-	Stack.push_back(*Value);
-}
-
-TObject Visitor::Pop()
-{
-	if (Stack.size() == 0)
-	{
-		Logging::Error("Cannot push null object.\n{}", FormatSource());
-		return TObject();
-	}
-	TObject Value = Stack.back();
-	Logging::Debug("POP: '{}'", Value.ToString());
-	Stack.pop_back();
-	return Value;
-}
-
-TObject Visitor::Back()
-{
-	if (Stack.size() == 0)
-	{
-		Logging::Error("Stack is empty.");
-		return TObject();
-	}
-	return Stack.back();
-}
-
-bool Visitor::IsIdentifier(const std::string& Name)
-{
-	auto Variable = GetIdentifier(Name);
-	return (Variable.GetType() != NullType);
-}
-
 bool Visitor::IsFunctionDeclared(const std::string& Name)
 {
 	auto Func = GetFunction(Name);
 	return (Func != nullptr);
-}
-
-TObject Visitor::GetIdentifier(const std::string& Name)
-{
-	for (const auto& [K, V] : Identifiers)
-	{
-		if (K == Name)
-		{
-			return Identifiers.at(K);
-		}
-	}
-	return TObject();
-}
-
-TObject* Visitor::GetIdentifierPtr(const std::string& Name)
-{
-	for (const auto& [K, V] : Identifiers)
-	{
-		if (K == Name)
-		{
-			return &Identifiers.at(K);
-		}
-	}
-	return nullptr;
-}
-
-void Visitor::SetIdentifierValue(const std::string& Name, const TObject& InValue)
-{
-	Identifiers[Name] = InValue;
 }
 
 ASTFunction* Visitor::GetFunction(const std::string& Name)
@@ -115,28 +35,9 @@ bool Visitor::Visit(ASTValue* Node)
 {
 	DEBUG_ENTER
 
-	switch (Node->Value.GetType())
-	{
-		case BoolType :
-			Push(*Node->AsBool());
-			break;
-		case IntType :
-			Push(*Node->AsInt());
-			break;
-		case FloatType :
-			Push(*Node->AsFloat());
-			break;
-		case StringType :
-			Push(*Node->AsString());
-			break;
-		case ArrayType :
-			Push(*Node->AsArray());
-			break;
-		default :
-			Logging::Error("Invalid type.");
-			DEBUG_EXIT
-			return false;
-	}
+	auto Value = Node->GetValue();
+	CurrentFrame->Push(Value);
+
 	DEBUG_EXIT
 	return true;
 }
@@ -145,7 +46,7 @@ bool Visitor::Visit(ASTIdentifier* Node)
 {
 	DEBUG_ENTER
 
-	Node->Value = GetIdentifier(Node->Name);
+	Node->Value = *CurrentFrame->GetIdentifier(Node->Name);
 	if (Node->Value.GetType() == NullType)
 	{
 		Logging::Error("'{}' is undefined.", Node->Name);
@@ -156,7 +57,7 @@ bool Visitor::Visit(ASTIdentifier* Node)
 
 	// If the variable is found, push the variable's value to the stack
 	Logging::Debug("'{}' is {}.", Node->Name, Node->Value.ToString());
-	Push(Node->Value);
+	CurrentFrame->Push(Node->Value);
 	DEBUG_EXIT
 	return true;
 }
@@ -166,7 +67,7 @@ bool Visitor::Visit(ASTUnaryExpr* Node)
 	DEBUG_ENTER
 	Node->Right->Accept(*this);
 	CHECK_ERRORS
-	auto CurrentValue = Pop();
+	auto CurrentValue = CurrentFrame->Pop();
 
 	switch (Node->Op)
 	{
@@ -181,7 +82,7 @@ bool Visitor::Visit(ASTUnaryExpr* Node)
 			CHECK_ERRORS
 	}
 
-	Push(CurrentValue);
+	CurrentFrame->Push(CurrentValue);
 	DEBUG_EXIT
 	return true;
 }
@@ -194,14 +95,14 @@ bool Visitor::Visit(ASTBinOp* Node)
 	CHECK_ERRORS
 
 	// After visiting the left value, pop it off the stack and store it here
-	TObject Left = Pop();
+	TObject Left = CurrentFrame->Pop();
 
 	// Visit the right value
 	Node->Right->Accept(*this);
 	CHECK_ERRORS
 
 	// After visiting the right value, pop it off the stack and store it here
-	TObject Right = Pop();
+	TObject Right = CurrentFrame->Pop();
 
 	// Execute the operator on the left and right value
 	TObject Result;
@@ -238,7 +139,7 @@ bool Visitor::Visit(ASTBinOp* Node)
 	}
 
 	// Push the resulting value to the stack
-	Push(Result);
+	CurrentFrame->Push(Result);
 	Logging::Debug("BINOP: {} {} {} = {}", Left.ToString(), TokenToStringMap[Node->Op], Right.ToString(),
 				   Result.ToString());
 	DEBUG_EXIT
@@ -252,14 +153,7 @@ bool Visitor::Visit(ASTAssignment* Node)
 	Node->Right->Accept(*this);
 	CHECK_ERRORS
 
-	if (Stack.size() == 0)
-	{
-		Logging::Error("Assignment right-hand is null.\n{}", FormatSource());
-		DEBUG_EXIT
-		return false;
-	}
-
-	TObject Value = Pop();
+	TObject Value = CurrentFrame->Pop();
 	CHECK_ERRORS
 
 	if (Value.GetType() == NullType)
@@ -269,7 +163,7 @@ bool Visitor::Visit(ASTAssignment* Node)
 		return false;
 	}
 
-	SetIdentifierValue(Node->Name, Value);
+	CurrentFrame->SetIdentifier(Node->Name, &Value);
 
 	Logging::Debug("ASSIGN: {} <= {}", Node->Name, Value.ToString());
 	DEBUG_EXIT
@@ -295,7 +189,7 @@ bool Visitor::Visit(ASTCall* Node)
 		Node->Args[0]->Accept(*this);
 		CHECK_ERRORS
 
-		Index = Pop();
+		Index = CurrentFrame->Pop();
 		CHECK_ERRORS
 		IndexValue = Index.GetInt().GetValue();
 
@@ -303,12 +197,12 @@ bool Visitor::Visit(ASTCall* Node)
 		{
 			case StringType :
 				Result = Object.AsString()->At(IndexValue);
-				Push(Result);
+				CurrentFrame->Push(Result);
 				break;
 			case ArrayType :
 				auto Temp = Object.AsArray()->At(IndexValue);
 				Result = *Temp;
-				Push(Result);
+				CurrentFrame->Push(Result);
 				break;
 		}
 	}
@@ -322,11 +216,16 @@ bool Visitor::Visit(ASTCall* Node)
 			if (Cast<ASTIdentifier>(Arg))
 			{
 				// Cast to an identifier
-				auto Identifier = Cast<ASTIdentifier>(Arg);
+				ASTIdentifier* Identifier = Cast<ASTIdentifier>(Arg);
 
 				// Get the corresponding identifier name and pointer
-				auto ArgName = Identifier->Name;
-				auto ArgValue = GetIdentifierPtr(Identifier->Name);
+				std::string ArgName = Identifier->Name;
+				TObject* ArgValue = CurrentFrame->GetIdentifier(ArgName);
+				if (ArgValue == nullptr)
+				{
+					DEBUG_EXIT
+					CHECK_ERRORS
+				}
 
 				// Add this as a new variable argument. The key here is the
 				// ArgValue is a pointer to the `Identifiers` array so we can
@@ -341,7 +240,7 @@ bool Visitor::Visit(ASTCall* Node)
 				// accept and pop to get a copy of the value.
 				Arg->Accept(*this);
 				CHECK_ERRORS
-				auto ArgValue = Pop();
+				auto ArgValue = CurrentFrame->Pop();
 				CHECK_ERRORS
 
 				// Add the copy of the literal value to the argument list.
@@ -376,7 +275,7 @@ bool Visitor::Visit(ASTCall* Node)
 			// If the function is not a void return type, push the return value
 			if (ReturnValue.GetType() != NullType)
 			{
-				Push(&ReturnValue);
+				CurrentFrame->Push(ReturnValue);
 			}
 		}
 		// Handle user-defined functions
@@ -393,14 +292,19 @@ bool Visitor::Visit(ASTCall* Node)
 				CHECK_ERRORS
 			}
 
+			GoIn();
+
 			// Push arguments to the variable table
 			for (const auto& [Index, InArg] : Enumerate(InArgs))
 			{
-				SetIdentifierValue(Func->Args[Index], InArg->GetValue());
+				auto Value = InArg->GetValue();
+				CurrentFrame->SetIdentifier(Func->Args[Index], &Value);
 			}
 
 			// Execute the function body
 			Func->Body->Accept(*this);
+
+			GoOut();
 		}
 		else
 		{
@@ -421,7 +325,7 @@ bool Visitor::Visit(ASTIf* Node)
 	Node->Cond->Accept(*this);
 	CHECK_ERRORS
 
-	bResult = Pop();
+	bResult = CurrentFrame->Pop();
 	if (bResult.GetType() != BoolType)
 	{
 		Logging::Error("Did not get a bool result inside if conditional.");
@@ -431,11 +335,15 @@ bool Visitor::Visit(ASTIf* Node)
 	Logging::Debug("IF: {}", bResult.GetBool().GetValue() ? "true" : "false");
 	if (bResult.GetBool().GetValue())
 	{
+		GoIn();
 		Node->TrueBody->Accept(*this);
+		GoOut();
 	}
 	else
 	{
+		GoIn();
 		Node->FalseBody->Accept(*this);
+		GoOut();
 	}
 	DEBUG_EXIT
 	return true;
@@ -452,13 +360,16 @@ bool Visitor::Visit(ASTWhile* Node)
 		Node->Cond->Accept(*this);
 		CHECK_ERRORS
 
-		bResult = Pop().GetBool();
+		bResult = CurrentFrame->Pop().GetBool();
 		Logging::Debug("WHILE ({}): {}", Count, bResult ? "true" : "false");
 		if (!bResult)
 		{
 			break;
 		}
+
+		GoIn();
 		Node->Body->Accept(*this);
+		GoOut();
 		CHECK_ERRORS
 
 		Count++;
@@ -492,9 +403,9 @@ bool Visitor::Visit(ASTReturn* Node)
 	Node->Expr->Accept(*this);
 	if (Stack.size() > 0)
 	{
-		TObject Value = Pop();
+		TObject Value = CurrentFrame->Pop();
 		CHECK_ERRORS
-		Push(Value);
+		CurrentFrame->Push(Value);
 	}
 	return true;
 }
