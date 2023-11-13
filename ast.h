@@ -93,27 +93,32 @@ struct Frame
 {
 	std::vector<TObject>		   Stack;
 	std::map<std::string, TObject> Identifiers;
-	Frame*						   Outer = nullptr;
 
-	Frame* CreateInnerFrame() { return new Frame(); }
+	Frame* Outer = nullptr;
+	Frame* Inner;
+
+	Frame* CreateInnerFrame()
+	{
+		Inner = new Frame();
+		Inner->Outer = this;
+		return Inner;
+	}
 
 	TObject* GetIdentifier(const std::string& Name)
 	{
-		DEBUG_ENTER
 		TObject* Result = nullptr;
 
 		for (const auto& [K, V] : Identifiers)
 		{
 			if (K == Name)
 			{
-				DEBUG_EXIT
 				return Result = &Identifiers.at(K);
 			}
 		}
 
 		if (Outer != nullptr)
 		{
-			DEBUG_EXIT
+			//std::cout << std::format("Looking up the stack for {}", Name) << std::endl;
 			return Outer->GetIdentifier(Name);
 		}
 
@@ -126,18 +131,10 @@ struct Frame
 		return Ident != nullptr;
 	}
 
-	void SetIdentifier(const std::string& Name, TObject* Value)
+	void SetIdentifier(const std::string& Name, const TObject& Value)
 	{
 		DEBUG_ENTER
-		auto Ptr = GetIdentifier(Name);
-		if (!Ptr)
-		{
-			Identifiers[Name] = *Value;
-		}
-		else
-		{
-			*Ptr = *Value;
-		}
+		Identifiers[Name] = Value;
 		DEBUG_EXIT
 	}
 
@@ -169,7 +166,15 @@ struct Frame
 		return Result;
 	}
 
-	bool IsEmpty() { return Stack.size() == 0; }
+	bool IsEmpty()
+	{
+		int Total = Stack.size();
+		if (Outer != nullptr)
+		{
+			Total += Stack.size();
+		}
+		return Total == 0;
+	}
 	void PrintStack()
 	{
 		for (const auto& V : Stack)
@@ -185,31 +190,30 @@ class Visitor
 	ASTFunction* GetFunction(const std::string& Name);
 
 public:
-	std::map<std::string, TObject>		Identifiers;
 	std::map<std::string, ASTFunction*> Functions;
 
-	std::vector<TObject> Stack;
-	Frame				 RootFrame;
-	Frame*				 CurrentFrame;
+	int				   FrameDepth = 0;
+	Frame			   RootFrame;
+	Frame*			   CurrentFrame;
+	std::vector<Frame> Frames;
 
 	Visitor()
 	{
 		RootFrame = Frame();
-		CurrentFrame = &RootFrame;
+		Frames.push_back(RootFrame);
+		CurrentFrame = &Frames.back();
 	};
 	Visitor(Visitor& Other)
 	{
-		Identifiers = Other.Identifiers;
-		Stack = Other.Stack;
 		RootFrame = Other.RootFrame;
 		CurrentFrame = Other.CurrentFrame;
+		Frames = Other.Frames;
 	}
 	Visitor(const Visitor& Other)
 	{
-		Identifiers = Other.Identifiers;
-		Stack = Other.Stack;
 		RootFrame = Other.RootFrame;
 		CurrentFrame = Other.CurrentFrame;
+		Frames = Other.Frames;
 	}
 	bool Visit(ASTValue* Node);
 	bool Visit(ASTIdentifier* Node);
@@ -228,17 +232,21 @@ public:
 
 	void GoIn()
 	{
-		// Frame* Inner = CurrentFrame->CreateInnerFrame();
-		// Inner->Outer = CurrentFrame;
-		// CurrentFrame = Inner;
+		CurrentFrame->CreateInnerFrame();
+		CurrentFrame = CurrentFrame->Inner;
+		FrameDepth += 1;
+		//std::cout << std::format("In: {}", FrameDepth) << std::endl;
 	}
 
 	void GoOut()
 	{
-		// if (CurrentFrame->Outer != nullptr)
-		//{
-		//	CurrentFrame = CurrentFrame->Outer;
-		// }
+		if (CurrentFrame->Outer != nullptr)
+		{
+			CurrentFrame = CurrentFrame->Outer;
+			delete CurrentFrame->Inner;
+			FrameDepth -= 1;
+			//std::cout << std::format("Out: {}\n-----\n", FrameDepth) << std::endl;
+		}
 	}
 };
 

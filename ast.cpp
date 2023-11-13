@@ -46,7 +46,15 @@ bool Visitor::Visit(ASTIdentifier* Node)
 {
 	DEBUG_ENTER
 
-	Node->Value = *CurrentFrame->GetIdentifier(Node->Name);
+	auto T = CurrentFrame->GetIdentifier(Node->Name);
+	if (T == nullptr)
+	{
+		Logging::Error("'{}' is undefined.", Node->Name);
+		auto Context = Node->GetContext();
+		Logging::Error("line {}, column {}", Context.Line, Context.Column);
+		CHECK_ERRORS
+	}
+	Node->Value = *T;
 	if (Node->Value.GetType() == NullType)
 	{
 		Logging::Error("'{}' is undefined.", Node->Name);
@@ -151,7 +159,7 @@ bool Visitor::Visit(ASTAssignment* Node)
 	DEBUG_ENTER
 
 	Node->Right->Accept(*this);
-	CHECK_ERRORS
+	//CHECK_ERRORS
 
 	TObject Value = CurrentFrame->Pop();
 	CHECK_ERRORS
@@ -163,7 +171,7 @@ bool Visitor::Visit(ASTAssignment* Node)
 		return false;
 	}
 
-	CurrentFrame->SetIdentifier(Node->Name, &Value);
+	CurrentFrame->SetIdentifier(Node->Name, Value);
 
 	Logging::Debug("ASSIGN: {} <= {}", Node->Name, Value.ToString());
 	DEBUG_EXIT
@@ -220,7 +228,7 @@ bool Visitor::Visit(ASTCall* Node)
 
 				// Get the corresponding identifier name and pointer
 				std::string ArgName = Identifier->Name;
-				TObject* ArgValue = CurrentFrame->GetIdentifier(ArgName);
+				TObject*	ArgValue = CurrentFrame->GetIdentifier(ArgName);
 				if (ArgValue == nullptr)
 				{
 					DEBUG_EXIT
@@ -292,19 +300,19 @@ bool Visitor::Visit(ASTCall* Node)
 				CHECK_ERRORS
 			}
 
-			GoIn();
+			//GoIn();
 
 			// Push arguments to the variable table
 			for (const auto& [Index, InArg] : Enumerate(InArgs))
 			{
 				auto Value = InArg->GetValue();
-				CurrentFrame->SetIdentifier(Func->Args[Index], &Value);
+				CurrentFrame->SetIdentifier(Func->Args[Index], Value);
 			}
 
 			// Execute the function body
 			Func->Body->Accept(*this);
 
-			GoOut();
+			//GoOut();
 		}
 		else
 		{
@@ -335,15 +343,15 @@ bool Visitor::Visit(ASTIf* Node)
 	Logging::Debug("IF: {}", bResult.GetBool().GetValue() ? "true" : "false");
 	if (bResult.GetBool().GetValue())
 	{
-		GoIn();
+		//GoIn();
 		Node->TrueBody->Accept(*this);
-		GoOut();
+		//GoOut();
 	}
 	else
 	{
-		GoIn();
+		//GoIn();
 		Node->FalseBody->Accept(*this);
-		GoOut();
+		//GoOut();
 	}
 	DEBUG_EXIT
 	return true;
@@ -355,8 +363,10 @@ bool Visitor::Visit(ASTWhile* Node)
 	TBoolValue bResult = true;
 	int		   Count = 1;
 
+		GoIn();
 	while (bResult)
 	{
+		//std::cout << std::format("While count: {}", Count) << std::endl;
 		Node->Cond->Accept(*this);
 		CHECK_ERRORS
 
@@ -367,18 +377,19 @@ bool Visitor::Visit(ASTWhile* Node)
 			break;
 		}
 
-		GoIn();
 		Node->Body->Accept(*this);
-		GoOut();
+
 		CHECK_ERRORS
 
 		Count++;
 		if (Count == WHILE_MAX_LOOP)
 		{
 			Logging::Error("ERROR: Hit max loop count ({}).", WHILE_MAX_LOOP);
+
 			CHECK_ERRORS
 		}
 	}
+		GoOut();
 	DEBUG_EXIT
 	return true;
 }
@@ -401,7 +412,7 @@ bool Visitor::Visit(ASTFunction* Node)
 bool Visitor::Visit(ASTReturn* Node)
 {
 	Node->Expr->Accept(*this);
-	if (Stack.size() > 0)
+	if (CurrentFrame->Stack.size() > 0)
 	{
 		TObject Value = CurrentFrame->Pop();
 		CHECK_ERRORS
@@ -425,7 +436,7 @@ bool Visitor::Visit(ASTBody* Node)
 void Visitor::Dump()
 {
 	std::cout << "Variables:" << std::endl;
-	for (const auto& [K, V] : Identifiers)
+	for (const auto& [K, V] : CurrentFrame->Identifiers)
 	{
 		std::cout << K << " : " << V.ToString() << std::endl;
 	}
