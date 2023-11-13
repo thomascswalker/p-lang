@@ -52,7 +52,7 @@ bool Visitor::Visit(ASTIdentifier* Node)
 		Logging::Error("'{}' is undefined.", Node->Name);
 		auto Context = Node->GetContext();
 		Logging::Error("line {}, column {}", Context.Line, Context.Column);
-		CHECK_ERRORS
+		return false;
 	}
 	Node->Value = *T;
 	if (Node->Value.GetType() == NullType)
@@ -60,7 +60,7 @@ bool Visitor::Visit(ASTIdentifier* Node)
 		Logging::Error("'{}' is undefined.", Node->Name);
 		auto Context = Node->GetContext();
 		Logging::Error("line {}, column {}", Context.Line, Context.Column);
-		CHECK_ERRORS
+		return false;
 	}
 
 	// If the variable is found, push the variable's value to the stack
@@ -73,8 +73,7 @@ bool Visitor::Visit(ASTIdentifier* Node)
 bool Visitor::Visit(ASTUnaryExpr* Node)
 {
 	DEBUG_ENTER
-	Node->Right->Accept(*this);
-	CHECK_ERRORS
+	CHECK_ACCEPT(Node->Right);
 	auto CurrentValue = CurrentFrame->Pop();
 
 	switch (Node->Op)
@@ -99,15 +98,13 @@ bool Visitor::Visit(ASTBinOp* Node)
 {
 	DEBUG_ENTER
 	// Visit the left value
-	Node->Left->Accept(*this);
-	CHECK_ERRORS
+	CHECK_ACCEPT(Node->Left);
 
 	// After visiting the left value, pop it off the stack and store it here
 	TObject Left = CurrentFrame->Pop();
 
 	// Visit the right value
-	Node->Right->Accept(*this);
-	CHECK_ERRORS
+	CHECK_ACCEPT(Node->Right);
 
 	// After visiting the right value, pop it off the stack and store it here
 	TObject Right = CurrentFrame->Pop();
@@ -158,8 +155,8 @@ bool Visitor::Visit(ASTAssignment* Node)
 {
 	DEBUG_ENTER
 
-	Node->Right->Accept(*this);
-	//CHECK_ERRORS
+	CHECK_ACCEPT(Node->Right);
+	// CHECK_ERRORS
 
 	TObject Value = CurrentFrame->Pop();
 	CHECK_ERRORS
@@ -194,8 +191,7 @@ bool Visitor::Visit(ASTCall* Node)
 		TObject Index;
 		int		IndexValue;
 
-		Node->Args[0]->Accept(*this);
-		CHECK_ERRORS
+		CHECK_ACCEPT(Node->Args[0]);
 
 		Index = CurrentFrame->Pop();
 		CHECK_ERRORS
@@ -300,7 +296,7 @@ bool Visitor::Visit(ASTCall* Node)
 				CHECK_ERRORS
 			}
 
-			//GoIn();
+			// GoIn();
 
 			// Push arguments to the variable table
 			for (const auto& [Index, InArg] : Enumerate(InArgs))
@@ -310,9 +306,9 @@ bool Visitor::Visit(ASTCall* Node)
 			}
 
 			// Execute the function body
-			Func->Body->Accept(*this);
+			CHECK_ACCEPT(Func->Body);
 
-			//GoOut();
+			// GoOut();
 		}
 		else
 		{
@@ -330,8 +326,7 @@ bool Visitor::Visit(ASTIf* Node)
 	DEBUG_ENTER
 	TObject bResult;
 
-	Node->Cond->Accept(*this);
-	CHECK_ERRORS
+	CHECK_ACCEPT(Node->Cond);
 
 	bResult = CurrentFrame->Pop();
 	if (bResult.GetType() != BoolType)
@@ -343,15 +338,16 @@ bool Visitor::Visit(ASTIf* Node)
 	Logging::Debug("IF: {}", bResult.GetBool().GetValue() ? "true" : "false");
 	if (bResult.GetBool().GetValue())
 	{
-		//GoIn();
-		Node->TrueBody->Accept(*this);
-		//GoOut();
+		// GoIn();
+		CHECK_ACCEPT(Node->TrueBody);
+
+		// GoOut();
 	}
 	else
 	{
-		//GoIn();
-		Node->FalseBody->Accept(*this);
-		//GoOut();
+		// GoIn();
+		CHECK_ACCEPT(Node->FalseBody);
+		// GoOut();
 	}
 	DEBUG_EXIT
 	return true;
@@ -363,12 +359,12 @@ bool Visitor::Visit(ASTWhile* Node)
 	TBoolValue bResult = true;
 	int		   Count = 1;
 
-		GoIn();
+	// GoIn();
 	while (bResult)
 	{
-		//std::cout << std::format("While count: {}", Count) << std::endl;
-		Node->Cond->Accept(*this);
-		CHECK_ERRORS
+
+		// std::cout << std::format("While count: {}", Count) << std::endl;
+		CHECK_ACCEPT(Node->Cond);
 
 		bResult = CurrentFrame->Pop().GetBool();
 		Logging::Debug("WHILE ({}): {}", Count, bResult ? "true" : "false");
@@ -377,9 +373,7 @@ bool Visitor::Visit(ASTWhile* Node)
 			break;
 		}
 
-		Node->Body->Accept(*this);
-
-		CHECK_ERRORS
+		CHECK_ACCEPT(Node->Body);
 
 		Count++;
 		if (Count == WHILE_MAX_LOOP)
@@ -389,7 +383,8 @@ bool Visitor::Visit(ASTWhile* Node)
 			CHECK_ERRORS
 		}
 	}
-		GoOut();
+	// GoOut();
+
 	DEBUG_EXIT
 	return true;
 }

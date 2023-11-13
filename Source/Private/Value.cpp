@@ -307,6 +307,11 @@ TArrayValue Values::TMapValue::GetValues() const
 	return TArrayValue(Values);
 }
 
+bool Values::TMapValue::HasKey(const std::string& Key) const
+{
+	return Value.find(Key) != Value.end();
+}
+
 TObject Values::TObject::operator+(const TObject& Other) const
 {
 	switch (Type)
@@ -477,46 +482,58 @@ TObject Values::TObject::operator<(const TObject& Other) const { TOBJECT_COMPARE
 
 TObject Values::TObject::operator>(const TObject& Other) const { TOBJECT_COMPARE_OP_BODY(>) }
 
-TBoolValue Values::TObject::operator==(TObject& Other)
+//bool Values::TObject::operator==(TObject& Other)
+//{
+//	if (GetType() != Other.GetType())
+//	{
+//		return false;
+//	}
+//
+//	switch (GetType())
+//	{
+//		case BoolType :
+//			return AsBool()->GetValue() == Other.AsBool()->GetValue();
+//		case IntType :
+//			return AsInt()->GetValue() == Other.AsInt()->GetValue();
+//		case FloatType :
+//			return AsFloat()->GetValue() == Other.AsFloat()->GetValue();
+//		case StringType :
+//			return AsString()->GetValue() == Other.AsString()->GetValue();
+//	}
+//
+//	return false;
+//}
+
+bool Values::TObject::operator==(const TObject& Other) const
 {
-	if (Type == Other.Type)
+	if (GetType() != Other.GetType())
 	{
-		switch (Type)
-		{
-			case BoolType :
-				return GetBool().GetValue() == Other.GetBool().GetValue();
-			case IntType :
-				return GetInt().GetValue() == Other.GetInt().GetValue();
-			case FloatType :
-				return GetFloat().GetValue() == Other.GetFloat().GetValue();
-			case StringType :
-				return GetString().GetValue() == Other.GetString().GetValue();
-			default :
-				return false;
-		}
+		return false;
 	}
+
+	switch (GetType())
+	{
+		case BoolType :
+			return AsBool()->GetValue() == Other.AsBool()->GetValue();
+		case IntType :
+			return AsInt()->GetValue() == Other.AsInt()->GetValue();
+		case FloatType :
+			return AsFloat()->GetValue() == Other.AsFloat()->GetValue();
+		case StringType :
+			return AsString()->GetValue() == Other.AsString()->GetValue();
+	}
+
 	return false;
 }
 
-TBoolValue Values::TObject::operator==(const TObject& Other) const
-{
-	return *this == Other;
-}
-
-TBoolValue Values::TObject::operator!=(const TObject& Other) const
+bool Values::TObject::operator!=(const TObject& Other) const
 {
 	return !(*this == Other);
 }
 
-TBoolValue Values::TObject::operator!() const
+bool Values::TObject::operator!() const
 {
 	return !AsBool()->GetValue();
-}
-
-std::ostringstream& Values::operator<<(std::ostringstream& Stream, const TObject& Object)
-{
-	//Stream << std::string(Object.ToString().data(), Object.ToString().size());
-	return Stream;
 }
 
 bool Values::IsType(const TObject& Value, EValueType Type)

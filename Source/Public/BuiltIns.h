@@ -9,12 +9,17 @@ typedef std::map<std::string, TFunction> TFunctionMap;
 namespace BuiltIns
 {
 	// Forward declaration of all built-in functions
-	static void PrintInternal(TArguments* Arguments, TObject* ReturnValue, bool& bResult);
-	static void AppendInternal(TArguments* Arguments, TObject* ReturnValue, bool& bResult);
-	static void ReadFileInternal(TArguments* Arguments, TObject* ReturnValue, bool& bResult);
 
-	static void IndexOf(TArguments* Arguments, TObject* ReturnValue, bool& bResult);
-	static void SizeOf(TArguments* Arguments, TObject* ReturnValue, bool& bResult);
+	// IO
+	static void Print_Internal(TArguments* Arguments, TObject* ReturnValue, bool& bResult);
+	static void Printf_Internal(TArguments* Arguments, TObject* ReturnValue, bool& bResult);
+	static void ReadFile_Internal(TArguments* Arguments, TObject* ReturnValue, bool& bResult);
+
+	// Containers
+	static void IndexOf_Internal(TArguments* Arguments, TObject* ReturnValue, bool& bResult);
+	static void SizeOf_Internal(TArguments* Arguments, TObject* ReturnValue, bool& bResult);
+	static void Append_Internal(TArguments* Arguments, TObject* ReturnValue, bool& bResult);
+	static void Contains_Internal(TArguments* Arguments, TObject* ReturnValue, bool& bResult);
 
 	// Initialize the function map of keywords to actual C++ functions
 	TFunctionMap InitFunctionMap();
