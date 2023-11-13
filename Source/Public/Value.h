@@ -249,6 +249,7 @@ namespace Values
 
 		TArrayValue GetKeys() const;
 		TArrayValue GetValues() const;
+		bool		HasKey(const std::string& Key) const;
 
 		operator bool() const { return !Value.empty(); }
 		TObject& operator[](const std::string& Key) { return Value[Key]; }
@@ -487,15 +488,6 @@ namespace Values
 		TObject& At(const TObject& Index) const { return At(Index); }
 
 		EValueType GetType() const { return Type; }
-		bool	   HasKey(const std::string& Key)
-		{
-			if (Type != MapType)
-			{
-				throw std::runtime_error("Object is not subscriptable.");
-			}
-			auto MapType = AsMap()->GetValue();
-			return MapType.find(Key) != MapType.end();
-		}
 
 		bool		IsSubscriptable() { return Value->IsSubscriptable(); }
 		bool		IsSubscriptable() const { return Value->IsSubscriptable(); }
@@ -503,8 +495,6 @@ namespace Values
 		std::string ToString() const { return Value->ToString(); }
 
 		// Operators
-
-		friend std::ostringstream& operator<<(std::ostringstream& Stream, const TObject& Object);
 
 		TObject& operator=(const TObject& Other)
 		{
@@ -570,10 +560,10 @@ namespace Values
 		TObject operator<(const TObject& Other) const;
 		TObject operator>(const TObject& Other) const;
 
-		TBoolValue operator==(TObject& Other);
-		TBoolValue operator==(const TObject& Other) const;
-		TBoolValue operator!=(const TObject& Other) const;
-		TBoolValue operator!() const;
+		//bool operator==(TObject& Other);
+		bool operator==(const TObject& Other) const;
+		bool operator!=(const TObject& Other) const;
+		bool operator!() const;
 
 		TObject& operator++() // Prefix
 		{

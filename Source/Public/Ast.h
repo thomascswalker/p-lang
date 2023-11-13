@@ -22,6 +22,13 @@ using namespace Values;
 		return false;                                                            \
 	}
 
+#define CHECK_ACCEPT(X)    \
+	if (!X->Accept(*this)) \
+	{                      \
+		DEBUG_EXIT         \
+		return false;      \
+	}
+
 static int		   WHILE_MAX_LOOP = 100000;
 static int		   LINE;
 static int		   COLUMN;
@@ -93,7 +100,7 @@ struct Frame
 
 		if (Outer != nullptr)
 		{
-			//std::cout << std::format("Looking up the stack for {}", Name) << std::endl;
+			// std::cout << std::format("Looking up the stack for {}", Name) << std::endl;
 			return Outer->GetIdentifier(Name);
 		}
 
@@ -210,7 +217,7 @@ public:
 		CurrentFrame->CreateInnerFrame();
 		CurrentFrame = CurrentFrame->Inner;
 		FrameDepth += 1;
-		//std::cout << std::format("In: {}", FrameDepth) << std::endl;
+		// std::cout << std::format("In: {}", FrameDepth) << std::endl;
 	}
 
 	void GoOut()
@@ -220,7 +227,7 @@ public:
 			CurrentFrame = CurrentFrame->Outer;
 			delete CurrentFrame->Inner;
 			FrameDepth -= 1;
-			//std::cout << std::format("Out: {}\n-----\n", FrameDepth) << std::endl;
+			// std::cout << std::format("Out: {}\n-----\n", FrameDepth) << std::endl;
 		}
 	}
 };
