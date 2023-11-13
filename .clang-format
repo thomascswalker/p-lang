@@ -47,4 +47,4 @@ PointerAlignment: Left
 SortIncludes: false
 SpaceBeforeCaseColon: true
 TabWidth: 4
-UseTab: Always
+UseTab: Never
