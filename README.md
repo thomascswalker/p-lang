@@ -35,12 +35,12 @@ Feature set similar to Python with optional type-safety and brackets.
 - [x] Printing
 - [x] Custom function definitions
 - [x] Custom function call
+- [x] Stack frames
 - [ ] `format` print
 - [ ] ++ and -- operators
 - [ ] `else if`
 - [ ] `and`, `or`
 - [ ] `break` in `while` statements
-- [ ] Stack frames
 - [ ] Function type hints
 - [ ] Function type checking
 - [ ] Imports 
