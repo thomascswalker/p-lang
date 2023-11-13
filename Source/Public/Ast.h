@@ -27,7 +27,6 @@ static int		   LINE;
 static int		   COLUMN;
 static std::string SOURCE;
 
-class VisitorBase;
 class Visitor;
 
 class ASTNode;
@@ -63,43 +62,133 @@ static bool IsBuiltIn(const std::string& Name)
 	return false;
 }
 
+struct Frame;
+
+struct Frame
+{
+	std::vector<TObject>		   Stack;
+	std::map<std::string, TObject> Identifiers;
+
+	Frame* Outer = nullptr;
+	Frame* Inner;
+
+	Frame* CreateInnerFrame()
+	{
+		Inner = new Frame();
+		Inner->Outer = this;
+		return Inner;
+	}
+
+	TObject* GetIdentifier(const std::string& Name)
+	{
+		TObject* Result = nullptr;
+
+		for (const auto& [K, V] : Identifiers)
+		{
+			if (K == Name)
+			{
+				return Result = &Identifiers.at(K);
+			}
+		}
+
+		if (Outer != nullptr)
+		{
+			//std::cout << std::format("Looking up the stack for {}", Name) << std::endl;
+			return Outer->GetIdentifier(Name);
+		}
+
+		return nullptr;
+	}
+
+	bool IsIdentifier(const std::string& Name)
+	{
+		auto Ident = GetIdentifier(Name);
+		return Ident != nullptr;
+	}
+
+	void SetIdentifier(const std::string& Name, const TObject& Value)
+	{
+		DEBUG_ENTER
+		Identifiers[Name] = Value;
+		DEBUG_EXIT
+	}
+
+	int Push(const TObject& Value)
+	{
+		DEBUG_ENTER
+		if (Value.GetType() == NullType)
+		{
+			DEBUG_EXIT
+			return -1;
+		}
+		Stack.push_back(Value);
+		DEBUG_EXIT
+	}
+
+	TObject Pop()
+	{
+		DEBUG_ENTER
+		TObject Result;
+		if (IsEmpty())
+		{
+			Logging::Error("Stack is empty.");
+			DEBUG_EXIT
+			return Result;
+		}
+		Result = Stack.back();
+		Stack.pop_back();
+		DEBUG_EXIT
+		return Result;
+	}
+
+	bool IsEmpty()
+	{
+		int Total = Stack.size();
+		if (Outer != nullptr)
+		{
+			Total += Stack.size();
+		}
+		return Total == 0;
+	}
+	void PrintStack()
+	{
+		for (const auto& V : Stack)
+		{
+			std::cout << V.ToString() << std::endl;
+		}
+	}
+};
+
 class Visitor
 {
-	void	Push(const TObject& Value);
-	void	Push(TObject* Value);
-	TObject Pop();
-	TObject Back();
-	bool	IsIdentifier(const std::string& Name);
-	bool	IsFunctionDeclared(const std::string& Name);
-
-	/// <summary>
-	/// Returns a copy of the specified identifier.
-	/// </summary>
-	TObject GetIdentifier(const std::string& Name);
-
-	/// <summary>
-	/// Returns a pointer to the specified identifier.
-	/// </summary>
-	TObject* GetIdentifierPtr(const std::string& Name);
-	void	 SetIdentifierValue(const std::string& Name, const TObject& InValue);
-
+	bool		 IsFunctionDeclared(const std::string& Name);
 	ASTFunction* GetFunction(const std::string& Name);
 
 public:
-	std::map<std::string, TObject>		Identifiers;
 	std::map<std::string, ASTFunction*> Functions;
-	std::vector<TObject>				Stack;
 
-	Visitor(){};
+	int				   FrameDepth = 0;
+	Frame			   RootFrame;
+	Frame*			   CurrentFrame;
+	std::vector<Frame> Frames;
+
+	Visitor()
+	{
+		RootFrame = Frame();
+		Frames.push_back(RootFrame);
+		CurrentFrame = &Frames.back();
+	};
 	Visitor(Visitor& Other)
 	{
-		Identifiers = Other.Identifiers;
-		Stack = Other.Stack;
+		RootFrame = Other.RootFrame;
+		CurrentFrame = Other.CurrentFrame;
+		Frames = Other.Frames;
 	}
 	Visitor(const Visitor& Other)
 	{
-		Identifiers = Other.Identifiers;
-		Stack = Other.Stack;
+		RootFrame = Other.RootFrame;
+		CurrentFrame = Other.CurrentFrame;
+		Frames = Other.Frames;
 	}
 	bool Visit(ASTValue* Node);
 	bool Visit(ASTIdentifier* Node);
@@ -115,6 +204,25 @@ public:
 
 	bool Succeeded() { return true; } // TODO: Update this!
 	void Dump();
+
+	void GoIn()
+	{
+		CurrentFrame->CreateInnerFrame();
+		CurrentFrame = CurrentFrame->Inner;
+		FrameDepth += 1;
+		//std::cout << std::format("In: {}", FrameDepth) << std::endl;
+	}
+
+	void GoOut()
+	{
+		if (CurrentFrame->Outer != nullptr)
+		{
+			CurrentFrame = CurrentFrame->Outer;
+			delete CurrentFrame->Inner;
+			FrameDepth -= 1;
+			//std::cout << std::format("Out: {}\n-----\n", FrameDepth) << std::endl;
+		}
+	}
 };
 
 // Base AST Node class
@@ -333,7 +441,6 @@ public:
 class ASTBody : public ASTNode
 {
 public:
-	ASTBody*				 Parent = nullptr;
 	std::vector<std::string> Errors;
 	std::vector<ASTNode*>	 Expressions;
 	Token					 Context;

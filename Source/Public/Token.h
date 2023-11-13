@@ -102,7 +102,7 @@ struct Token
 	ETokenType	Type;
 	std::string Content = "";
 	std::string Source = "";
-	int			Line = 0;
+	int			Line = 1;
 	int			Column = 0;
 
 	// Constructors
@@ -124,7 +124,7 @@ class Lexer
 {
 	std::string				 Source = "";
 	int						 Position = 0;
-	int						 Line = 0;
+	int						 Line = 1;
 	int						 Column = 0;
 	std::vector<std::string> Lines;
 
