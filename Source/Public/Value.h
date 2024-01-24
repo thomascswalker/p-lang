@@ -37,13 +37,13 @@ namespace Values
     class TArrayValue;
     class TMapValue;
 
-    typedef std::vector<TObject>           TArray;
-    typedef std::map<std::string, TObject> TMap;
+    using TArray = std::vector<TObject>;
+    using TMap = std::map<std::string, TObject>;
 
     class TValue
     {
     public:
-        virtual ~TValue() = default;
+        virtual             ~TValue() = default;
         virtual bool        IsSubscriptable() = 0;
         virtual bool        IsValid() const = 0;
         virtual std::string ToString() = 0;
@@ -64,7 +64,8 @@ namespace Values
         bool Value;
 
     public:
-        TBoolValue(bool InValue) : Value(InValue){};
+        TBoolValue(bool InValue)
+            : Value(InValue) {}
         bool        GetValue() const { return Value; }
         void        SetValue(bool NewValue) { Value = NewValue; }
         bool        IsSubscriptable() override { return false; }
@@ -76,15 +77,15 @@ namespace Values
         TBoolValue operator!=(const TBoolValue& Other) const;
 
         // Bool -> Bool
-        explicit operator bool() const { return Value; }
+        operator bool() const { return Value; }
 
         // Bool -> Int
-        explicit operator int() const;
-        explicit operator TIntValue() const;
+        operator int() const;
+        operator TIntValue() const;
 
         // Bool -> String
-        explicit operator std::string() const;
-        explicit operator TStringValue() const;
+        operator std::string() const;
+        operator TStringValue() const;
     };
 
     class TIntValue : public TValue
@@ -92,7 +93,8 @@ namespace Values
         int Value;
 
     public:
-        TIntValue(int InValue) : Value(InValue){};
+        TIntValue(int InValue)
+            : Value(InValue) {};
         int         GetValue() const { return Value; }
         void        SetValue(int NewValue) { Value = NewValue; }
         bool        IsSubscriptable() override { return false; }
@@ -131,7 +133,7 @@ namespace Values
         operator bool() const { return Value; }
 
         // Int -> Float
-        operator float() const { return (float)Value; }
+        operator float() const { return static_cast<float>(Value); }
         operator TFloatValue() const;
 
         // Int -> String
@@ -144,7 +146,8 @@ namespace Values
         float Value;
 
     public:
-        TFloatValue(float InValue) : Value(InValue){};
+        TFloatValue(float InValue)
+            : Value(InValue) {};
         float       GetValue() const { return Value; }
         void        SetValue(float NewValue) { Value = NewValue; }
         bool        IsSubscriptable() override { return false; }
@@ -179,7 +182,7 @@ namespace Values
         operator float() const { return Value; }
 
         // Float -> Int
-        operator int() const { return (int)Value; }
+        operator int() const { return static_cast<int>(Value); }
         operator TIntValue() const;
 
         // Float -> String
@@ -192,8 +195,9 @@ namespace Values
         std::string Value;
 
     public:
-        TStringValue(){};
-        TStringValue(const std::string& InValue) : Value(InValue){};
+        TStringValue() {};
+        TStringValue(const std::string& InValue)
+            : Value(InValue) {};
         std::string GetValue() const { return Value; }
         void        SetValue(const std::string& NewValue) { Value = NewValue; }
         bool        IsSubscriptable() override { return true; }
@@ -216,8 +220,9 @@ namespace Values
         TArray Value;
 
     public:
-        TArrayValue(){};
-        TArrayValue(const TArray& InValue) : Value(InValue){};
+        TArrayValue() {};
+        TArrayValue(const TArray& InValue)
+            : Value(InValue) {};
         TArray      GetValue() const { return Value; }
         bool        IsSubscriptable() override { return true; }
         bool        IsValid() const override { return true; }
@@ -240,7 +245,8 @@ namespace Values
         TMap Value;
 
     public:
-        TMapValue(const TMap& InValue) : Value(InValue){};
+        TMapValue(const TMap& InValue)
+            : Value(InValue) {};
         TMap        GetValue() const { return Value; }
         bool        IsSubscriptable() override { return false; }
         bool        IsValid() const override { return true; }
@@ -272,11 +278,12 @@ namespace Values
             Pointer Ptr;
 
         public:
-            explicit Iterator(Pointer InPtr) : Ptr(InPtr){};
+            Iterator(const Pointer InPtr)
+                : Ptr(InPtr) {}
 
             Reference operator*() const { return *Ptr; }
 
-            Pointer operator->() { return Ptr; }
+            Pointer operator->() const { return Ptr; }
 
             // Prefix increment
             Iterator& operator++()
@@ -288,13 +295,13 @@ namespace Values
             // Postfix increment
             Iterator operator++(int)
             {
-                Iterator Tmp = *this;
+                const Iterator Tmp = *this;
                 ++(*this);
                 return Tmp;
             }
 
-            friend bool operator==(const Iterator& Left, const Iterator& Right) { return Left.Ptr == Right.Ptr; };
-            friend bool operator!=(const Iterator& Left, const Iterator& Right) { return Left.Ptr != Right.Ptr; };
+            friend bool operator==(const Iterator& Left, const Iterator& Right) { return Left.Ptr == Right.Ptr; }
+            friend bool operator!=(const Iterator& Left, const Iterator& Right) { return Left.Ptr != Right.Ptr; }
         };
 
     public:
@@ -321,45 +328,45 @@ namespace Values
             Value = std::move(Other.Value);
             Type = Other.Type;
         }
-        ~TObject() noexcept {};
+        ~TObject() noexcept {}
         TObject(bool InValue) noexcept
         {
             Value = std::make_unique<TBoolValue>(InValue);
             Type = BoolType;
-        }; // Bool
+        } // Bool
         TObject(const TBoolValue& InValue) noexcept
         {
             Value = std::make_unique<TBoolValue>(InValue);
             Type = BoolType;
-        }; // Bool
+        } // Bool
         TObject(int InValue) noexcept
         {
             Value = std::make_unique<TIntValue>(InValue);
             Type = IntType;
-        }; // Integer
+        } // Integer
         TObject(const TIntValue& InValue) noexcept
         {
             Value = std::make_unique<TIntValue>(InValue);
             Type = IntType;
-        }; // Integer
+        } // Integer
         TObject(float InValue) noexcept
         {
             Value = std::make_unique<TFloatValue>(InValue);
             Type = FloatType;
-        }; // Float
+        } // Float
         TObject(const TFloatValue& InValue) noexcept
         {
             Value = std::make_unique<TFloatValue>(InValue);
             Type = FloatType;
-        }; // Float
+        } // Float
         TObject(const std::string& InValue) noexcept
         {
             Value = std::make_unique<TStringValue>(InValue);
             Type = StringType;
-        }; // String
+        } // String
         TObject(char InChar) noexcept
         {
-            std::string InValue = std::string(1, InChar);
+            auto InValue = std::string(1, InChar);
             Value = std::make_unique<TStringValue>(InValue);
             Type = StringType;
         }
@@ -645,8 +652,8 @@ namespace Values
         std::string Name;
 
     public:
-        TIdentifier(){};
-        virtual ~TIdentifier() = default;
+        TIdentifier() = default;
+        virtual             ~TIdentifier() = default;
         virtual bool        IsValid() = 0;
         virtual TObject     GetValue() = 0;
         virtual TObject*    GetValuePtr() = 0;
@@ -658,9 +665,10 @@ namespace Values
         TObject Value;
 
     public:
-        TLiteral(const TObject& InValue) : Value(InValue){};
+        TLiteral(TObject InValue)
+            : Value(std::move(InValue)) {}
         std::string GetName() { return Name; }
-        bool        IsValid() { return Value.GetType() != NullType; }
+        bool        IsValid() override { return Value.GetType() != NullType; }
         TObject     GetValue() override { return Value; }
         TObject*    GetValuePtr() override { return &Value; }
         std::string ToString() override
@@ -692,15 +700,15 @@ namespace Values
         {
             Name = Other.Name;
             *this = Other;
-        };
+        }
         TVariable(const TVariable& Other) noexcept
         {
             Name = Other.Name;
             *this = Other;
-        };
+        }
 
-        ~TVariable() = default;
-        bool        IsValid() { return Value != nullptr; }
+        ~TVariable() override = default;
+        bool        IsValid() override { return Value != nullptr; }
         TObject     GetValue() override { return *Value; }
         TObject*    GetValuePtr() override { return Value; }
         void        SetValue(TObject* InValue) { Value = InValue; }
@@ -726,13 +734,13 @@ namespace Values
 
     using TArguments = std::vector<TIdentifier*>;
 
-    typedef void(TFunctor)(TArguments* InArguments, TObject* ReturnValue, bool& bResult);
+    using TFunctor = void(TArguments* InArguments, TObject* ReturnValue, bool& bResult);
     class TFunction
     {
         TFunctor* Func = nullptr;
 
     public:
-        TFunction(){};
+        TFunction() {};
         TFunction(TFunctor* InFunc) { Func = InFunc; }
         bool Invoke(TArguments* Arguments, TObject* ReturnValue)
         {

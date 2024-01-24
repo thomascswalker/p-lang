@@ -1,6 +1,5 @@
 #include <fstream>
-
-#include <array>
+#include <iostream>
 
 #include "../Public/BuiltIns.h"
 #include "../Public/Core.h"
@@ -26,7 +25,7 @@ void BuiltIns::Print_Internal(TArguments* Arguments, TObject* ReturnValue, bool&
 {
     CHECK_EXACT_ARG_COUNT(Arguments, 1);
     std::vector<TObject> Objects;
-    for (auto Arg : *Arguments)
+    for (const auto Arg : *Arguments)
     {
         if (!Arg->IsValid())
         {
@@ -37,11 +36,12 @@ void BuiltIns::Print_Internal(TArguments* Arguments, TObject* ReturnValue, bool&
         TObject Value = Arg->GetValue();
         Objects.push_back(Value);
     }
-    std::string Out = TStringValue::Join(Objects, ",");
-    std::cout << Out << std::endl;
+    const std::string Out = TStringValue::Join(Objects, ",");
+    std::cout << Out << '\n';
 
     bResult = true;
 }
+
 void BuiltIns::Printf_Internal(TArguments* Arguments, TObject* ReturnValue, bool& bResult)
 {
     CHECK_MIN_ARG_COUNT(Arguments, 2);
@@ -91,19 +91,19 @@ void BuiltIns::Printf_Internal(TArguments* Arguments, TObject* ReturnValue, bool
             return;
         }
         TObject Value = Arg->GetValue();
-        Objects.push_back(Value.ToString());
+        Objects.emplace_back(Value.ToString());
     }
 
     int         Index = 0; // Start at the second argument as the first is the fmt string itself
     std::string Out = Fmt;
     while (Out.find("{}") != std::string::npos)
     {
-        auto First = Out.find_first_of("{}");
-        auto Offset = Out.begin() + First;
+        const auto First = Out.find_first_of("{}");
+        auto       Offset = Out.begin() + First;
         Out.replace(Offset, Offset + 2, Objects.at(Index).ToString().c_str());
         Index++;
     }
-    std::cout << Out << std::endl;
+    std::cout << Out << '\n';
     bResult = true;
 };
 
@@ -111,10 +111,10 @@ void BuiltIns::Append_Internal(TArguments* Arguments, TObject* ReturnValue, bool
 {
     CHECK_EXACT_ARG_COUNT(Arguments, 2)
 
-    auto Arg1 = Cast<TVariable>(Arguments->at(0));
-    auto Arg2 = Arguments->at(1);
+    const auto Arg1 = Cast<TVariable>(Arguments->at(0));
+    const auto Arg2 = Arguments->at(1);
 
-    TObject Value = Arg2->GetValue();
+    const TObject Value = Arg2->GetValue();
 
     Arg1->GetValuePtr()->AsArray()->Append(Value);
     bResult = true;
@@ -132,7 +132,7 @@ void BuiltIns::ReadFile_Internal(TArguments* Arguments, TObject* ReturnValue, bo
         return;
     }
 
-    auto          FileName = Arg1.GetString();
+    const auto    FileName = Arg1.GetString();
     std::ifstream Stream(FileName.GetValue().c_str());
     if (!Stream.good())
     {
@@ -141,7 +141,7 @@ void BuiltIns::ReadFile_Internal(TArguments* Arguments, TObject* ReturnValue, bo
         return;
     }
 
-    auto Content = std::string(std::istreambuf_iterator<char>(Stream), std::istreambuf_iterator<char>());
+    const auto Content = std::string(std::istreambuf_iterator<char>(Stream), std::istreambuf_iterator<char>());
     *ReturnValue = Content;
 
     bResult = true;
@@ -152,8 +152,8 @@ void BuiltIns::IndexOf_Internal(TArguments* Arguments, TObject* ReturnValue, boo
     // size_of ( container, index, out )
     CHECK_EXACT_ARG_COUNT(Arguments, 2);
 
-    auto Container = Arguments->at(0)->GetValue();
-    auto Index = Arguments->at(1)->GetValue().GetInt().GetValue();
+    auto       Container = Arguments->at(0)->GetValue();
+    const auto Index = Arguments->at(1)->GetValue().GetInt().GetValue();
 
     TObject Value;
     switch (Container.GetType())
@@ -180,7 +180,7 @@ void BuiltIns::SizeOf_Internal(TArguments* Arguments, TObject* ReturnValue, bool
 
     auto Container = Arguments->at(0)->GetValue();
 
-    int Size = 0;
+    size_t Size = 0;
     switch (Container.GetType())
     {
         case StringType :
@@ -198,17 +198,17 @@ void BuiltIns::SizeOf_Internal(TArguments* Arguments, TObject* ReturnValue, bool
             return;
     }
 
-    *ReturnValue = Size;
+    *ReturnValue = static_cast<int>(Size);
     bResult = true;
 }
 
 void BuiltIns::Contains_Internal(TArguments* Arguments, TObject* ReturnValue, bool& bResult)
 {
     CHECK_EXACT_ARG_COUNT(Arguments, 2);
-    auto Container = Arguments->at(0)->GetValue();
-    auto Value = Arguments->at(1)->GetValue();
+    auto       Container = Arguments->at(0)->GetValue();
+    const auto Value = Arguments->at(1)->GetValue();
 
-    bool bContainsValue = false;
+    bool bContainsValue;
     switch (Container.GetType())
     {
         case StringType :

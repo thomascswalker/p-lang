@@ -1,4 +1,3 @@
-#include <utility>
 #include "Public/Ast.h"
 
 using namespace Core;
@@ -8,12 +7,12 @@ using namespace Logging;
 int Compile(std::string FileName)
 {
     std::string Source = ReadFile(FileName);
-    if (Source == "")
+    if (Source.empty())
     {
         Error("File not found or empty: {}", FileName);
         return -1;
     }
-    std::cout << "Running " << FileName << "\n-----------" << std::endl;
+    std::cout << "Running " << FileName << "\n-----------" << '\n';
     Debug("\n{}\n", Source);
 
     // Tokenize the source code
@@ -28,19 +27,18 @@ int Compile(std::string FileName)
     Debug("AST constructed.");
     ASTBody* Program = Ast.GetTree();
 
-    auto V = std::make_unique<Visitor>();
+    auto V = Visitor();
     Debug("Evaluating AST...");
-    V->Visit(Program);
+    V.Visit(Program);
     Debug("Evaluation complete.");
 
-    int ErrorCount = GetLogger()->GetCount(_Error);
-    std::cout << std::format("Program compiled with {} errors.", ErrorCount) << std::endl;
+    int ErrorCount = GetLogger()->GetCount(LogLevel::Error);
+    std::cout << std::format("Program compiled with {} errors.", ErrorCount) << '\n';
     if (ErrorCount > 0)
     {
-        auto ErrorMsgs = GetLogger()->GetMessages(_Error);
-        for (auto Msg : ErrorMsgs)
+        for (auto Msg : GetLogger()->GetMessages(LogLevel::Error))
         {
-            std::cout << std::format("{}ERROR: {}{}", "\033[31m", Msg, "\033[0m") << std::endl;
+            std::cout << std::format("{}ERROR: {}{}", "\033[31m", Msg, "\033[0m") << '\n';
         }
     }
 
@@ -48,7 +46,7 @@ int Compile(std::string FileName)
 }
 
 // Main entrypoint
-int main(int argc, char* argv[])
+int main(int argc, char* argv[]) // ReSharper disable
 {
     if (argc == 1)
     {
@@ -64,7 +62,7 @@ int main(int argc, char* argv[])
         printf("Invalid argument. Please enter a filename.");
         return -1;
     }
-    auto Result = Compile(FileName);
+    const auto Result = Compile(FileName);
 
     return Result;
 }

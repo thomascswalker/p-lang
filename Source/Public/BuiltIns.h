@@ -1,11 +1,11 @@
 #pragma once
 
-#include "Logging.h"
 #include "Value.h"
 
 using namespace Values;
 
-typedef std::map<std::string, TFunction> TFunctionMap;
+using TFunctionMap = std::map<std::string, TFunction>;
+
 namespace BuiltIns
 {
     // Forward declaration of all built-in functions

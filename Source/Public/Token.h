@@ -1,3 +1,5 @@
+#pragma once
+
 #include <string>
 #include <fstream>
 #include <regex>
@@ -54,16 +56,16 @@ enum ETokenType
     MinusMinus,
 };
 
-static int TokenTypeCount = (int)ETokenType::Count;
+static int TokenTypeCount = ETokenType::Count;
 
 static std::map<ETokenType, std::string> TokenToStringMap{
-    { Eof, "/0" },        { Type, "Type" },    { Func, "func" },     { Plus, "+" },         { Minus, "-" },
-    { Multiply, "*" },    { Divide, "/" },     { Comma, "," },       { Not, "!" },          { Assign, "=" },
-    { Equals, "==" },     { NotEquals, "!=" }, { Semicolon, ";" },   { LessThan, "<" },     { GreaterThan, ">" },
-    { LParen, "(" },      { RParen, ")" },     { LBracket, "[" },    { RBracket, "]" },     { LCurly, "{" },
-    { RCurly, "}" },      { If, "if" },        { Else, "else" },     { For, "for" },        { While, "while" },
-    { Return, "return" }, { Period, "." },     { PlusEquals, "+=" }, { MinusEquals, "-=" }, { MultEquals, "*=" },
-    { DivEquals, "/=" },  { PlusPlus, "++" },  { MinusMinus, "--" }
+    { Eof, "/0" }, { Type, "Type" }, { Func, "func" }, { Plus, "+" }, { Minus, "-" },
+    { Multiply, "*" }, { Divide, "/" }, { Comma, "," }, { Not, "!" }, { Assign, "=" },
+    { Equals, "==" }, { NotEquals, "!=" }, { Semicolon, ";" }, { LessThan, "<" }, { GreaterThan, ">" },
+    { LParen, "(" }, { RParen, ")" }, { LBracket, "[" }, { RBracket, "]" }, { LCurly, "{" },
+    { RCurly, "}" }, { If, "if" }, { Else, "else" }, { For, "for" }, { While, "while" },
+    { Return, "return" }, { Period, "." }, { PlusEquals, "+=" }, { MinusEquals, "-=" }, { MultEquals, "*=" },
+    { DivEquals, "/=" }, { PlusPlus, "++" }, { MinusMinus, "--" }
 };
 
 static ETokenType GetTokenTypeFromString(const std::string& InString)
@@ -94,7 +96,7 @@ const std::vector<std::string>         FUNCTION{ "function", "func", "fn", "def"
 struct Token;
 class Lexer;
 
-typedef std::vector<std::shared_ptr<Token>> TokenArray;
+using TokenArray = std::vector<std::shared_ptr<Token>>;
 
 struct Token
 {
@@ -106,9 +108,13 @@ struct Token
     int         Column = 0;
 
     // Constructors
-    Token() : Type(Invalid){};
+    Token()
+        : Type(Invalid) {};
     Token(ETokenType InType, const std::string& InContent, int InLine, int InColumn)
-        : Type(InType), Content(InContent), Line(InLine), Column(InColumn){};
+        : Type(InType)
+        , Content(InContent)
+        , Line(InLine)
+        , Column(InColumn) {};
 
     // Methods
     std::string ToString() const
@@ -195,7 +201,8 @@ class Lexer
     bool IsSymbol(char C) { return Contains(TOKENS, C); }
 
 public:
-    Lexer(std::string InSource) : Source(InSource){};
+    Lexer(std::string InSource)
+        : Source(InSource) {};
 
     Token Next()
     {

@@ -1,3 +1,5 @@
+#pragma once
+
 #include <vector>
 #include <memory>
 #include <functional>
@@ -5,7 +7,6 @@
 #include <variant>
 #include <typeinfo>
 #include <format>
-#include <any>
 
 #include "BuiltIns.h"
 #include "Logging.h"
@@ -16,7 +17,7 @@ using namespace Core;
 using namespace Values;
 
 #define CHECK_ERRORS                                                             \
-    if (Logging::Logger::GetInstance()->GetCount(Logging::LogLevel::_Error) > 0) \
+    if (Logging::Logger::GetInstance()->GetCount(Logging::LogLevel::Error) > 0) \
     {                                                                            \
         DEBUG_EXIT                                                               \
         return false;                                                            \
@@ -29,14 +30,14 @@ using namespace Values;
         return false;      \
     }
 
-static int		   WHILE_MAX_LOOP = 100000;
-static int		   LINE;
-static int		   COLUMN;
+static int         WHILE_MAX_LOOP = 100000;
+static int         LINE;
+static int         COLUMN;
 static std::string SOURCE;
 
 class Visitor;
 
-class ASTNode;
+class AstNode;
 class ASTValue;
 class ASTIdentifier;
 class ASTUnaryExpr;
@@ -73,7 +74,7 @@ struct Frame;
 
 struct Frame
 {
-    std::vector<TObject>		   Stack;
+    std::vector<TObject>           Stack;
     std::map<std::string, TObject> Identifiers;
 
     Frame* Outer = nullptr;
@@ -148,16 +149,16 @@ struct Frame
         return Result;
     }
 
-    bool IsEmpty()
+    bool IsEmpty() const
     {
-        int Total = Stack.size();
+        size_t Total = Stack.size();
         if (Outer != nullptr)
         {
             Total += Stack.size();
         }
         return Total == 0;
     }
-    void PrintStack()
+    void PrintStack() const
     {
         for (const auto& V : Stack)
         {
@@ -168,15 +169,15 @@ struct Frame
 
 class Visitor
 {
-    bool		 IsFunctionDeclared(const std::string& Name);
+    bool         IsFunctionDeclared(const std::string& Name);
     ASTFunction* GetFunction(const std::string& Name);
 
 public:
     std::map<std::string, ASTFunction*> Functions;
 
-    int				   FrameDepth = 0;
-    Frame			   RootFrame;
-    Frame*			   CurrentFrame;
+    int                FrameDepth = 0;
+    Frame              RootFrame;
+    Frame*             CurrentFrame;
     std::vector<Frame> Frames;
 
     Visitor()
@@ -197,46 +198,27 @@ public:
         CurrentFrame = Other.CurrentFrame;
         Frames = Other.Frames;
     }
-    bool Visit(ASTValue* Node);
-    bool Visit(ASTIdentifier* Node);
-    bool Visit(ASTUnaryExpr* Node);
+    bool Visit(ASTValue* Node) const;
+    bool Visit(ASTIdentifier* Node) const;
+    bool Visit(const ASTUnaryExpr* Node);
     bool Visit(ASTBinOp* Node);
     bool Visit(ASTAssignment* Node);
     bool Visit(ASTCall* Node);
     bool Visit(ASTIf* Node);
-    bool Visit(ASTWhile* Node);
+    bool Visit(const ASTWhile* Node);
     bool Visit(ASTFunction* Node);
-    bool Visit(ASTReturn* Node);
-    bool Visit(ASTBody* Node);
+    bool Visit(const ASTReturn* Node);
+    bool Visit(const ASTBody* Node);
 
     bool Succeeded() { return true; } // TODO: Update this!
-    void Dump();
-
-    void GoIn()
-    {
-        CurrentFrame->CreateInnerFrame();
-        CurrentFrame = CurrentFrame->Inner;
-        FrameDepth += 1;
-        // std::cout << std::format("In: {}", FrameDepth) << std::endl;
-    }
-
-    void GoOut()
-    {
-        if (CurrentFrame->Outer != nullptr)
-        {
-            CurrentFrame = CurrentFrame->Outer;
-            delete CurrentFrame->Inner;
-            FrameDepth -= 1;
-            // std::cout << std::format("Out: {}\n-----\n", FrameDepth) << std::endl;
-        }
-    }
+    void Dump() const;
 };
 
 // Base AST Node class
-class ASTNode
+class AstNode
 {
 public:
-    virtual ~ASTNode(){};
+    virtual      ~AstNode() {};
     virtual bool Accept(Visitor& V) = 0;
 
     /// <summary>
@@ -244,17 +226,21 @@ public:
     /// </summary>
     /// <returns>This node formatted as a string.</returns>
     virtual std::string ToString() const = 0;
-    virtual Token		GetContext() const = 0;
+    virtual Token       GetContext() const = 0;
 };
 
-class ASTValue : public ASTNode
+class ASTValue : public AstNode
 {
 public:
     TObject Value;
-    Token	Context;
+    Token   Context;
 
-    ASTValue(TObject& InValue, Token InContext) : Value(InValue), Context(InContext){};
-    ASTValue(const TObject& InValue, Token InContext) : Value(InValue), Context(InContext){};
+    ASTValue(TObject& InValue, Token InContext)
+        : Value(InValue)
+        , Context(InContext) {};
+    ASTValue(const TObject& InValue, Token InContext)
+        : Value(InValue)
+        , Context(InContext) {};
 
     bool  Accept(Visitor& V) override { return V.Visit(this); }
     Token GetContext() const override { return Context; }
@@ -265,14 +251,14 @@ public:
     bool IsBool() { return Value.GetType() == BoolType; }
     bool IsArray() { return Value.GetType() == ArrayType; }
 
-    TBoolValue	 GetBool() const { return Value.GetBool(); }
-    TIntValue	 GetInt() const { return Value.GetInt(); }
-    TFloatValue	 GetFloat() const { return Value.GetFloat(); }
+    TBoolValue   GetBool() const { return Value.GetBool(); }
+    TIntValue    GetInt() const { return Value.GetInt(); }
+    TFloatValue  GetFloat() const { return Value.GetFloat(); }
     TStringValue GetString() const { return Value.GetString(); }
-    TArrayValue	 GetArray() const { return Value.GetArray(); }
+    TArrayValue  GetArray() const { return Value.GetArray(); }
 
-    TBoolValue*	  AsBool() const { return Value.AsBool(); }
-    TIntValue*	  AsInt() const { return Value.AsInt(); }
+    TBoolValue*   AsBool() const { return Value.AsBool(); }
+    TIntValue*    AsInt() const { return Value.AsInt(); }
     TFloatValue*  AsFloat() const { return Value.AsFloat(); }
     TStringValue* AsString() const { return Value.AsString(); }
     TArrayValue*  AsArray() const { return Value.AsArray(); }
@@ -302,35 +288,40 @@ public:
         throw std::runtime_error("Unable to get value for this object.");
     }
 
-    virtual std::string ToString() const
+    std::string ToString() const override
     {
         std::string Result;
         return Result;
     }
 };
 
-class ASTIdentifier : public ASTNode
+class ASTIdentifier : public AstNode
 {
 public:
     std::string Name;
-    TObject		Value;
-    Token		Context;
+    TObject     Value;
+    Token       Context;
 
-    ASTIdentifier(const std::string& InName, Token InContext) : Name(InName), Context(InContext){};
-    virtual std::string ToString() const { return "Variable: " + Name + ", " + Value.ToString(); }
-    bool				Accept(Visitor& V) override { return V.Visit(this); }
-    Token				GetContext() const override { return Context; }
+    ASTIdentifier(const std::string& InName, Token InContext)
+        : Name(InName)
+        , Context(InContext) {};
+    std::string ToString() const override { return "Variable: " + Name + ", " + Value.ToString(); }
+    bool        Accept(Visitor& V) override { return V.Visit(this); }
+    Token       GetContext() const override { return Context; }
 };
 
-class ASTUnaryExpr : public ASTNode
+class ASTUnaryExpr : public AstNode
 {
 public:
     ETokenType Op;
-    ASTNode*   Right = nullptr;
-    Token	   Context;
+    AstNode*   Right = nullptr;
+    Token      Context;
 
-    ASTUnaryExpr(ETokenType InOp, ASTNode* InRight, Token InContext) : Op(InOp), Right(InRight), Context(InContext){};
-    virtual std::string ToString() const
+    ASTUnaryExpr(ETokenType InOp, AstNode* InRight, Token InContext)
+        : Op(InOp)
+        , Right(InRight)
+        , Context(InContext) {};
+    std::string ToString() const override
     {
         return std::format("UnaryExpr: {}{}", TokenToStringMap[Op], Right->ToString());
     }
@@ -338,19 +329,22 @@ public:
     Token GetContext() const override { return Context; }
 };
 
-class ASTBinOp : public ASTNode
+class ASTBinOp : public AstNode
 {
     std::string OpString;
-    Token		Context;
+    Token       Context;
 
 public:
-    ASTNode*   Left = nullptr;
-    ASTNode*   Right = nullptr;
+    AstNode*   Left = nullptr;
+    AstNode*   Right = nullptr;
     ETokenType Op = Invalid;
 
-    ASTBinOp(ASTNode* InLeft, ASTNode* InRight, ETokenType& InOp, Token InContext)
-        : Left(InLeft), Right(InRight), Op(InOp), Context(InContext){};
-    virtual std::string ToString() const
+    ASTBinOp(AstNode* InLeft, AstNode* InRight, ETokenType& InOp, Token InContext)
+        : Context(InContext)
+        , Left(InLeft)
+        , Right(InRight)
+        , Op(InOp) {};
+    std::string ToString() const override
     {
         return "BinOp{\"Left: " + Left->ToString() + ", \"Op: \"" + OpString
                + "\", Right: " + (Right ? Right->ToString() : "none") + "}";
@@ -360,103 +354,121 @@ public:
     Token GetContext() const override { return Context; }
 };
 
-class ASTAssignment : public ASTNode
+class ASTAssignment : public AstNode
 {
 public:
     std::string Name;
-    ASTNode*	Right;
-    Token		Context;
+    AstNode*    Right;
+    Token       Context;
 
-    ASTAssignment(const std::string& InName, ASTNode* InRight, Token InContext)
-        : Name(InName), Right(InRight), Context(InContext){};
-    virtual std::string ToString() const { return "Assign: " + Name + " => {" + Right->ToString() + "}"; }
-
-    bool  Accept(Visitor& V) override { return V.Visit(this); }
-    Token GetContext() const override { return Context; }
-};
-
-class ASTCall : public ASTNode
-{
-public:
-    std::string			  Identifier;
-    ECallType			  Type;
-    std::vector<ASTNode*> Args;
-    Token				  Context;
-
-    ASTCall(const std::string& InIdentifier, ECallType InType, std::vector<ASTNode*> InArgs, Token InContext)
-        : Identifier(InIdentifier), Type(InType), Args(InArgs), Context(InContext){};
-    virtual std::string ToString() const { return "Call"; }
+    ASTAssignment(const std::string& InName, AstNode* InRight, Token InContext)
+        : Name(InName)
+        , Right(InRight)
+        , Context(InContext) {};
+    std::string ToString() const override { return "Assign: " + Name + " => {" + Right->ToString() + "}"; }
 
     bool  Accept(Visitor& V) override { return V.Visit(this); }
     Token GetContext() const override { return Context; }
 };
 
-class ASTIf : public ASTNode
+class ASTCall : public AstNode
 {
 public:
-    ASTNode* Cond = nullptr;
-    ASTNode* TrueBody = nullptr;
-    ASTNode* FalseBody = nullptr;
-    Token	 Context;
+    std::string           Identifier;
+    ECallType             Type;
+    std::vector<AstNode*> Args;
+    Token                 Context;
 
-    ASTIf(ASTNode* InCond, ASTNode* InTrueBody, ASTNode* InFalseBody, Token InContext)
-        : Cond(InCond), TrueBody(InTrueBody), FalseBody(InFalseBody), Context(InContext){};
-    virtual std::string ToString() const { return "Conditional"; }
-    bool				Accept(Visitor& V) override { return V.Visit(this); }
-    Token				GetContext() const override { return Context; }
+    ASTCall(const std::string& InIdentifier, ECallType InType, std::vector<AstNode*> InArgs, Token InContext)
+        : Identifier(InIdentifier)
+        , Type(InType)
+        , Args(InArgs)
+        , Context(InContext) {};
+    std::string ToString() const override { return "Call"; }
+
+    bool  Accept(Visitor& V) override { return V.Visit(this); }
+    Token GetContext() const override { return Context; }
 };
 
-class ASTWhile : public ASTNode
+class ASTIf : public AstNode
 {
 public:
-    ASTNode* Cond = nullptr;
-    ASTNode* Body = nullptr;
-    Token	 Context;
+    AstNode* Cond = nullptr;
+    AstNode* TrueBody = nullptr;
+    AstNode* FalseBody = nullptr;
+    Token    Context;
 
-    ASTWhile(ASTNode* InCond, ASTNode* InBody, Token InContext) : Cond(InCond), Body(InBody), Context(InContext){};
-    virtual std::string ToString() const { return "While"; }
-    bool				Accept(Visitor& V) override { return V.Visit(this); }
-    Token				GetContext() const override { return Context; }
+    ASTIf(AstNode* InCond, AstNode* InTrueBody, AstNode* InFalseBody, Token InContext)
+        : Cond(InCond)
+        , TrueBody(InTrueBody)
+        , FalseBody(InFalseBody)
+        , Context(InContext) {};
+    std::string ToString() const override { return "Conditional"; }
+    bool        Accept(Visitor& V) override { return V.Visit(this); }
+    Token       GetContext() const override { return Context; }
 };
 
-class ASTFunction : public ASTNode
+class ASTWhile : public AstNode
 {
 public:
-    std::string				 Name;
+    AstNode* Cond = nullptr;
+    AstNode* Body = nullptr;
+    Token    Context;
+
+    ASTWhile(AstNode* InCond, AstNode* InBody, Token InContext)
+        : Cond(InCond)
+        , Body(InBody)
+        , Context(InContext) {};
+    std::string ToString() const override { return "While"; }
+    bool        Accept(Visitor& V) override { return V.Visit(this); }
+    Token       GetContext() const override { return Context; }
+};
+
+class ASTFunction : public AstNode
+{
+public:
+    std::string              Name;
     std::vector<std::string> Args;
-    ASTNode*				 Body = nullptr;
-    Token					 Context;
+    AstNode*                 Body = nullptr;
+    Token                    Context;
 
-    ASTFunction(const std::string& InName, std::vector<std::string> InArgs, ASTNode* InBody, Token InContext)
-        : Name(InName), Args(InArgs), Body(InBody), Context(InContext){};
-    virtual std::string ToString() const { return "FunctionDecl"; }
-    bool				Accept(Visitor& V) override { return V.Visit(this); }
-    Token				GetContext() const override { return Context; }
+    ASTFunction(const std::string& InName, std::vector<std::string> InArgs, AstNode* InBody, Token InContext)
+        : Name(InName)
+        , Args(InArgs)
+        , Body(InBody)
+        , Context(InContext) {};
+    std::string ToString() const override { return "FunctionDecl"; }
+    bool        Accept(Visitor& V) override { return V.Visit(this); }
+    Token       GetContext() const override { return Context; }
 };
 
-class ASTReturn : public ASTNode
+class ASTReturn : public AstNode
 {
 public:
-    ASTNode* Expr;
-    Token	 Context;
-    ASTReturn(ASTNode* InExpr, Token InContext) : Expr(InExpr), Context(InContext){};
-    virtual std::string ToString() const { return "FunctionDecl"; }
-    bool				Accept(Visitor& V) override { return V.Visit(this); }
-    Token				GetContext() const override { return Context; }
+    AstNode* Expr;
+    Token    Context;
+    ASTReturn(AstNode* InExpr, Token InContext)
+        : Expr(InExpr)
+        , Context(InContext) {};
+    std::string ToString() const override { return "FunctionDecl"; }
+    bool        Accept(Visitor& V) override { return V.Visit(this); }
+    Token       GetContext() const override { return Context; }
 };
 
-class ASTBody : public ASTNode
+class ASTBody : public AstNode
 {
 public:
     std::vector<std::string> Errors;
-    std::vector<ASTNode*>	 Expressions;
-    Token					 Context;
+    std::vector<AstNode*>    Expressions;
+    Token                    Context;
 
-    ASTBody(std::vector<ASTNode*> InBody, Token InContext) : Expressions(InBody), Context(InContext){};
-    virtual std::string ToString() const
+    ASTBody(std::vector<AstNode*> InBody, Token InContext)
+        : Expressions(InBody)
+        , Context(InContext) {};
+    std::string ToString() const override
     {
         std::string Out;
-        for (const ASTNode* E : Expressions)
+        for (const AstNode* E : Expressions)
         {
             Out += E->ToString() + "\n";
         };
@@ -473,11 +485,11 @@ public:
 class AST
 {
 private:
-    ASTBody*			  Program;
-    std::vector<Token>	  Tokens{};
-    std::vector<ASTNode*> Expressions{};
-    Token*				  CurrentToken;
-    int					  Position;
+    ASTBody*              Program;
+    std::vector<Token>    Tokens{};
+    std::vector<AstNode*> Expressions{};
+    Token*                CurrentToken;
+    int                   Position;
 
     const std::map<std::string, EValueType> StringTypeMap{
         { "void", NullType },
@@ -596,24 +608,25 @@ private:
         return ExpectAny({ Minus, PlusPlus, MinusMinus, Period, LBracket }, Offset);
     }
 
-    ASTNode* ParseValueExpr();
-    ASTNode* ParseIdentifier();
-    ASTNode* ParseUnaryExpr();
-    ASTNode* ParseMultiplicativeExpr();
-    ASTNode* ParseAdditiveExpr();
-    ASTNode* ParseEqualityExpr();
-    ASTNode* ParseAssignment();
-    ASTNode* ParseParenExpr();
-    ASTNode* ParseBracketExpr();
-    ASTNode* ParseCurlyExpr();
-    ASTNode* ParseIf();
-    ASTNode* ParseWhile();
-    ASTNode* ParseFunctionDecl();
-    ASTNode* ParseExpression();
-    ASTNode* ParseBody();
+    AstNode* ParseValueExpr();
+    AstNode* ParseIdentifier();
+    AstNode* ParseUnaryExpr();
+    AstNode* ParseMultiplicativeExpr();
+    AstNode* ParseAdditiveExpr();
+    AstNode* ParseEqualityExpr();
+    AstNode* ParseAssignment();
+    AstNode* ParseParenExpr();
+    AstNode* ParseBracketExpr();
+    AstNode* ParseCurlyExpr();
+    AstNode* ParseIf();
+    AstNode* ParseWhile();
+    AstNode* ParseFunctionDecl();
+    AstNode* ParseExpression();
+    AstNode* ParseBody();
 
 public:
-    AST(std::vector<Token>& InTokens) : Tokens(InTokens)
+    AST(std::vector<Token>& InTokens)
+        : Tokens(InTokens)
     {
         CurrentToken = &Tokens[0];
         Position = 0;

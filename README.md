@@ -1,26 +1,31 @@
 # Penguin Language
 
 <!--TOC-->
-  - [Goals](#goals)
-  - [Features](#features)
-  - [Development](#development)
-  - [Example](#example)
+
+- [Goals](#goals)
+- [Features](#features)
+- [Development](#development)
+- [Example](#example)
     - [Basic arithmetic](#basic-arithmetic)
     - [Strings](#strings)
     - [Arrays](#arrays)
     - [Loops](#loops)
-  - [Grammar](#grammar)
+- [Grammar](#grammar)
+
 <!--/TOC-->
 
 ## Goals
+
 Feature set similar to Python with optional type-safety and brackets.
 
 ## Features
+
 - Dynamically typed
 - Ignores whitespace
 - Basic mutable types
 
 ## Development
+
 - [x] Lexer
 - [x] AST
 - [x] Variables
@@ -43,11 +48,12 @@ Feature set similar to Python with optional type-safety and brackets.
 - [ ] `break` in `while` statements
 - [ ] Function type hints
 - [ ] Function type checking
-- [ ] Imports 
+- [ ] Imports
 
 ## Example
 
 ### Basic arithmetic
+
 ```c
 var1 = 1;
 var2 = 3.14159;
@@ -56,6 +62,7 @@ var3 = var1 + var2;
 ```
 
 ### Strings
+
 ```c
 my_string = "This is a very long test string.";
 my_string[0];
@@ -65,6 +72,7 @@ my_string[-1];
 ```
 
 ### Arrays
+
 ```c
 my_array = [1,2,3]
 my_array[-1]
@@ -78,6 +86,7 @@ my_array[1]
 ```
 
 ### Loops
+
 ```c
 my_array = [0,1,2,3,4,5];
 i = 0;
@@ -102,14 +111,14 @@ my_new_string
 
 ## Grammar
 
-| Expression | Grammar |
-| --- | --- |
-| Body       | ```Expr*``` |
-| Expr       | ```Equality \| Assignment ;``` |
-| Assignment | ```Name ( = \| += \| -= \| *= \| /= ) Expr``` |
-| Equality   | ```Comparison ( != \| == ) Comparison``` |
-| Comparison | ```Sum ( < \| > \| <= \| >= ) Sum``` |
-| Sum        | ```Product ( + \| - ) Product``` |
-| Product    | ```Unary ( * \| / ) Unary``` |
-| Unary      | ```( ! \| - ) Value``` |
+| Expression | Grammar                                           |
+|------------|---------------------------------------------------|
+| Body       | ```Expr*```                                       |
+| Expr       | ```Equality \| Assignment ;```                    |
+| Assignment | ```Name ( = \| += \| -= \| *= \| /= ) Expr```     |
+| Equality   | ```Comparison ( != \| == ) Comparison```          |
+| Comparison | ```Sum ( < \| > \| <= \| >= ) Sum```              |
+| Sum        | ```Product ( + \| - ) Product```                  |
+| Product    | ```Unary ( * \| / ) Unary```                      |
+| Unary      | ```( ! \| - ) Value```                            |
 | Value      | ```Number \| String \| Bool \| Name \| ( ... )``` |

@@ -3,23 +3,23 @@
 #include <format>
 #include <string>
 #include <vector>
-#include <iostream>
+
 
 namespace Logging
 {
-    enum LogLevel
+    enum class LogLevel
     {
-        _Debug,
-        _Info,
-        _Warning,
-        _Error,
+        Debug,
+        Info,
+        Warning,
+        Error,
     };
 
     class Logger
     {
         std::vector<std::pair<std::string, LogLevel>> Messages;
 
-        Logger(){};
+        Logger() = default;
 
     public:
         static Logger*     Instance;
@@ -28,7 +28,7 @@ namespace Logging
         static std::string Source;
 
         Logger(Logger& Other) = delete;
-        ~Logger(){};
+        ~Logger() = default;
         void operator=(const Logger& Other) = delete;
 
         static Logger* GetInstance();
@@ -36,17 +36,16 @@ namespace Logging
         template <typename... Types>
         void Log(std::format_string<Types...> Fmt, LogLevel Level, Types&&... Args)
         {
-            std::string Msg;
-            Msg = std::format(Fmt, std::forward<Types>(Args)...);
+            std::string Msg = std::format(Fmt, std::forward<Types>(Args)...);
             Messages.push_back({ Msg, Level });
         }
 
-        int GetCount(LogLevel Level)
+        int GetCount(const LogLevel Level)
         {
             int Count = 0;
-            for (const auto& Pair : Messages)
+            for (const auto& [Msg, MsgLevel] : Messages)
             {
-                if (Pair.second == Level)
+                if (MsgLevel == Level)
                 {
                     Count++;
                 }
@@ -54,14 +53,14 @@ namespace Logging
             return Count;
         }
 
-        std::vector<std::string> GetMessages(LogLevel Level)
+        std::vector<std::string> GetMessages(const LogLevel Level)
         {
             std::vector<std::string> Result;
-            for (const auto& Pair : Messages)
+            for (const auto& [Msg, MsgLevel] : Messages)
             {
-                if (Pair.second == Level)
+                if (MsgLevel == Level)
                 {
-                    Result.push_back(Pair.first);
+                    Result.push_back(Msg);
                 }
             }
             return Result;
@@ -76,35 +75,35 @@ namespace Logging
     template <typename... Types>
     static constexpr void Debug(std::format_string<Types...> Fmt, Types&&... Args)
     {
-#ifdef _DEBUG
+        #ifdef _DEBUG
         std::cout << std::format(Fmt, std::forward<Types>(Args)...) << std::endl;
         Logger::GetInstance()->Log(Fmt, _Debug, std::forward<Types>(Args)...);
-#endif
+        #endif
     }
 
     template <typename... Types>
     static constexpr void Info(std::format_string<Types...> Fmt, Types&&... Args)
     {
-        Logger::GetInstance()->Log(Fmt, _Info, std::forward<Types>(Args)...);
+        Logger::GetInstance()->Log(Fmt, LogLevel::Info, std::forward<Types>(Args)...);
     }
 
     template <typename... Types>
     static constexpr void Warning(std::format_string<Types...> Fmt, Types&&... Args)
     {
-        Logger::GetInstance()->Log(Fmt, _Warning, std::forward<Types>(Args)...);
+        Logger::GetInstance()->Log(Fmt, LogLevel::Warning, std::forward<Types>(Args)...);
     }
 
     template <typename... Types>
     static constexpr void Error(std::format_string<Types...> Fmt, Types&&... Args)
     {
-        Logger::GetInstance()->Log(Fmt, _Error, std::forward<Types>(Args)...);
+        Logger::GetInstance()->Log(Fmt, LogLevel::Error, std::forward<Types>(Args)...);
     }
 } // namespace Logging
 
 static int         IndentDepth = 0;
 static std::string GetIndent()
 {
-    return std::string(IndentDepth, ' ');
+    return std::string(IndentDepth, ' '); // NOLINT(modernize-return-braced-init-list)
 }
 
 #ifdef _DEBUG
@@ -115,6 +114,6 @@ static std::string GetIndent()
         IndentDepth--; \
         Logging::Debug("{}Exiting {}.", GetIndent(), __FUNCSIG__);
 #else
-    #define DEBUG_ENTER
-    #define DEBUG_EXIT
+#define DEBUG_ENTER
+#define DEBUG_EXIT
 #endif
