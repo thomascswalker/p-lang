@@ -56,16 +56,16 @@ enum ETokenType
     MinusMinus,
 };
 
-static int TokenTypeCount = ETokenType::Count;
+static int TOKEN_TYPE_COUNT = ETokenType::Count;
 
 static std::map<ETokenType, std::string> TokenToStringMap{
-    { Eof, "/0" }, { Type, "Type" }, { Func, "func" }, { Plus, "+" }, { Minus, "-" },
-    { Multiply, "*" }, { Divide, "/" }, { Comma, "," }, { Not, "!" }, { Assign, "=" },
-    { Equals, "==" }, { NotEquals, "!=" }, { Semicolon, ";" }, { LessThan, "<" }, { GreaterThan, ">" },
-    { LParen, "(" }, { RParen, ")" }, { LBracket, "[" }, { RBracket, "]" }, { LCurly, "{" },
-    { RCurly, "}" }, { If, "if" }, { Else, "else" }, { For, "for" }, { While, "while" },
-    { Return, "return" }, { Period, "." }, { PlusEquals, "+=" }, { MinusEquals, "-=" }, { MultEquals, "*=" },
-    { DivEquals, "/=" }, { PlusPlus, "++" }, { MinusMinus, "--" }
+    {Eof, "/0"}, {Type, "Type"}, {Func, "func"}, {Plus, "+"}, {Minus, "-"},
+    {Multiply, "*"}, {Divide, "/"}, {Comma, ","}, {Not, "!"}, {Assign, "="},
+    {Equals, "=="}, {NotEquals, "!="}, {Semicolon, ";"}, {LessThan, "<"}, {GreaterThan, ">"},
+    {LParen, "("}, {RParen, ")"}, {LBracket, "["}, {RBracket, "]"}, {LCurly, "{"},
+    {RCurly, "}"}, {If, "if"}, {Else, "else"}, {For, "for"}, {While, "while"},
+    {Return, "return"}, {Period, "."}, {PlusEquals, "+="}, {MinusEquals, "-="}, {MultEquals, "*="},
+    {DivEquals, "/="}, {PlusPlus, "++"}, {MinusMinus, "--"}
 };
 
 static ETokenType GetTokenTypeFromString(const std::string& InString)
@@ -80,17 +80,17 @@ static ETokenType GetTokenTypeFromString(const std::string& InString)
     return Invalid;
 }
 
-const std::vector<char> TOKENS{ '+', '-', '/', '*', '=', '!', ';', '<', '>', '(', ')', '[', ']', '{', '}', ',', '.' };
-const std::vector<char> OPERATORS{ '+', '-', '/', '*', '=', '.', '!' };
+const std::vector<char> TOKENS{'+', '-', '/', '*', '=', '!', ';', '<', '>', '(', ')', '[', ']', '{', '}', ',', '.'};
+const std::vector<char> OPERATORS{'+', '-', '/', '*', '=', '.', '!'};
 const std::vector<std::string> TYPES{
     "int",
     "float",
     "string",
     "bool",
 };
-const std::vector<std::string>         KEYWORDS{ "if", "else", "for", "while", "return" };
-const std::map<ETokenType, ETokenType> BLOCK_PAIRS{ { LParen, RParen }, { LBracket, RBracket }, { LCurly, RCurly } };
-const std::vector<std::string>         FUNCTION{ "function", "func", "fn", "def" };
+const std::vector<std::string> KEYWORDS{"if", "else", "for", "while", "return"};
+const std::map<ETokenType, ETokenType> BLOCK_PAIRS{{LParen, RParen}, {LBracket, RBracket}, {LCurly, RCurly}};
+const std::vector<std::string> FUNCTION{"function", "func", "fn", "def"};
 
 // Forward decl
 struct Token;
@@ -101,44 +101,48 @@ using TokenArray = std::vector<std::shared_ptr<Token>>;
 struct Token
 {
     // Properties
-    ETokenType  Type;
-    std::string Content = "";
-    std::string Source = "";
-    int         Line = 1;
-    int         Column = 0;
+    ETokenType Type;
+    std::string Content;
+    std::string Source;
+    int Line = 1;
+    int Column = 0;
 
     // Constructors
     Token()
-        : Type(Invalid) {};
-    Token(ETokenType InType, const std::string& InContent, int InLine, int InColumn)
+        : Type(Invalid)
+    {
+    }
+    Token(const ETokenType InType, const std::string& InContent, int InLine, int InColumn)
         : Type(InType)
-        , Content(InContent)
-        , Line(InLine)
-        , Column(InColumn) {};
+          , Content(InContent)
+          , Line(InLine)
+          , Column(InColumn)
+    {
+    }
 
     // Methods
     std::string ToString() const
     {
         std::ostringstream Stream;
-        Stream << (int)Type << ", " << Content << ", line " << (Line + 1) << ", col " << Column;
+        Stream << Type << ", " << Content << ", line " << (Line + 1) << ", col " << Column;
         return Stream.str();
     }
-    void Print() const { std::cout << ToString() << std::endl; }
+    void Print() const { std::cout << ToString() << '\n'; }
 };
 
 class Lexer
 {
-    std::string              Source = "";
-    int                      Position = 0;
-    int                      Line = 1;
-    int                      Column = 0;
+    std::string Source;
+    int Position = 0;
+    int Line = 1;
+    int Column = 0;
     std::vector<std::string> Lines;
 
-    char        GetCurrentChar() { return Source[Position]; }
-    char        GetNextChar() { return Source[Position + 1]; }
-    std::string GetPair() { return Source.substr(Position, 2); }
-    std::string GetRemaining() { return Source.substr(Position); }
-    const char  Advance(int Offset = 1)
+    char GetCurrentChar() const { return Source[Position]; }
+    char GetNextChar() const { return Source[Position + 1]; }
+    std::string GetPair() const { return Source.substr(Position, 2); }
+    std::string GetRemaining() const { return Source.substr(Position); }
+    char Advance(int Offset = 1)
     {
         Position += Offset;
         Column += Offset;
@@ -146,9 +150,9 @@ class Lexer
     }
     bool IsWhitespace()
     {
-        std::string Slice = GetRemaining();
-        auto        T = GetPair();
-        if (T == "//")
+        const std::string Slice = GetRemaining();
+        const std::string Pair = GetPair();
+        if (Pair == "//")
         {
             Advance(2); // Consume '//'
             while (GetCurrentChar() != '\n')
@@ -160,7 +164,7 @@ class Lexer
             return true;
         }
 
-        if (GetPair() == "/*")
+        if (Pair == "/*")
         {
             Advance(2); // Consume '/*'
             auto C = GetCurrentChar();
@@ -196,13 +200,17 @@ class Lexer
         }
         return false;
     }
-    bool IsAscii(char C) { return C >= 'a' && C <= 'z' || C >= 'A' && C <= 'Z'; }
-    bool IsDigit(char C) { return C >= '0' && C <= '9'; }
-    bool IsSymbol(char C) { return Contains(TOKENS, C); }
+    static bool IsAscii(const char C) { return C >= 'a' && C <= 'z' || C >= 'A' && C <= 'Z'; }
+    static bool IsDigit(const char C) { return C >= '0' && C <= '9'; }
+    static bool IsSymbol(const char C) { return Contains(TOKENS, C); }
+
+    bool AtEnd() const { return Position >= Source.size(); }
 
 public:
-    Lexer(std::string InSource)
-        : Source(InSource) {};
+    explicit Lexer(const std::string& InSource)
+        : Source(InSource)
+    {
+    }
 
     Token Next()
     {
@@ -217,7 +225,7 @@ public:
         // Operators, blocks
         if (IsSymbol(C))
         {
-            ETokenType  Type;
+            ETokenType Type;
             std::string Op;
             // Equals operator
             if (Contains(OPERATORS, C) && Contains(OPERATORS, GetNextChar()))
@@ -233,10 +241,11 @@ public:
                 Advance(); // Consume single char operator
             }
 
-            return Token{ Type, Op, Line, Column };
+            return Token{Type, Op, Line, Column};
         }
+
         // Numbers
-        else if (IsDigit(C))
+        if (IsDigit(C))
         {
             std::string Number;
             while (IsDigit(C) || C == '.')
@@ -245,10 +254,11 @@ public:
                 C = Advance();
             }
 
-            return Token{ ETokenType::Number, Number, Line, Column };
+            return Token{ETokenType::Number, Number, Line, Column};
         }
+
         // Types, Names
-        else if (IsAscii(C))
+        if (IsAscii(C))
         {
             std::string String;
             while (IsAscii(C) || C == '_')
@@ -259,28 +269,29 @@ public:
 
             if (Contains(FUNCTION, String))
             {
-                return Token{ Func, String, Line, Column };
+                return Token{Func, String, Line, Column};
             }
 
             if (Contains(TYPES, String))
             {
-                return Token{ ETokenType::Type, String, Line, Column };
+                return Token{ETokenType::Type, String, Line, Column};
             }
 
             if (Contains(KEYWORDS, String))
             {
-                return Token{ GetTokenTypeFromString(String), String, Line, Column };
+                return Token{GetTokenTypeFromString(String), String, Line, Column};
             }
 
-            if (Contains({ "true", "false" }, String))
+            if (Contains({"true", "false"}, String))
             {
-                return Token{ ETokenType::Bool, String, Line, Column };
+                return Token{ETokenType::Bool, String, Line, Column};
             }
 
-            return Token{ ETokenType::Name, String, Line, Column };
+            return Token{ETokenType::Name, String, Line, Column};
         }
+
         // Strings
-        else if (C == '"' || C == '\'')
+        if (C == '"' || C == '\'')
         {
             C = Advance(); // Skip first quotation
             std::string String;
@@ -292,34 +303,37 @@ public:
                 C = Advance();
             }
             Advance(); // Skip last quotation
-            return Token{ ETokenType::String, String, Line, Column };
+            return Token{ETokenType::String, String, Line, Column};
         }
+
         // End of file
-        else if (C == '\0')
+        if (C == '\0')
         {
-            return Token{ ETokenType::Eof, "\0", Line, Column };
+            return Token{ETokenType::Eof, "\0", Line, Column};
         }
-        else
-        {
-            throw(std::runtime_error("Invalid character found: " + C));
-        }
+
+        throw(std::runtime_error(std::format("Invalid character found: {}", C)));
     }
 
     std::vector<Token> Tokenize()
     {
         // First split the source into separate lines
-        auto Stream = std::stringstream{ Source };
-        for (std::string Line; std::getline(Stream, Line, '\n');)
+        auto Stream = std::stringstream{Source};
+        for (std::string LineContent; std::getline(Stream, LineContent, '\n');)
         {
-            Lines.push_back(Line);
+            Lines.push_back(LineContent);
         }
 
         // Then tokenize the source
         std::vector<Token> Tokens;
         while (Position < Source.size())
         {
+            if (Position >= Source.size())
+            {
+                break;
+            }
             Token T = Next();
-            T.Source = Lines[T.Line - 1];
+            T.Source = Lines[T.Line];
             Tokens.push_back(T);
         }
         return Tokens;

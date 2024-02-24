@@ -79,6 +79,7 @@
             <SDLCheck>true</SDLCheck>
             <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
             <ConformanceMode>true</ConformanceMode>
+            <LanguageStandard>stdcpp20</LanguageStandard>
         </ClCompile>
         <Link>
             <SubSystem>Console</SubSystem>
@@ -93,6 +94,7 @@
             <SDLCheck>true</SDLCheck>
             <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
             <ConformanceMode>true</ConformanceMode>
+            <LanguageStandard>stdcpp20</LanguageStandard>
         </ClCompile>
         <Link>
             <SubSystem>Console</SubSystem>
@@ -107,7 +109,6 @@
             <SDLCheck>true</SDLCheck>
             <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
             <ConformanceMode>true</ConformanceMode>
-            <LanguageStandard_C>Default</LanguageStandard_C>
             <LanguageStandard>stdcpp20</LanguageStandard>
             <GenerateXMLDocumentationFiles>false</GenerateXMLDocumentationFiles>
         </ClCompile>
@@ -125,7 +126,6 @@
             <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
             <ConformanceMode>true</ConformanceMode>
             <LanguageStandard>stdcpp20</LanguageStandard>
-            <LanguageStandard_C>stdc11</LanguageStandard_C>
         </ClCompile>
         <Link>
             <SubSystem>Console</SubSystem>
@@ -135,7 +135,6 @@
         </Link>
     </ItemDefinitionGroup>
     <ItemGroup>
-        <None Include=".clang-format"/>
         <None Include="cpp.hint"/>
         <None Include="Examples\arithmetic.p"/>
         <None Include="Examples\bootstrap.p"/>

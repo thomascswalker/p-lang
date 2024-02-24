@@ -41,7 +41,7 @@ while (i < limit)
     print(a);
     i += 1;
 }
-printf("Fibonnaci: {} iterations, ends with {}", limit, a);
+printf("Fibonacci: {} iterations, ends with {}", limit, a);
 print("=========");
 
 // Implicit casting

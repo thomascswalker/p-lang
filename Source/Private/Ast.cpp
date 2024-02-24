@@ -1,10 +1,24 @@
 #include "../Public/Ast.h"
 
 #include <cassert>
+#include <ranges>
 
 using namespace Core;
 
-static std::string FormatSource()
+
+bool IsBuiltIn(const std::string& Name)
+{
+    for (const auto& Key : FUNCTION_MAP | std::views::keys)
+    {
+        if (Key == Name)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::string FormatSource()
 {
     return std::format("line {}, column {}\n\t{}\n\t{}^", LINE, COLUMN, SOURCE, std::string(COLUMN, ' '));
 }
@@ -19,7 +33,7 @@ bool Visitor::IsFunctionDeclared(const std::string& Name)
     return (Func != nullptr);
 }
 
-ASTFunction* Visitor::GetFunction(const std::string& Name)
+AstFunction* Visitor::GetFunction(const std::string& Name)
 {
     for (const auto& [K, V] : Functions)
     {
@@ -31,19 +45,16 @@ ASTFunction* Visitor::GetFunction(const std::string& Name)
     return nullptr;
 }
 
-bool Visitor::Visit(ASTValue* Node) const
+bool Visitor::Visit(AstValue* Node) const
 {
     DEBUG_ENTER
-
-    auto Value = Node->GetValue();
-    assert(Value);
-    CurrentFrame->Push(Value);
+    CurrentFrame->Push(&Node->Value);
 
     DEBUG_EXIT
     return true;
 }
 
-bool Visitor::Visit(ASTIdentifier* Node) const
+bool Visitor::Visit(AstIdentifier* Node) const
 {
     DEBUG_ENTER
 
@@ -66,28 +77,28 @@ bool Visitor::Visit(ASTIdentifier* Node) const
 
     // If the variable is found, push the variable's value to the stack
     Logging::Debug("'{}' is {}.", Node->Name, Node->Value.ToString());
-    CurrentFrame->Push(Node->Value);
+    CurrentFrame->Push(&Node->Value);
     DEBUG_EXIT
     return true;
 }
 
-bool Visitor::Visit(const ASTUnaryExpr* Node)
+bool Visitor::Visit(const AstUnaryExpr* Node)
 {
     DEBUG_ENTER
     CHECK_ACCEPT(Node->Right)
-    auto CurrentValue = CurrentFrame->Pop();
+    TObject* CurrentValue = CurrentFrame->Pop();
 
     switch (Node->Op)
     {
-        case Not :
-            CurrentValue = CurrentValue - TObject(1);
-            break;
-        case Minus :
-            CurrentValue = CurrentValue * TObject(-1);
-            break;
-        default :
-            Logging::Error("Operator is not a valid unary operator.");
-            CHECK_ERRORS
+    case Not :
+        *CurrentValue = *CurrentValue - TObject(1);
+        break;
+    case Minus :
+        *CurrentValue = *CurrentValue * TObject(-1);
+        break;
+    default :
+        Logging::Error("Operator is not a valid unary operator.");
+        CHECK_ERRORS
     }
 
     CurrentFrame->Push(CurrentValue);
@@ -95,76 +106,76 @@ bool Visitor::Visit(const ASTUnaryExpr* Node)
     return true;
 }
 
-bool Visitor::Visit(ASTBinOp* Node)
+bool Visitor::Visit(AstBinOp* Node)
 {
     DEBUG_ENTER
     // Visit the left value
     CHECK_ACCEPT(Node->Left)
 
     // After visiting the left value, pop it off the stack and store it here
-    TObject Left = CurrentFrame->Pop();
+    TObject* Left = CurrentFrame->Pop();
+    TObject OriginalLeftValue = *Left;
 
     // Visit the right value
     CHECK_ACCEPT(Node->Right)
 
     // After visiting the right value, pop it off the stack and store it here
-    TObject Right = CurrentFrame->Pop();
+    TObject* Right = CurrentFrame->Pop();
 
     // Execute the operator on the left and right value
-    TObject Result;
     switch (Node->Op)
     {
-        case Plus :
-        case PlusEquals :
-            Result = Left + Right;
-            break;
-        case Minus :
-        case MinusEquals :
-            Result = Left - Right;
-            break;
-        case Multiply :
-        case MultEquals :
-            Result = Left * Right;
-            break;
-        case Divide :
-        case DivEquals :
-            Result = Left / Right;
-            break;
-        case LessThan :
-            Result = Left < Right;
-            break;
-        case GreaterThan :
-            Result = Left > Right;
-            break;
-        case Equals :
-            Result = Left == Right;
-            break;
-        case NotEquals :
-            Result = !(Left == Right);
-            break;
-        default :
-            break;
+    case Plus :
+    case PlusEquals :
+        *Left = *Left + *Right;
+        break;
+    case Minus :
+    case MinusEquals :
+        *Left = *Left - *Right;
+        break;
+    case Multiply :
+    case MultEquals :
+        *Left = *Left * *Right;
+        break;
+    case Divide :
+    case DivEquals :
+        *Left = *Left / *Right;
+        break;
+    case LessThan :
+        *Left = *Left < *Right;
+        break;
+    case GreaterThan :
+        *Left = *Left > *Right;
+        break;
+    case Equals :
+        *Left = *Left == *Right;
+        break;
+    case NotEquals :
+        *Left = *Left != *Right;
+        break;
+    default :
+        break;
     }
 
     // Push the resulting value to the stack
-    CurrentFrame->Push(Result);
-    Logging::Debug("BINOP: {} {} {} = {}", Left.ToString(), TokenToStringMap[Node->Op], Right.ToString(),
-                   Result.ToString());
+    CurrentFrame->Push(Left);
+    Logging::Debug("BINOP: {} {} {} = {}", Left->ToString(), TokenToStringMap[Node->Op], Right->ToString(),
+                   OriginalLeftValue.ToString());
     DEBUG_EXIT
     return true;
 }
 
-bool Visitor::Visit(ASTAssignment* Node)
+bool Visitor::Visit(AstAssignment* Node)
 {
     DEBUG_ENTER
 
     CHECK_ACCEPT(Node->Right)
     // CHECK_ERRORS
 
-    TObject Value = CurrentFrame->Pop();
+    TObject* Value = CurrentFrame->Pop();
     CHECK_ERRORS
 
-    if (Value.GetType() == NullType)
+    if (Value->GetType() == NullType)
     {
         Logging::Error("Cannot assign nulltype.\n{}", FormatSource());
         DEBUG_EXIT
@@ -173,12 +184,12 @@ bool Visitor::Visit(ASTAssignment* Node)
 
     CurrentFrame->SetIdentifier(Node->Name, Value);
 
-    Logging::Debug("ASSIGN: {} <= {}", Node->Name, Value.ToString());
+    Logging::Debug("ASSIGN: {} <= {}", Node->Name, Value->ToString());
     DEBUG_EXIT
     return true;
 }
 
-bool Visitor::Visit(ASTCall* Node)
+bool Visitor::Visit(AstCall* Node)
 {
     DEBUG_ENTER
 
@@ -189,72 +200,63 @@ bool Visitor::Visit(ASTCall* Node)
             Logging::Error("Invalid argument count for subscript operator.");
             CHECK_ERRORS
         }
-        TObject Object;
-        TObject Result;
-        TObject Index;
-        int     IndexValue;
-
         CHECK_ACCEPT(Node->Args[0])
 
-        Index = CurrentFrame->Pop();
+        const TObject* Index = CurrentFrame->Pop();
         CHECK_ERRORS
-        IndexValue = Index.GetInt().GetValue();
+        int IndexValue = Index->GetInt().GetValue();
 
-        TObject* Temp;
-        switch (Object.GetType())
+        TObject* IdentifierPtr = CurrentFrame->GetIdentifier(Node->Identifier);
+        if (!IdentifierPtr)
         {
-            case StringType :
-                Result = Object.AsString()->At(IndexValue);
-                CurrentFrame->Push(Result);
-                break;
-            case ArrayType :
-                Temp = Object.AsArray()->At(IndexValue);
-                Result = *Temp;
-                CurrentFrame->Push(Result);
-                break;
-            default :
-                break ;
+            Logging::Error("Unable to find identifier {}.", Node->Identifier);
+            CHECK_ERRORS
+        }
+        TObject* Value;
+        TObject Char;
+        switch (IdentifierPtr->GetType())
+        {
+        case StringType :
+            Char = IdentifierPtr->At(IndexValue);
+            CurrentFrame->Push(&Char);
+            break;
+        case ArrayType :
+            Value = IdentifierPtr->AsArray()->GetValue().data() + IndexValue;
+            CurrentFrame->Push(Value);
+            break;
+        default :
+            Logging::Error("Invalid identifier type.");
+            CHECK_ERRORS
+            break ;
         }
     }
     else if (Node->Type == Function)
     {
         // Parse argument values
         TArguments InArgs;
-        for (const auto& Arg : Node->Args)
+        for (AstNode* Arg : Node->Args)
         {
             // Evaluate identifiers
-            if (Cast<ASTIdentifier>(Arg))
+            if (Cast<AstIdentifier>(Arg))
             {
                 // Cast to an identifier
-                ASTIdentifier* Identifier = Cast<ASTIdentifier>(Arg);
+                AstIdentifier* Identifier = Cast<AstIdentifier>(Arg);
 
                 // Get the corresponding identifier name and pointer
                 std::string ArgName = Identifier->Name;
-                TObject*    ArgValue = CurrentFrame->GetIdentifier(ArgName);
-                if (ArgValue == nullptr)
-                {
-                    DEBUG_EXIT
-                    CHECK_ERRORS
-                }
+                TObject* ArgValue = CurrentFrame->GetIdentifier(ArgName);
 
                 // Add this as a new variable argument. The key here is the
                 // ArgValue is a pointer to the `Identifiers` array so we can
                 // modify that value in place rather than pass around a bunch
                 // of copies.
-                InArgs.push_back(new TVariable{ ArgName, ArgValue });
+                InArgs.push_back(std::make_shared<TVariable>(ArgName, ArgValue));
             }
             // Evaluate literal values
-            else if (Cast<ASTValue>(Arg))
+            else if (AstValue* ValueArg = Cast<AstValue>(Arg))
             {
-                // Because this is a literal value, we can just do a normal
-                // accept and pop to get a copy of the value.
-                Arg->Accept(*this);
-                CHECK_ERRORS
-                auto ArgValue = CurrentFrame->Pop();
-                CHECK_ERRORS
-
                 // Add the copy of the literal value to the argument list.
-                InArgs.push_back(new TLiteral{ ArgValue });
+                InArgs.push_back(std::make_shared<TLiteral>(ValueArg->Value));
             }
             else
             {
@@ -267,14 +269,14 @@ bool Visitor::Visit(ASTCall* Node)
         if (IsBuiltIn(Node->Identifier))
         {
             // Temporary return value for the function
-            TObject ReturnValue;
+            TObject* ReturnValue = nullptr;
 
             // Get the corresponding function pointer to the identifier name
-            auto Func = FunctionMap[Node->Identifier];
+            auto Func = FUNCTION_MAP[Node->Identifier];
 
             // Invoke the function with the arguments parsed above
-            bool bResult = Func.Invoke(&InArgs, &ReturnValue);
-            if (!bResult)
+            bool bResult = Func.Invoke(&InArgs, ReturnValue);
+            if (!bResult && !ReturnValue)
             {
                 auto Context = Node->GetContext();
                 auto Space = std::string(Context.Column, ' ');
@@ -282,8 +284,7 @@ bool Visitor::Visit(ASTCall* Node)
                 CHECK_ERRORS
             }
 
-            // If the function is not a void return type, push the return value
-            if (ReturnValue.GetType() != NullType)
+            if (ReturnValue)
             {
                 CurrentFrame->Push(ReturnValue);
             }
@@ -305,13 +306,12 @@ bool Visitor::Visit(ASTCall* Node)
             // Push arguments to the variable table
             for (const auto& [Index, InArg] : Enumerate(InArgs))
             {
-                auto Value = InArg->GetValue();
+                TObject* Value = InArg->GetValuePtr();
                 CurrentFrame->SetIdentifier(Func->Args[Index], Value);
             }
 
             // Execute the function body
             CHECK_ACCEPT(Func->Body)
-
         }
         else
         {
@@ -324,50 +324,39 @@ bool Visitor::Visit(ASTCall* Node)
     return true;
 }
 
-bool Visitor::Visit(ASTIf* Node)
+bool Visitor::Visit(AstIf* Node)
 {
     DEBUG_ENTER
-    TObject bResult;
 
     CHECK_ACCEPT(Node->Cond)
 
-    bResult = CurrentFrame->Pop();
-    if (bResult.GetType() != BoolType)
-    {
-        Logging::Error("Did not get a bool result inside if conditional.");
-        CHECK_ERRORS
-    }
+    bool bResult = CurrentFrame->Pop();
 
-    Logging::Debug("IF: {}", bResult.GetBool().GetValue() ? "true" : "false");
-    if (bResult.GetBool().GetValue())
+    Logging::Debug("IF: {}", bResult? "true" : "false");
+    if (bResult)
     {
-
         CHECK_ACCEPT(Node->TrueBody)
-
     }
     else
     {
-
         CHECK_ACCEPT(Node->FalseBody)
-
     }
     DEBUG_EXIT
     return true;
 }
 
-bool Visitor::Visit(const ASTWhile* Node)
+bool Visitor::Visit(const AstWhile* Node)
 {
     DEBUG_ENTER
     TBoolValue bResult = true;
-    int        Count = 1;
+    int Count = 1;
 
     while (bResult)
     {
-
         // std::cout << std::format("While count: {}", Count) << std::endl;
         CHECK_ACCEPT(Node->Cond)
 
-        bResult = CurrentFrame->Pop().GetBool();
+        bResult = CurrentFrame->Pop()->GetBool();
         Logging::Debug("WHILE ({}): {}", Count, bResult ? "true" : "false");
         if (!bResult)
         {
@@ -389,7 +378,7 @@ bool Visitor::Visit(const ASTWhile* Node)
     return true;
 }
 
-bool Visitor::Visit(ASTFunction* Node)
+bool Visitor::Visit(AstFunction* Node)
 {
     if (!Functions.contains(Node->Name))
     {
@@ -404,24 +393,24 @@ bool Visitor::Visit(ASTFunction* Node)
     return true;
 }
 
-bool Visitor::Visit(const ASTReturn* Node)
+bool Visitor::Visit(const AstReturn* Node)
 {
-    Node->Expr->Accept(*this);
+    Node->Expr->Accept(this);
     if (CurrentFrame->Stack.size() > 0)
     {
-        const TObject Value = CurrentFrame->Pop();
+        TObject* Value = CurrentFrame->Pop();
         CHECK_ERRORS
         CurrentFrame->Push(Value);
     }
     return true;
 }
 
-bool Visitor::Visit(const ASTBody* Node)
+bool Visitor::Visit(const AstBody* Node)
 {
     DEBUG_ENTER
     for (const auto& E : Node->Expressions)
     {
-        E->Accept(*this);
+        E->Accept(this);
     }
     DEBUG_EXIT
     return true;
@@ -432,7 +421,7 @@ void Visitor::Dump() const
     std::cout << "Variables:\n";
     for (const auto& [K, V] : CurrentFrame->Identifiers)
     {
-        std::cout << K << " : " << V.ToString() << '\n';
+        std::cout << K << " : " << V->ToString() << '\n';
     }
 }
 
@@ -440,7 +429,16 @@ void Visitor::Dump() const
 // AST //
 /////////
 
-AstNode* AST::ParseValueExpr()
+void Ast::PrintCurrentToken() const
+{
+    if (!CurrentToken)
+    {
+        return;
+    }
+    std::cout << (std::format("{}", CurrentToken->Content)) << '\n';
+}
+
+AstNode* Ast::ParseValueExpr()
 {
     DEBUG_ENTER
 
@@ -462,7 +460,7 @@ AstNode* AST::ParseValueExpr()
             Logging::Debug("VALUE: Parsing number: {}", Value.GetInt().GetValue());
         }
 
-        const auto Expr = new ASTValue(Value, *CurrentToken);
+        const auto Expr = new AstValue(Value, *CurrentToken);
         Accept(); // Consume number
         DEBUG_EXIT
         return Expr;
@@ -472,7 +470,7 @@ AstNode* AST::ParseValueExpr()
     {
         std::string String = CurrentToken->Content;
         Logging::Debug("VALUE: Parsing string: {}", String);
-        const auto Expr = new ASTValue(String, *CurrentToken);
+        const auto Expr = new AstValue(TObject(String), *CurrentToken);
         Accept(); // Consume string
         DEBUG_EXIT
         return Expr;
@@ -488,7 +486,7 @@ AstNode* AST::ParseValueExpr()
     {
         bool Value = CurrentToken->Content == "true" ? true : false;
         Logging::Debug("VALUE: Parsing bool: {}", Value);
-        const auto Expr = new ASTValue(Value, *CurrentToken);
+        const auto Expr = new AstValue(Value, *CurrentToken);
         Accept(); // Consume bool
         DEBUG_EXIT
         return Expr;
@@ -498,15 +496,15 @@ AstNode* AST::ParseValueExpr()
     return nullptr;
 }
 
-AstNode* AST::ParseIdentifier()
+AstNode* Ast::ParseIdentifier()
 {
     DEBUG_ENTER
 
-    const auto Identifier = new ASTIdentifier(CurrentToken->Content, *CurrentToken);
+    const auto Identifier = new AstIdentifier(CurrentToken->Content, *CurrentToken);
     const auto IdentifierToken = *CurrentToken;
     Accept(); // Consume the variable
 
-    if (!ExpectAny({ LParen, LBracket, Period }))
+    if (!ExpectAny({LParen, LBracket, Period}))
     {
         DEBUG_EXIT
         return Identifier;
@@ -519,16 +517,16 @@ AstNode* AST::ParseIdentifier()
     ECallType CallType;
     switch (StartTok)
     {
-        case LBracket :
-            CallType = IndexOf;
-            break;
-        case LParen :
-            CallType = Function;
-            break;
-        default :
-            Logging::Error("Token {} not supported.", TokenToStringMap[StartTok]);
-            DEBUG_EXIT
-            return nullptr;
+    case LBracket :
+        CallType = IndexOf;
+        break;
+    case LParen :
+        CallType = Function;
+        break;
+    default :
+        Logging::Error("Token {} not supported.", TokenToStringMap[StartTok]);
+        DEBUG_EXIT
+        return nullptr;
     }
     std::vector<AstNode*> Args;
     while (!Expect(EndTok))
@@ -558,26 +556,26 @@ AstNode* AST::ParseIdentifier()
     Accept(); // Consume end token
 
     DEBUG_EXIT
-    return new ASTCall(Identifier->Name, CallType, Args, IdentifierToken);
+    return new AstCall(Identifier->Name, CallType, Args, IdentifierToken);
 }
 
-AstNode* AST::ParseUnaryExpr()
+AstNode* Ast::ParseUnaryExpr()
 {
     DEBUG_ENTER
 
     AstNode* Expr = ParseValueExpr();
-    if (ExpectAny({ Not, Minus }))
+    if (ExpectAny({Not, Minus}))
     {
         const auto Op = CurrentToken->Type;
         Accept(); // Consume '!' or '-'
-        Expr = new ASTUnaryExpr(Op, ParseValueExpr(), *CurrentToken);
+        Expr = new AstUnaryExpr(Op, ParseValueExpr(), *CurrentToken);
     }
 
     DEBUG_EXIT
     return Expr;
 }
 
-AstNode* AST::ParseMultiplicativeExpr()
+AstNode* Ast::ParseMultiplicativeExpr()
 {
     DEBUG_ENTER
 
@@ -586,14 +584,14 @@ AstNode* AST::ParseMultiplicativeExpr()
     {
         auto Op = CurrentToken->Type;
         Accept(); // Consume '*' or '/'
-        Expr = new ASTBinOp(Expr, ParseUnaryExpr(), Op, *CurrentToken);
+        Expr = new AstBinOp(Expr, ParseUnaryExpr(), Op, *CurrentToken);
     }
 
     DEBUG_EXIT
     return Expr;
 }
 
-AstNode* AST::ParseAdditiveExpr()
+AstNode* Ast::ParseAdditiveExpr()
 {
     DEBUG_ENTER
 
@@ -602,48 +600,48 @@ AstNode* AST::ParseAdditiveExpr()
     {
         auto Op = CurrentToken->Type;
         Accept(); // Consume '+' or '-'
-        Expr = new ASTBinOp(Expr, ParseMultiplicativeExpr(), Op, *CurrentToken);
+        Expr = new AstBinOp(Expr, ParseMultiplicativeExpr(), Op, *CurrentToken);
     }
 
     DEBUG_EXIT
     return Expr;
 }
 
-AstNode* AST::ParseEqualityExpr()
+AstNode* Ast::ParseEqualityExpr()
 {
     DEBUG_ENTER
     AstNode* Expr = ParseAdditiveExpr();
-    while (ExpectAny({ GreaterThan, LessThan, NotEquals, Equals }))
+    while (ExpectAny({GreaterThan, LessThan, NotEquals, Equals}))
     {
         auto Op = CurrentToken->Type;
         Accept(); // Consume '==' or '!=' or '<' or '>'
-        Expr = new ASTBinOp(Expr, ParseAdditiveExpr(), Op, *CurrentToken);
+        Expr = new AstBinOp(Expr, ParseAdditiveExpr(), Op, *CurrentToken);
     }
 
     DEBUG_EXIT
     return Expr;
 }
 
-AstNode* AST::ParseAssignment()
+AstNode* Ast::ParseAssignment()
 {
     DEBUG_ENTER
 
     const std::string Name = CurrentToken->Content; // Get the name
-    const auto        NameToken = *CurrentToken;
-    Accept();                     // Consume name
+    const auto NameToken = *CurrentToken;
+    Accept(); // Consume name
     auto Op = CurrentToken->Type; // Get the assignment operator
-    Accept();                     // Consume assignment operator
+    Accept(); // Consume assignment operator
 
     auto Expr = ParseExpression();
     if (Op == PlusEquals || Op == MinusEquals || Op == MultEquals || Op == DivEquals)
     {
-        Expr = new ASTBinOp(new ASTIdentifier(Name, NameToken), Expr, Op, *CurrentToken);
+        Expr = new AstBinOp(new AstIdentifier(Name, NameToken), Expr, Op, *CurrentToken);
     }
     DEBUG_EXIT
-    return new ASTAssignment(Name, Expr, *CurrentToken);
+    return new AstAssignment(Name, Expr, *CurrentToken);
 }
 
-AstNode* AST::ParseParenExpr()
+AstNode* Ast::ParseParenExpr()
 {
     DEBUG_ENTER
 
@@ -666,7 +664,7 @@ AstNode* AST::ParseParenExpr()
     return Expr;
 }
 
-AstNode* AST::ParseBracketExpr()
+AstNode* Ast::ParseBracketExpr()
 {
     DEBUG_ENTER
 
@@ -679,7 +677,7 @@ AstNode* AST::ParseBracketExpr()
         {
             Logging::Debug("BRACKET: Parsing loop in {}.", __FUNCTION__);
             const auto Value = ParseExpression();
-            const auto CastValue = Cast<ASTValue>(Value);
+            const auto CastValue = Cast<AstValue>(Value);
             if (!CastValue)
             {
                 Logging::Error("Unable to cast value.");
@@ -703,14 +701,14 @@ AstNode* AST::ParseBracketExpr()
 
         Accept(); // Consume ']'
 
-        ASTValue* Value;
+        AstValue* Value;
         if (Values.Size().GetValue() == 1)
         {
-            Value = new ASTValue(Values[0], *CurrentToken);
+            Value = new AstValue(Values[0], *CurrentToken);
         }
         else
         {
-            Value = new ASTValue(Values, *CurrentToken);
+            Value = new AstValue(Values, *CurrentToken);
         }
         DEBUG_EXIT
         return Value;
@@ -719,7 +717,7 @@ AstNode* AST::ParseBracketExpr()
     return nullptr;
 }
 
-AstNode* AST::ParseCurlyExpr()
+AstNode* Ast::ParseCurlyExpr()
 {
     DEBUG_ENTER
 
@@ -751,10 +749,10 @@ AstNode* AST::ParseCurlyExpr()
     Accept(); // Consume '}'
 
     DEBUG_EXIT
-    return new ASTBody(Body, CurlyToken);
+    return new AstBody(Body, CurlyToken);
 }
 
-AstNode* AST::ParseIf()
+AstNode* Ast::ParseIf()
 {
     DEBUG_ENTER
 
@@ -792,10 +790,10 @@ AstNode* AST::ParseIf()
     }
 
     DEBUG_EXIT
-    return new ASTIf(Cond, TrueBody, FalseBody, IfToken);
+    return new AstIf(Cond, TrueBody, FalseBody, IfToken);
 }
 
-AstNode* AST::ParseWhile()
+AstNode* Ast::ParseWhile()
 {
     DEBUG_ENTER
     const Token WhileToken = *CurrentToken;
@@ -826,10 +824,10 @@ AstNode* AST::ParseWhile()
     }
 
     DEBUG_EXIT
-    return new ASTWhile(Cond, Body, WhileToken);
+    return new AstWhile(Cond, Body, WhileToken);
 }
 
-AstNode* AST::ParseFunctionDecl()
+AstNode* Ast::ParseFunctionDecl()
 {
     DEBUG_ENTER
     if (!Expect(Func))
@@ -897,10 +895,10 @@ AstNode* AST::ParseFunctionDecl()
     }
 
     DEBUG_EXIT
-    return new ASTFunction(FuncName, Args, Body, FuncToken);
+    return new AstFunction(FuncName, Args, Body, FuncToken);
 }
 
-AstNode* AST::ParseExpression()
+AstNode* Ast::ParseExpression()
 {
     DEBUG_ENTER
 
@@ -920,7 +918,7 @@ AstNode* AST::ParseExpression()
             Accept(); // Consume ';'
         }
     }
-    else if (ExpectSequence({ Name, LParen }))
+    else if (ExpectSequence({Name, LParen}))
     {
         Expr = ParseIdentifier();
         if (Expect(Semicolon))
@@ -937,14 +935,14 @@ AstNode* AST::ParseExpression()
             Accept(); // Consume ';'
         }
     }
-    else if (ExpectAny({ Not, Minus }))
+    else if (ExpectAny({Not, Minus}))
     {
         Expr = ParseUnaryExpr();
     }
     // 5 + ...;
     // "Test" + ...;
     // MyVar + ...;
-    else if (ExpectAny({ Name, Number, String, Bool }))
+    else if (ExpectAny({Name, Number, String, Bool}))
     {
         Expr = ParseEqualityExpr();
     }
@@ -976,10 +974,10 @@ AstNode* AST::ParseExpression()
     return Expr;
 }
 
-AstNode* AST::ParseBody()
+AstNode* Ast::ParseBody()
 {
     DEBUG_ENTER
-    const auto Body = new ASTBody({}, *CurrentToken);
+    const auto Body = new AstBody({}, *CurrentToken);
     while (CurrentToken != nullptr && CurrentToken != &Tokens.back())
     {
         auto Expr = ParseExpression();

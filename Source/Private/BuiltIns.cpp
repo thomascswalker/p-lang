@@ -7,25 +7,26 @@
 using namespace BuiltIns;
 
 #define CHECK_MIN_ARG_COUNT(Args, Count)                                                            \
-    if (Args->size() < Count)                                                                       \
+    if ((Args)->size() < (Count))                                                                       \
     {                                                                                               \
-        Logging::Error("Invalid argument count. Wanted at least {}, got {}.", Count, Args->size()); \
+        Logging::Error("Invalid argument count. Wanted at least {}, got {}.", Count, (Args)->size()); \
         bResult = false;                                                                            \
         return;                                                                                     \
     }
 #define CHECK_EXACT_ARG_COUNT(Args, Count)                                                 \
-    if (Args->size() != Count)                                                             \
+    if ((Args)->size() != (Count))                                                             \
     {                                                                                      \
-        Logging::Error("Invalid argument count. Wanted {}, got {}.", Count, Args->size()); \
+        Logging::Error("Invalid argument count. Wanted {}, got {}.", Count, (Args)->size()); \
         bResult = false;                                                                   \
         return;                                                                            \
     }
 
 void BuiltIns::Print_Internal(TArguments* Arguments, TObject* ReturnValue, bool& bResult)
 {
-    CHECK_EXACT_ARG_COUNT(Arguments, 1);
+    CHECK_EXACT_ARG_COUNT(Arguments, 1)
+
     std::vector<TObject> Objects;
-    for (const auto Arg : *Arguments)
+    for (const std::shared_ptr<TIdentifier>& Arg : *Arguments)
     {
         if (!Arg->IsValid())
         {
@@ -34,7 +35,7 @@ void BuiltIns::Print_Internal(TArguments* Arguments, TObject* ReturnValue, bool&
             return;
         }
         TObject Value = Arg->GetValue();
-        Objects.push_back(Value);
+        Objects.emplace_back(Value);
     }
     const std::string Out = TStringValue::Join(Objects, ",");
     std::cout << Out << '\n';
@@ -44,9 +45,9 @@ void BuiltIns::Print_Internal(TArguments* Arguments, TObject* ReturnValue, bool&
 
 void BuiltIns::Printf_Internal(TArguments* Arguments, TObject* ReturnValue, bool& bResult)
 {
-    CHECK_MIN_ARG_COUNT(Arguments, 2);
+    CHECK_MIN_ARG_COUNT(Arguments, 2)
 
-    auto Arg1 = Arguments->at(0)->GetValue();
+    TObject Arg1 = Arguments->at(0)->GetValue();
     if (Arg1.GetType() != StringType)
     {
         Logging::Error("Wanted 'string' for first argument, got ", Arg1.ToString());
@@ -55,8 +56,8 @@ void BuiltIns::Printf_Internal(TArguments* Arguments, TObject* ReturnValue, bool
     }
 
     // Get the format string (first argument)
-    std::string            Fmt = Arg1.GetString();
-    size_t                 ArgCount = 0;
+    std::string Fmt = Arg1.GetString().GetValue();
+    size_t ArgCount = 0;
     std::string::size_type Pos = 0;
 
     while ((Pos = Fmt.find("{}", Pos)) != std::string::npos)
@@ -94,12 +95,12 @@ void BuiltIns::Printf_Internal(TArguments* Arguments, TObject* ReturnValue, bool
         Objects.emplace_back(Value.ToString());
     }
 
-    int         Index = 0; // Start at the second argument as the first is the fmt string itself
+    int Index = 0; // Start at the second argument as the first is the fmt string itself
     std::string Out = Fmt;
     while (Out.find("{}") != std::string::npos)
     {
         const auto First = Out.find_first_of("{}");
-        auto       Offset = Out.begin() + First;
+        auto Offset = Out.begin() + First;
         Out.replace(Offset, Offset + 2, Objects.at(Index).ToString().c_str());
         Index++;
     }
@@ -111,7 +112,7 @@ void BuiltIns::Append_Internal(TArguments* Arguments, TObject* ReturnValue, bool
 {
     CHECK_EXACT_ARG_COUNT(Arguments, 2)
 
-    const auto Arg1 = Cast<TVariable>(Arguments->at(0));
+    const auto Arg1 = Cast<TVariable>(Arguments->at(0).get());
     const auto Arg2 = Arguments->at(1);
 
     const TObject Value = Arg2->GetValue();
@@ -132,7 +133,7 @@ void BuiltIns::ReadFile_Internal(TArguments* Arguments, TObject* ReturnValue, bo
         return;
     }
 
-    const auto    FileName = Arg1.GetString();
+    const auto FileName = Arg1.GetString();
     std::ifstream Stream(FileName.GetValue().c_str());
     if (!Stream.good())
     {
@@ -150,24 +151,24 @@ void BuiltIns::ReadFile_Internal(TArguments* Arguments, TObject* ReturnValue, bo
 void BuiltIns::IndexOf_Internal(TArguments* Arguments, TObject* ReturnValue, bool& bResult)
 {
     // size_of ( container, index, out )
-    CHECK_EXACT_ARG_COUNT(Arguments, 2);
+    CHECK_EXACT_ARG_COUNT(Arguments, 2)
 
-    auto       Container = Arguments->at(0)->GetValue();
+    auto Container = Arguments->at(0)->GetValue();
     const auto Index = Arguments->at(1)->GetValue().GetInt().GetValue();
 
     TObject Value;
     switch (Container.GetType())
     {
-        case StringType :
-            Value = Container.GetString().GetValue().at(Index);
-            break;
-        case ArrayType :
-            Value = Container.GetArray().GetValue().at(Index);
-            break;
-        default :
-            bResult = false;
-            Logging::Error("Type does not have an 'index'.");
-            return;
+    case StringType :
+        Value = Container.GetString().GetValue().at(Index);
+        break;
+    case ArrayType :
+        Value = Container.GetArray().GetValue().at(Index);
+        break;
+    default :
+        bResult = false;
+        Logging::Error("Type does not have an 'index'.");
+        return;
     }
 
     *ReturnValue = Value;
@@ -176,26 +177,26 @@ void BuiltIns::IndexOf_Internal(TArguments* Arguments, TObject* ReturnValue, boo
 
 void BuiltIns::SizeOf_Internal(TArguments* Arguments, TObject* ReturnValue, bool& bResult)
 {
-    CHECK_EXACT_ARG_COUNT(Arguments, 1);
+    CHECK_EXACT_ARG_COUNT(Arguments, 1)
 
     auto Container = Arguments->at(0)->GetValue();
 
     size_t Size = 0;
     switch (Container.GetType())
     {
-        case StringType :
-            Size = Container.AsString()->GetValue().size();
-            break;
-        case ArrayType :
-            Size = Container.AsArray()->GetValue().size();
-            break;
-        case MapType :
-            Size = Container.AsMap()->GetValue().size();
-            break;
-        default :
-            bResult = false;
-            Logging::Error("Type does not have a 'size'.");
-            return;
+    case StringType :
+        Size = Container.AsString()->GetValue().size();
+        break;
+    case ArrayType :
+        Size = Container.AsArray()->GetValue().size();
+        break;
+    case MapType :
+        Size = Container.AsMap()->GetValue().size();
+        break;
+    default :
+        bResult = false;
+        Logging::Error("Type does not have a 'size'.");
+        return;
     }
 
     *ReturnValue = static_cast<int>(Size);
@@ -204,26 +205,27 @@ void BuiltIns::SizeOf_Internal(TArguments* Arguments, TObject* ReturnValue, bool
 
 void BuiltIns::Contains_Internal(TArguments* Arguments, TObject* ReturnValue, bool& bResult)
 {
-    CHECK_EXACT_ARG_COUNT(Arguments, 2);
-    auto       Container = Arguments->at(0)->GetValue();
+    CHECK_EXACT_ARG_COUNT(Arguments, 2)
+
+    auto Container = Arguments->at(0)->GetValue();
     const auto Value = Arguments->at(1)->GetValue();
 
     bool bContainsValue;
     switch (Container.GetType())
     {
-        case StringType :
-            bContainsValue = Container.AsString()->GetValue().find(Value.GetString().GetValue()) != std::string::npos;
-            break;
-        case ArrayType :
-            bContainsValue = Container.AsArray()->Contains(Value);
-            break;
-        case MapType :
-            bContainsValue = Container.AsMap()->HasKey(Value.AsString()->GetValue());
-            break;
-        default :
-            bResult = false;
-            Logging::Error("Type is not a 'container'.");
-            return;
+    case StringType :
+        bContainsValue = Container.AsString()->GetValue().find(Value.GetString().GetValue()) != std::string::npos;
+        break;
+    case ArrayType :
+        bContainsValue = Container.AsArray()->Contains(Value);
+        break;
+    case MapType :
+        bContainsValue = Container.AsMap()->HasKey(Value.AsString()->GetValue());
+        break;
+    default :
+        bResult = false;
+        Logging::Error("Type is not a 'container'.");
+        return;
     }
     *ReturnValue = bContainsValue;
     bResult = true;

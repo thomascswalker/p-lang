@@ -23,9 +23,9 @@ int Compile(std::string FileName)
 
     // Construct a syntax tree from the tokens
     Debug("Constructing AST...");
-    AST Ast(Tokens);
+    Ast Ast(Tokens);
     Debug("AST constructed.");
-    ASTBody* Program = Ast.GetTree();
+    AstBody* Program = Ast.GetTree();
 
     auto V = Visitor();
     Debug("Evaluating AST...");
@@ -46,7 +46,7 @@ int Compile(std::string FileName)
 }
 
 // Main entrypoint
-int main(int argc, char* argv[]) // ReSharper disable
+int main(int argc, char* argv[])
 {
     if (argc == 1)
     {
