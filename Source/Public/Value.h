@@ -513,6 +513,7 @@ namespace Values
                 const std::string MapKey = Index.AsString()->GetValue();
                 return TObject(AsMap()->At(MapKey)->Value.get());
             }
+            return TObject();
         }
 
         TObject& At(const TObject& Index) const { return At(Index); }

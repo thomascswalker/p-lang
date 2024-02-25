@@ -269,7 +269,7 @@ bool Visitor::Visit(AstCall* Node)
         if (IsBuiltIn(Node->Identifier))
         {
             // Temporary return value for the function
-            TObject* ReturnValue = nullptr;
+            auto ReturnValue = new TObject(); // TODO: Refactor this
 
             // Get the corresponding function pointer to the identifier name
             auto Func = FUNCTION_MAP[Node->Identifier];
@@ -627,9 +627,9 @@ AstNode* Ast::ParseAssignment()
     DEBUG_ENTER
 
     const std::string Name = CurrentToken->Content; // Get the name
-    const auto NameToken = *CurrentToken;
+    const Token NameToken = *CurrentToken;
     Accept(); // Consume name
-    auto Op = CurrentToken->Type; // Get the assignment operator
+    ETokenType Op = CurrentToken->Type; // Get the assignment operator
     Accept(); // Consume assignment operator
 
     auto Expr = ParseExpression();
@@ -638,7 +638,7 @@ AstNode* Ast::ParseAssignment()
         Expr = new AstBinOp(new AstIdentifier(Name, NameToken), Expr, Op, *CurrentToken);
     }
     DEBUG_EXIT
-    return new AstAssignment(Name, Expr, *CurrentToken);
+    return new AstAssignment(Name, Expr, NameToken);
 }
 
 AstNode* Ast::ParseParenExpr()

@@ -333,6 +333,10 @@ public:
                 break;
             }
             Token T = Next();
+            if (T.Line > Lines.size() - 1)
+            {
+                break;
+            }
             T.Source = Lines[T.Line];
             Tokens.push_back(T);
         }
