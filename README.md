@@ -14,7 +14,7 @@
 
 <!--/TOC-->
 
-[![](https://github.com/p-lang/Images/interpreter.gif)](https://github.com/thomascswalker/p-lang/blob/main/Images/interpreter.gif)
+![](https://github.com/thomascswalker/p-lang/blob/main/Images/interpreter.gif)
 
 ## Goals
 
