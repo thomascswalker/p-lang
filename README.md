@@ -14,6 +14,8 @@
 
 <!--/TOC-->
 
+![](https://github.com/p-lang/Images/interpreter.gif)
+
 ## Goals
 
 Feature set similar to Python with optional type-safety and brackets.
