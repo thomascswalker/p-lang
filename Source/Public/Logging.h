@@ -44,6 +44,8 @@ namespace Logging
         
         int GetCount(const LogLevel Level);
         std::vector<std::string> GetMessages(const LogLevel Level);
+
+        void Clear() { Messages.clear(); }
     };
 
     static Logger* GetLogger()
