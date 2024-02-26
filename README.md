@@ -23,8 +23,14 @@ Feature set similar to Python with optional type-safety and brackets.
 ## Features
 
 - Dynamically typed
-- Ignores whitespace
-- Basic mutable types
+- Ignores whitespace/indent depth
+- Basic mutable types (int, float, string, lists)
+
+## Usage
+There are two modes which the .exe can be run with:
+
+1. Run with no arguments. This will be the interpreter mode (like the GIF above). This allows typing in commands line-by-line. `peng.exe`
+2. Run with one argument. This will read the input file and execute it. `peng.exe "C:\my_file.p"`
 
 ## Development
 
