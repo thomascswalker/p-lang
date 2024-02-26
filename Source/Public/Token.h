@@ -318,10 +318,21 @@ public:
     std::vector<Token> Tokenize()
     {
         // First split the source into separate lines
+        Position = 0;
         auto Stream = std::stringstream{Source};
-        for (std::string LineContent; std::getline(Stream, LineContent, '\n');)
+
+        // In input is a single line
+        if (std::ranges::count(Source, '\n') <= 1)
         {
-            Lines.push_back(LineContent);
+            Lines.push_back(Source);
+        }
+        // If input is multiple lines
+        else
+        {
+            for (std::string LineContent; std::getline(Stream, LineContent, '\n');)
+            {
+                Lines.push_back(LineContent);
+            }
         }
 
         // Then tokenize the source
@@ -333,11 +344,11 @@ public:
                 break;
             }
             Token T = Next();
-            if (T.Line > Lines.size() - 1)
+            if (T.Line > Lines.size())
             {
                 break;
             }
-            T.Source = Lines[T.Line];
+            T.Source = Lines[T.Line - 1];
             Tokens.push_back(T);
         }
         return Tokens;
